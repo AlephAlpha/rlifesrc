@@ -1,4 +1,3 @@
-use std::io;
 use std::env;
 use crate::search::Search;
 use crate::rule::Life;
@@ -30,9 +29,7 @@ fn main() {
     let mut search = Search::new(Life::new(width, height, period, dx, dy));
     while search.search() {
         search.display();
-        println!("Press enter to search the next result.");
-        let mut n = String::new();
-        io::stdin().read_line(&mut n).expect("");
+        println!("");
     }
     println!("No more result.");
 }

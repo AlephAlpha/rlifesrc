@@ -28,10 +28,8 @@ pub trait World<Ix: Copy> {
     // 同一位置后一代的细胞
     fn succ(&self, ix: Ix) -> Ix;
 
-    // 从这个细胞开始搜索
-    fn first(&self) -> Ix;
-    // 要搜索的下一个细胞；若是搜完了则返回 None
-    fn next(&self, ix: Ix) -> Option<Ix>;
+    // 获取一个未知的细胞
+    fn get_unknown(&self) -> Option<Ix>;
 
     // 从邻域的列表得到邻域的状态
     fn nbhd_state(&self, neighbors: Vec<Ix>) -> Self::NbhdState;
@@ -105,10 +103,8 @@ impl<W: World<Ix>, Ix: Copy> Search<W, Ix> {
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
     fn consistify10(&mut self, ix: Ix) -> bool {
         let succ = self.world.succ(ix);
-        let mut cells = self.world.neighbors(succ);
-        cells.push(succ);
-        cells.push(ix);
-        cells.iter().all(|&i| self.consistify(i))
+        self.consistify(ix) && self.consistify(succ) &&
+            self.world.neighbors(succ).iter().all(|&i| self.consistify(i))
     }
 
     // 把所有能确定的细胞确定下来
@@ -156,29 +152,15 @@ impl<W: World<Ix>, Ix: Copy> Search<W, Ix> {
         }
     }
 
-    // 获取一个未知的细胞
-    fn get_unknown(&mut self) -> Option<Ix> {
-        let mut ix = self.world.first();
-        loop {
-            if let State::Unknown = self.world.get_cell(ix).state {
-                return Some(ix);
-            } else if let Some(next) = self.world.next(ix) {
-                ix = next;
-            } else {
-                return None;
-            }
-        }
-    }
-
     // 最终搜索函数
     pub fn search(&mut self) -> bool {
-        if let None = self.get_unknown() {
+        if let None = self.world.get_unknown() {
             if !self.backup() {
                 return false;
             }
         }
         while self.go() {
-            if let Some(ix) = self.get_unknown() {
+            if let Some(ix) = self.world.get_unknown() {
                 self.put_cell(ix, Cell {state: State::Dead, free: true});
             } else {
                 return true;

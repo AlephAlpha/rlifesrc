@@ -54,6 +54,14 @@ impl Life {
     fn index(&self, ix: Index) -> usize {
         ((ix.0 * self.height + ix.1) * self.period + ix.2) as usize
     }
+
+    #[inline]
+    fn to_index(&self, i: usize) -> Index {
+        let i = i as isize;
+        let j = i / self.period;
+        let k = j / self.height;
+        (k % self.width, j % self.height, i % self.period)
+    }
 }
 
 impl World<Index> for Life {
@@ -75,26 +83,24 @@ impl World<Index> for Life {
     }
 
     fn neighbors(&self, ix: Index) -> Vec<Index> {
-        let outside = ix.0 < -1 || ix.0 > self.width + 1 ||
-                      ix.1 < -1 || ix.1 > self.height + 1 ||
-                      ix.2 < 0 || ix.2 > self.period;
-        if outside {
-            Vec::new()
-        } else {
-            [(-1,-1), (-1,0), (-1,1), (0,-1), (0, 1), (1,-1), (1,0), (1,1)].iter()
-                .map(|n| (ix.0 + n.0, ix.1 + n.1, ix.2)).collect()
-        }
+        vec![(ix.0 - 1, ix.1 - 1, ix.2),
+             (ix.0 - 1, ix.1, ix.2),
+             (ix.0 - 1, ix.1 + 1, ix.2),
+             (ix.0, ix.1 - 1, ix.2),
+             (ix.0, ix.1 + 1, ix.2),
+             (ix.0 + 1, ix.1 - 1, ix.2),
+             (ix.0 + 1, ix.1, ix.2),
+             (ix.0 + 1, ix.1 + 1, ix.2),]
     }
 
     fn nbhd_state(&self, neighbors: Vec<Index>) -> Self::NbhdState {
         let mut alives = 0;
         let mut unknowns = 0;
         for n in neighbors {
-            let cell = self.get_cell(n);
-            match cell.state {
+            match self.get_cell(n).state {
                 State::Alive => alives += 1,
                 State::Dead => (),
-                State::Unknown => unknowns += 1
+                State::Unknown => unknowns += 1,
             }
         }
         let deads = 8 - alives - unknowns;
@@ -118,28 +124,9 @@ impl World<Index> for Life {
     }
 
     // 搜索顺序不太好决定……先随便按顺序搜，以后慢慢调整
-    fn first(&self) -> Index {
-        (0, 0, 0)
-    }
-
-    fn next(&self, ix: Index) -> Option<Index> {
-        if self.includes(ix) {
-            if ix.2 == self.period - 1 {
-                if ix.1 == self.height - 1 {
-                    if ix.0 == self.width - 1 {
-                        None
-                    } else {
-                        Some((ix.0 + 1, 0, 0))
-                    }
-                } else {
-                    Some((ix.0, ix.1 + 1, 0))
-                }
-            } else {
-                Some((ix.0, ix.1, ix.2 + 1))
-            }
-        } else {
-            None
-        }
+    fn get_unknown(&self) -> Option<Index> {
+        self.cells.iter().position(|&cell| cell.state == State::Unknown)
+            .map(|i| self.to_index(i))
     }
 
     // 仅适用于生命游戏
@@ -220,7 +207,7 @@ impl World<Index> for Life {
 
     fn display(&self) {
         for t in 0..self.period {
-            println!("Generation {}", t);
+            println!("Generation {}:", t);
             for y in 0..self.height {
                 for x in 0..self.width {
                     let s = match self.get_cell((x, y, t)).state {
