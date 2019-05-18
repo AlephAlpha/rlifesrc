@@ -26,7 +26,7 @@ type Index = (isize, isize, isize);
 // 有点想像 lifesrc 一样用一个字节来保持邻域状态，不过那样看起来太不直观
 pub struct NbhdState {
     alives: u8,     // 活细胞的个数
-    unknowns: u8,   // 未知细胞的个数
+    deads: u8,   // 未知细胞的个数
 }
 
 impl Life {
@@ -97,12 +97,13 @@ impl World<Index> for Life {
                 State::Unknown => unknowns += 1
             }
         }
-        NbhdState {alives, unknowns}
+        let deads = 8 - alives - unknowns;
+        NbhdState {alives, deads}
     }
 
     fn pred(&self, ix: Index) -> Index {
         if ix.2 == 0 {
-            (ix.0 - self.dx, ix.1 - self.dy, self.period - 1)
+            (ix.0 + self.dx, ix.1 + self.dy, self.period - 1)
         } else {
             (ix.0, ix.1, ix.2 - 1)
         }
@@ -110,7 +111,7 @@ impl World<Index> for Life {
 
     fn succ(&self, ix: Index) -> Index {
         if ix.2 == self.period - 1 {
-            (ix.0 + self.dx, ix.1 + self.dy, 0)
+            (ix.0 - self.dx, ix.1 - self.dy, 0)
         } else {
             (ix.0, ix.1, ix.2 + 1)
         }
@@ -120,6 +121,7 @@ impl World<Index> for Life {
     fn first(&self) -> Index {
         (0, 0, 0)
     }
+
     fn next(&self, ix: Index) -> Option<Index> {
         if self.includes(ix) {
             if ix.2 == self.period - 1 {
@@ -142,9 +144,9 @@ impl World<Index> for Life {
 
     // 仅适用于生命游戏
     // 这些条件是从 lifesrc 抄来的
-    fn transit(cell:Cell, nbhd: Self::NbhdState) -> State {
+    fn transit(cell:Cell, nbhd: &Self::NbhdState) -> State {
         let alives = nbhd.alives;
-        let deads = 8 - nbhd.alives - nbhd.unknowns;
+        let deads = nbhd.deads;
         match cell.state {
             State::Dead => if deads > 5 || alives > 3 {
                 State::Dead
@@ -168,6 +170,51 @@ impl World<Index> for Life {
             } else {
                 State::Unknown
             },
+        }
+    }
+
+    // 从 lifesrc 抄来的
+    fn implic(cell: Cell, nbhd: &Self::NbhdState, succ: Cell) -> (State, State) {
+        let alives = nbhd.alives;
+        let deads = nbhd.deads;
+        match (cell.state, succ.state) {
+            (State::Dead, State::Dead) => if alives == 2 && deads == 5 {
+                (State::Unknown, State::Dead)
+            } else {
+                (State::Unknown, State::Unknown)
+            },
+            (State::Dead, State::Alive) => if deads == 5 {
+                (State::Unknown, State::Alive)
+            } else {
+                (State::Unknown, State::Unknown)
+            },
+            (State::Alive, State::Dead) => if alives == 2 && deads == 4 {
+                (State::Unknown, State::Alive)
+            } else if alives == 1 && (deads == 5 || deads == 6) {
+                (State::Unknown, State::Dead)
+            } else {
+                (State::Unknown, State::Unknown)
+            },
+            (State::Alive, State::Alive) => if deads == 6 {
+                (State::Unknown, State::Alive)
+            } else {
+                (State::Unknown, State::Unknown)
+            },
+            (State::Unknown, State::Dead) => if alives == 2 && deads == 6 {
+                (State::Dead, State::Unknown)
+            } else if alives == 2 && deads == 5 {
+                (State::Dead, State::Dead)
+            } else {
+                (State::Unknown, State::Unknown)
+            },
+            (State::Unknown, State::Alive) => if alives == 2 && deads == 6 {
+                (State::Alive, State::Unknown)
+            } else if deads == 6 {
+                (State::Alive, State::Alive)
+            } else {
+                (State::Unknown, State::Unknown)
+            },
+            _ => (State::Unknown, State::Unknown),
         }
     }
 

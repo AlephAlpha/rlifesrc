@@ -36,11 +36,12 @@ pub trait World<Ix: Copy> {
     // 从邻域的列表得到邻域的状态
     fn nbhd_state(&self, neighbors: Vec<Ix>) -> Self::NbhdState;
     // 由一个细胞及其邻域的状态得到其后一代的状态
-    fn transit(cell:Cell, nbhd: Self::NbhdState) -> State;
+    fn transit(cell: Cell, nbhd: &Self::NbhdState) -> State;
 
-    // 下面还有一个 implic 函数
     // 由一个细胞本身、邻域以及其后一代的状态，决定其本身或者邻域中某些未知细胞的状态
-    // 不过有些复杂，以后再写
+    // 返回两个值，一个表示本身的状态，另一个表示邻域中未知细胞的状态
+    // 这样写并不好扩展到 non-totalistic 的规则的情形，不过以后再说吧
+    fn implic(cell: Cell, nbhd: &Self::NbhdState, succ: Cell) -> (State, State);
 
     // 输出图样
     fn display(&self);
@@ -63,7 +64,6 @@ impl<W: World<Ix>, Ix: Copy> Search<W, Ix> {
 
     // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
     // 并且把细胞记录到 set_table 中
-    // 不知道返回的类型是用 bool 好还是用 Result 好
     fn put_cell(&mut self, ix: Ix, cell: Cell) -> bool {
         let old_cell = self.world.get_cell(ix);
         match (old_cell.state, cell.state) {
@@ -81,15 +81,25 @@ impl<W: World<Ix>, Ix: Copy> Search<W, Ix> {
     fn consistify(&mut self, ix: Ix) -> bool {
         // 先用 transit 来看这个细胞本来的状态
         let pred = self.world.pred(ix);
+        let pred_cell = self.world.get_cell(pred);
         let pred_nbhd = self.world.nbhd_state(self.world.neighbors(pred));
-        let state = W::transit(self.world.get_cell(pred), pred_nbhd);
+        let state = W::transit(pred_cell, &pred_nbhd);
         if !self.put_cell(ix, Cell {state, free: false}) {
             return false;
         }
 
         // 如果上一步没有矛盾，就用 implic 来看前一代的邻域的状态
-        // 涉及 implic 的部分以后再写
-        true
+        let (state, state_nbhd) = W::implic(pred_cell, &pred_nbhd, self.world.get_cell(ix));
+        if !self.put_cell(pred, Cell {state, free: false}) {
+            return false;
+        }
+        self.world.neighbors(pred).iter().all(|&i| {
+            if let State::Unknown = self.world.get_cell(i).state {
+                self.put_cell(i, Cell {state: state_nbhd, free: false})
+            } else {
+                true
+            }
+        })
     }
 
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
