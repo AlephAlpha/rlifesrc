@@ -87,11 +87,11 @@ impl World<Index> for Life {
         (self.width * self.height * self.period) as usize
     }
 
-    fn get_cell(&self, ix: Index) -> Cell {
+    fn get_cell(&self, ix: Index) -> &Cell {
         if self.includes(ix) {
-            self.cells[self.index(ix)]
+            &self.cells[self.index(ix)]
         } else {
-            self.dead
+            &self.dead
         }
     }
 
@@ -172,16 +172,16 @@ impl World<Index> for Life {
 
     // 搜索顺序不太好决定……先随便按顺序搜，以后慢慢调整
     fn get_unknown(&self) -> Option<Index> {
-        self.cells.iter().position(|&cell| cell.state == State::Unknown)
+        self.cells.iter().position(|cell| cell.state == State::Unknown)
             .map(|i| self.to_index(i))
     }
 
     // 仅适用于生命游戏
     // 这些条件是从 lifesrc 抄来的
-    fn transit(cell:Cell, nbhd: &Self::NbhdState) -> State {
+    fn transit(state: State, nbhd: &Self::NbhdState) -> State {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
-        match cell.state {
+        match state {
             State::Dead => if deads > 5 || alives > 3 {
                 State::Dead
             } else if alives == 3 && deads == 5 {
@@ -208,10 +208,10 @@ impl World<Index> for Life {
     }
 
     // 从 lifesrc 抄来的
-    fn implic(cell: Cell, nbhd: &Self::NbhdState, succ: Cell) -> (State, State) {
+    fn implic(state: State, nbhd: &Self::NbhdState, succ_state: State) -> (State, State) {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
-        match (cell.state, succ.state) {
+        match (state, succ_state) {
             (State::Dead, State::Dead) => if alives == 2 && deads == 5 {
                 (State::Unknown, State::Dead)
             } else {

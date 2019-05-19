@@ -1,4 +1,3 @@
-// 由于搞不定所有权之类的东西，只好 Copy 一切
 #[derive(Clone, Copy, PartialEq)]
 pub enum State {
     Dead,
@@ -6,7 +5,6 @@ pub enum State {
     Unknown,
 }
 
-#[derive(Clone, Copy)]
 pub struct Cell {
     pub state: State,   // 细胞状态
     pub free: bool,     // 此状态是否取决于其它细胞的状态
@@ -21,7 +19,7 @@ pub trait World<Index: Copy> {
     // 世界的大小，即所有回合的细胞总数
     fn size(&self) -> usize;
 
-    fn get_cell(&self, ix: Index) -> Cell;
+    fn get_cell(&self, ix: Index) -> &Cell;
     fn set_cell(&mut self, ix: Index, cell: Cell);
 
     // 细胞的邻域
@@ -40,12 +38,12 @@ pub trait World<Index: Copy> {
     // 从邻域的列表得到邻域的状态
     fn nbhd_state(&self, neighbors: Vec<Index>) -> Self::NbhdState;
     // 由一个细胞及其邻域的状态得到其后一代的状态
-    fn transit(cell: Cell, nbhd: &Self::NbhdState) -> State;
+    fn transit(state: State, nbhd: &Self::NbhdState) -> State;
 
     // 由一个细胞本身、邻域以及其后一代的状态，决定其本身或者邻域中某些未知细胞的状态
     // 返回两个值，一个表示本身的状态，另一个表示邻域中未知细胞的状态
     // 这样写并不好扩展到 non-totalistic 的规则的情形，不过以后再说吧
-    fn implic(cell: Cell, nbhd: &Self::NbhdState, succ: Cell) -> (State, State);
+    fn implic(state: State, nbhd: &Self::NbhdState, succ_state: State) -> (State, State);
 
     // 确保搜振荡子不会搜出静物，或者周期比指定的要小的振荡子
     fn subperiod(&self) -> bool;

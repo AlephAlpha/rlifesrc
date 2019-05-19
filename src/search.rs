@@ -26,16 +26,20 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
 
     // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
     // 并且把细胞记录到 set_table 中
-    fn put_cell(&mut self, ix: Index, cell: Cell) -> bool {
-        let old_cell = self.world.get_cell(ix);
-        match (old_cell.state, cell.state) {
-            (_, State::Unknown) => true,
-            (State::Unknown, _) => {
-                self.world.set_cell(ix, cell);
-                self.set_table.push(ix);
-                true
-            },
-            _ => old_cell.state == cell.state,
+    fn put_cell(&mut self, ix: Index, state: State) -> bool {
+        match state {
+            State::Unknown => true,
+            _ => {
+                let old_state = self.world.get_cell(ix).state;
+                match old_state {
+                    State::Unknown => {
+                        self.world.set_cell(ix, Cell {state, free: false});
+                        self.set_table.push(ix);
+                        true
+                    },
+                    _ => state == old_state,
+                }
+            }
         }
     }
 
@@ -43,21 +47,21 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
     fn consistify(&mut self, ix: Index) -> bool {
         // 先用 transit 来看这个细胞本来的状态
         let pred = self.world.pred(ix);
-        let pred_cell = self.world.get_cell(pred);
+        let pred_state = self.world.get_cell(pred).state;
         let pred_nbhd = self.world.nbhd_state(self.world.neighbors(pred));
-        let state = W::transit(pred_cell, &pred_nbhd);
-        if !self.put_cell(ix, Cell {state, free: false}) {
+        let state = W::transit(pred_state, &pred_nbhd);
+        if !self.put_cell(ix, state) {
             return false;
         }
 
         // 如果上一步没有矛盾，就用 implic 来看前一代的邻域的状态
-        let (state, state_nbhd) = W::implic(pred_cell, &pred_nbhd, self.world.get_cell(ix));
-        if !self.put_cell(pred, Cell {state, free: false}) {
+        let (state, nbhd_state) = W::implic(pred_state, &pred_nbhd, self.world.get_cell(ix).state);
+        if !self.put_cell(pred, state) {
             return false;
         }
         self.world.neighbors(pred).iter().all(|&i| {
             if let State::Unknown = self.world.get_cell(i).state {
-                self.put_cell(i, Cell {state: state_nbhd, free: false})
+                self.put_cell(i, nbhd_state)
             } else {
                 true
             }
@@ -75,8 +79,8 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
     fn proceed(&mut self) -> bool {
         while self.next_set < self.set_table.len() {
             let ix = self.set_table[self.next_set];
-            let cell = self.world.get_cell(ix);
-            if self.world.sym(ix).iter().any(|&i| !self.put_cell(i, cell))
+            let state = self.world.get_cell(ix).state;
+            if self.world.sym(ix).iter().any(|&i| !self.put_cell(i, state))
                  || !self.consistify10(ix) {
                 return false;
             }
@@ -131,7 +135,8 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         }
         while self.go() {
             if let Some(ix) = self.world.get_unknown() {
-                self.put_cell(ix, Cell {state: State::Dead, free: true});
+                self.world.set_cell(ix, Cell {state: State::Dead, free: true});
+                self.set_table.push(ix);
             } else if self.world.subperiod() {
                 return true;
             } else if !self.backup() {
