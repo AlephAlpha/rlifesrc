@@ -1,8 +1,10 @@
 use std::env;
 use crate::search::Search;
 use crate::rule::Life;
+use crate::rule::Symmetry;
 mod search;
 mod rule;
+mod world;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -26,7 +28,7 @@ fn main() {
     } else {
         (&args[5]).parse().expect("Not a number!")
     };
-    let mut search = Search::new(Life::new(width, height, period, dx, dy));
+    let mut search = Search::new(Life::new(width, height, period, dx, dy, Symmetry::C1));
     while search.search() {
         search.display();
         println!("");

@@ -1,6 +1,6 @@
-use crate::search::State;
-use crate::search::Cell;
-use crate::search::World;
+use crate::world::State;
+use crate::world::Cell;
+use crate::world::World;
 
 // 先实现生命游戏，以后再修改以满足其它规则
 pub struct Life {
@@ -9,6 +9,7 @@ pub struct Life {
     period: isize,
     dx: isize,  // 每周期平移的列数
     dy: isize,  // 每周期平移的行数
+    symmetry: Symmetry,
 
     // 搜索范围内的所有细胞的列表
     cells: Vec<Cell>,
@@ -29,8 +30,23 @@ pub struct NbhdState {
     deads: u8,   // 未知细胞的个数
 }
 
+// 对称性
+pub enum Symmetry {
+    C1,
+    C2,
+    C4,
+    D2Row,
+    D2Column,
+    D2Diag,
+    D2Antidiag,
+    D4Ortho,
+    D4Diag,
+    D8,
+}
+
 impl Life {
-    pub fn new(width: isize, height: isize, period: isize, dx: isize, dy: isize) -> Life {
+    pub fn new(width: isize, height: isize, period: isize, dx: isize, dy: isize,
+               symmetry: Symmetry) -> Life {
         let size = width * height * period;
         let mut cells = Vec::with_capacity(size as usize);
         let dead = Cell {state: State::Dead, free: false};
@@ -39,7 +55,7 @@ impl Life {
             cells.push(Cell {state: State::Unknown, free: true});
         }
 
-        Life {width, height, period, dx, dy, cells, dead}
+        Life {width, height, period, dx, dy, symmetry, cells, dead}
     }
 
     // 细胞是否在范围之内
@@ -66,6 +82,10 @@ impl Life {
 
 impl World<Index> for Life {
     type NbhdState = NbhdState;
+
+    fn size(&self) -> usize {
+        (self.width * self.height * self.period) as usize
+    }
 
     fn get_cell(&self, ix: Index) -> Cell {
         if self.includes(ix) {
@@ -109,7 +129,7 @@ impl World<Index> for Life {
 
     fn pred(&self, ix: Index) -> Index {
         if ix.2 == 0 {
-            (ix.0 + self.dx, ix.1 + self.dy, self.period - 1)
+            (ix.0 - self.dx, ix.1 - self.dy, self.period - 1)
         } else {
             (ix.0, ix.1, ix.2 - 1)
         }
@@ -117,9 +137,36 @@ impl World<Index> for Life {
 
     fn succ(&self, ix: Index) -> Index {
         if ix.2 == self.period - 1 {
-            (ix.0 - self.dx, ix.1 - self.dy, 0)
+            (ix.0 + self.dx, ix.1 + self.dy, 0)
         } else {
             (ix.0, ix.1, ix.2 + 1)
+        }
+    }
+
+    fn sym(&self, ix: Index) -> Vec<Index> {
+        match &self.symmetry {
+            Symmetry::C1 => vec![],
+            Symmetry::C2 => vec![(self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
+            Symmetry::C4 => vec![(ix.1, self.width - 1 - ix.0, ix.2),
+                                 (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2),
+                                 (self.height - 1 - ix.1, ix.0, ix.2)],
+            Symmetry::D2Row => vec![(self.width - 1 - ix.0, ix.1, ix.2)],
+            Symmetry::D2Column => vec![(ix.0, self.height - 1 - ix.1, ix.2)],
+            Symmetry::D2Diag => vec![(ix.1, ix.0, ix.2)],
+            Symmetry::D2Antidiag => vec![(self.height - 1 - ix.1, self.width - 1 - ix.0, ix.2)],
+            Symmetry::D4Ortho => vec![(self.width - 1 - ix.0, ix.1, ix.2),
+                                      (ix.0, self.height - 1 - ix.1, ix.2),
+                                      (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
+            Symmetry::D4Diag => vec![(ix.1, ix.0, ix.2),
+                                     (self.height - 1 - ix.1, self.width - 1 - ix.0, ix.2),
+                                     (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
+            Symmetry::D8 => vec![(ix.1, self.width - 1 - ix.0, ix.2),
+                                 (self.height - 1 - ix.1, ix.0, ix.2),
+                                 (self.width - 1 - ix.0, ix.1, ix.2),
+                                 (ix.0, self.height - 1 - ix.1, ix.2),
+                                 (ix.1, ix.0, ix.2),
+                                 (self.height - 1 - ix.1, self.width - 1 - ix.0, ix.2),
+                                 (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
         }
     }
 
