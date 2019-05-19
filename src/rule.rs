@@ -253,19 +253,16 @@ impl World<Index> for Life {
     }
 
     fn display(&self) {
-        for t in 0..self.period {
-            println!("Generation {}:", t);
-            for y in 0..self.height {
-                for x in 0..self.width {
-                    let s = match self.get_cell((x, y, t)).state {
-                        State::Dead => ".",
-                        State::Alive => "o",
-                        State::Unknown => "?",
-                    };
-                    print!("{}", s);
-                }
-                println!("");
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let s = match self.get_cell((x, y, 0)).state {
+                    State::Dead => ".",
+                    State::Alive => "o",
+                    State::Unknown => "?",
+                };
+                print!("{}", s);
             }
+            println!("");
         }
     }
 }

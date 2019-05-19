@@ -1,4 +1,5 @@
-use std::env;
+extern crate clap;
+use clap::{Arg, App};
 use crate::search::Search;
 use crate::rule::Life;
 use crate::rule::Symmetry;
@@ -7,31 +8,51 @@ mod rule;
 mod world;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        panic!("Not enough arguments!");
-    }
-    let width = (&args[1]).parse().expect("Not a number!");
-    let height = (&args[2]).parse().expect("Not a number!");
-    let period = if args.len() < 4 {
-        1
-    } else {
-        (&args[3]).parse().expect("Not a number!")
+    let matches = App::new("rlifesrc")
+        .arg(Arg::with_name("WIDTH")
+             .help("Number of columns")
+             .required(true)
+             .index(1))
+        .arg(Arg::with_name("HEIGHT")
+             .help("Number of rows")
+             .required(true)
+             .index(2))
+        .arg(Arg::with_name("PERIOD")
+             .help("Number of generations")
+             .index(3))
+        .arg(Arg::with_name("DX")
+             .help("Row translation")
+             .index(4))
+        .arg(Arg::with_name("DY")
+             .help("Column translation")
+             .index(5))
+        .arg(Arg::with_name("SYMMETRY")
+             .help("Symmetry of the pattern.")
+             .short("s")
+             .long("symmetry")
+             .takes_value(true))
+        .get_matches();
+    let width = matches.value_of("WIDTH").unwrap().parse().unwrap();
+    let height = matches.value_of("HEIGHT").unwrap().parse().unwrap();
+    let period = matches.value_of("PERIOD").unwrap_or("1").parse().unwrap();
+    let dx = matches.value_of("DX").unwrap_or("0").parse().unwrap();
+    let dy = matches.value_of("DY").unwrap_or("0").parse().unwrap();
+    let symmetry = match matches.value_of("SYMMETRY").unwrap_or("C1") {
+        "C1" => Symmetry::C1,
+        "C2" => Symmetry::C2,
+        "C4" => Symmetry::C4,
+        "D2|" => Symmetry::D2Row,
+        "D2-" => Symmetry::D2Column,
+        "D2\\" => Symmetry::D2Diag,
+        "D2/" => Symmetry::D2Antidiag,
+        "D4+" => Symmetry::D4Ortho,
+        "D4X" => Symmetry::D4Diag,
+        "D8" => Symmetry::D8,
+        _ => Symmetry::C1,
     };
-    let dx = if args.len() < 5 {
-        0
-    } else {
-        (&args[4]).parse().expect("Not a number!")
-    };
-    let dy = if args.len() < 6 {
-        0
-    } else {
-        (&args[5]).parse().expect("Not a number!")
-    };
-    let mut search = Search::new(Life::new(width, height, period, dx, dy, Symmetry::C1));
+    let mut search = Search::new(Life::new(width, height, period, dx, dy, symmetry));
     while search.search() {
         search.display();
         println!("");
     }
-    println!("No more result.");
 }
