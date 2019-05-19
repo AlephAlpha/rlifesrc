@@ -27,10 +27,18 @@ fn main() {
              .help("Column translation")
              .index(5))
         .arg(Arg::with_name("SYMMETRY")
-             .help("Symmetry of the pattern.")
+             .help("Symmetry of the pattern")
              .short("s")
              .long("symmetry")
              .takes_value(true))
+        .arg(Arg::with_name("ALL")
+             .help("Search for all possible patterns")
+             .short("a")
+             .long("all"))
+        .arg(Arg::with_name("TIME")
+             .help("Show how long the search takes")
+             .short("t")
+             .long("time"))
         .get_matches();
     let width = matches.value_of("WIDTH").unwrap().parse().unwrap();
     let height = matches.value_of("HEIGHT").unwrap().parse().unwrap();
@@ -50,9 +58,15 @@ fn main() {
         "D8" => Symmetry::D8,
         _ => Symmetry::C1,
     };
-    let mut search = Search::new(Life::new(width, height, period, dx, dy, symmetry));
-    while search.search() {
+    let all = matches.is_present("ALL");
+    let time = matches.is_present("TIME");
+    let mut search = Search::new(Life::new(width, height, period, dx, dy, symmetry), time);
+    if all {
+        while search.search() {
+            search.display();
+            println!("");
+        }
+    } else if search.search() {
         search.display();
-        println!("");
     }
 }

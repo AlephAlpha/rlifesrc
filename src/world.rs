@@ -47,6 +47,9 @@ pub trait World<Index: Copy> {
     // 这样写并不好扩展到 non-totalistic 的规则的情形，不过以后再说吧
     fn implic(cell: Cell, nbhd: &Self::NbhdState, succ: Cell) -> (State, State);
 
+    // 确保搜振荡子不会搜出静物，或者周期比指定的要小的振荡子
+    fn subperiod(&self) -> bool;
+
     // 输出图样
     fn display(&self);
 }

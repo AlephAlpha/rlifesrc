@@ -1,3 +1,5 @@
+extern crate stopwatch;
+use stopwatch::Stopwatch;
 use crate::world::State;
 use crate::world::Cell;
 use crate::world::World;
@@ -9,12 +11,17 @@ pub struct Search<W: World<Index>, Index: Copy> {
     set_table: Vec<Index>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
+    // 是否计时
+    time: bool,
+    // 记录搜索时间
+    stopwatch: Stopwatch,
 }
 
 impl<W: World<Index>, Index: Copy> Search<W, Index> {
-    pub fn new(world: W) -> Search<W, Index> {
+    pub fn new(world: W, time: bool) -> Search<W, Index> {
         let set_table = Vec::with_capacity(world.size());
-        Search {world, set_table, next_set: 0}
+        let stopwatch = Stopwatch::new();
+        Search {world, set_table, next_set: 0, time, stopwatch}
     }
 
     // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
@@ -114,6 +121,9 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
 
     // 最终搜索函数
     pub fn search(&mut self) -> bool {
+        if self.time {
+            self.stopwatch.restart();
+        }
         if let None = self.world.get_unknown() {
             if !self.backup() {
                 return false;
@@ -122,8 +132,10 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         while self.go() {
             if let Some(ix) = self.world.get_unknown() {
                 self.put_cell(ix, Cell {state: State::Dead, free: true});
-            } else {
+            } else if self.world.subperiod() {
                 return true;
+            } else if !self.backup() {
+                return false;
             }
         }
         false
@@ -131,5 +143,8 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
 
     pub fn display(&self) {
         self.world.display();
+        if self.time {
+            println!("Time taken: {}ms.", self.stopwatch.elapsed_ms());
+        }
     }
 }

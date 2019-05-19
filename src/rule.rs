@@ -110,7 +110,7 @@ impl World<Index> for Life {
              (ix.0, ix.1 + 1, ix.2),
              (ix.0 + 1, ix.1 - 1, ix.2),
              (ix.0 + 1, ix.1, ix.2),
-             (ix.0 + 1, ix.1 + 1, ix.2),]
+             (ix.0 + 1, ix.1 + 1, ix.2)]
     }
 
     fn nbhd_state(&self, neighbors: Vec<Index>) -> Self::NbhdState {
@@ -250,6 +250,13 @@ impl World<Index> for Life {
             },
             _ => (State::Unknown, State::Unknown),
         }
+    }
+
+    fn subperiod(&self) -> bool {
+        (1..self.period).all(|t| self.period % t != 0
+            || (0..self.height).any(|y|
+                (0..self.width).any(|x|
+                    self.get_cell((x, y, 0)).state != self.get_cell((x, y, t)).state)))
     }
 
     fn display(&self) {
