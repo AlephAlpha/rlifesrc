@@ -49,10 +49,10 @@ impl Life {
                symmetry: Symmetry) -> Life {
         let size = width * height * period;
         let mut cells = Vec::with_capacity(size as usize);
-        let dead = Cell {state: State::Dead, free: false};
+        let dead = Cell {state: Some(State::Dead), free: false};
 
         for _ in 0..size {
-            cells.push(Cell {state: State::Unknown, free: true});
+            cells.push(Cell {state: None, free: true});
         }
 
         Life {width, height, period, dx, dy, symmetry, cells, dead}
@@ -118,9 +118,9 @@ impl World<Index> for Life {
         let mut unknowns = 0;
         for n in neighbors {
             match self.get_cell(n).state {
-                State::Alive => alives += 1,
-                State::Dead => (),
-                State::Unknown => unknowns += 1,
+                Some(State::Alive) => alives += 1,
+                None => unknowns += 1,
+                _ => (),
             }
         }
         let deads = 8 - alives - unknowns;
@@ -172,83 +172,84 @@ impl World<Index> for Life {
 
     // 搜索顺序不太好决定……先随便按顺序搜，以后慢慢调整
     fn get_unknown(&self) -> Option<Index> {
-        self.cells.iter().position(|cell| cell.state == State::Unknown)
+        self.cells.iter().position(|cell| cell.state.is_none())
             .map(|i| self.to_index(i))
     }
 
     // 仅适用于生命游戏
     // 这些条件是从 lifesrc 抄来的
-    fn transit(state: State, nbhd: &Self::NbhdState) -> State {
+    fn transit(state: Option<State>, nbhd: &Self::NbhdState) -> Option<State> {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
         match state {
-            State::Dead => if deads > 5 || alives > 3 {
-                State::Dead
+            Some(State::Dead) => if deads > 5 || alives > 3 {
+                Some(State::Dead)
             } else if alives == 3 && deads == 5 {
-                State::Alive
+                Some(State::Alive)
             } else {
-                State::Unknown
+                None
             },
-            State::Alive => if deads > 6 || alives > 3 {
-                State::Dead
+            Some(State::Alive) => if deads > 6 || alives > 3 {
+                Some(State::Dead)
             } else if (alives == 2 && (deads == 5 || deads == 6)) ||
                       (alives == 3 && deads == 5) {
-                State::Alive
+                Some(State::Alive)
             } else {
-                State::Unknown
+                None
             },
-            State::Unknown => if deads > 6 || alives > 3 {
-                State::Dead
+            None => if deads > 6 || alives > 3 {
+                Some(State::Dead)
             } else if alives == 3 && deads == 5 {
-                State::Alive
+                Some(State::Alive)
             } else {
-                State::Unknown
+                None
             },
         }
     }
 
     // 从 lifesrc 抄来的
-    fn implic(state: State, nbhd: &Self::NbhdState, succ_state: State) -> (State, State) {
+    fn implic(state: Option<State>, nbhd: &Self::NbhdState, succ_state: Option<State>)
+        -> (Option<State>, Option<State>) {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
         match (state, succ_state) {
-            (State::Dead, State::Dead) => if alives == 2 && deads == 5 {
-                (State::Unknown, State::Dead)
+            (Some(State::Dead), Some(State::Dead)) => if alives == 2 && deads == 5 {
+                (None, Some(State::Dead))
             } else {
-                (State::Unknown, State::Unknown)
+                (None, None)
             },
-            (State::Dead, State::Alive) => if deads == 5 {
-                (State::Unknown, State::Alive)
+            (Some(State::Dead), Some(State::Alive)) => if deads == 5 {
+                (None, Some(State::Alive))
             } else {
-                (State::Unknown, State::Unknown)
+                (None, None)
             },
-            (State::Alive, State::Dead) => if alives == 2 && deads == 4 {
-                (State::Unknown, State::Alive)
+            (Some(State::Alive), Some(State::Dead)) => if alives == 2 && deads == 4 {
+                (None, Some(State::Alive))
             } else if alives == 1 && (deads == 5 || deads == 6) {
-                (State::Unknown, State::Dead)
+                (None, Some(State::Dead))
             } else {
-                (State::Unknown, State::Unknown)
+                (None, None)
             },
-            (State::Alive, State::Alive) => if deads == 6 {
-                (State::Unknown, State::Alive)
+            (Some(State::Alive), Some(State::Alive)) => if deads == 6 {
+                (None, Some(State::Alive))
             } else {
-                (State::Unknown, State::Unknown)
+                (None, None)
             },
-            (State::Unknown, State::Dead) => if alives == 2 && deads == 6 {
-                (State::Dead, State::Unknown)
+            (None, Some(State::Dead)) => if alives == 2 && deads == 6 {
+                (Some(State::Dead), None)
             } else if alives == 2 && deads == 5 {
-                (State::Dead, State::Dead)
+                (Some(State::Dead), Some(State::Dead))
             } else {
-                (State::Unknown, State::Unknown)
+                (None, None)
             },
-            (State::Unknown, State::Alive) => if alives == 2 && deads == 6 {
-                (State::Alive, State::Unknown)
+            (None, Some(State::Alive)) => if alives == 2 && deads == 6 {
+                (Some(State::Alive), None)
             } else if deads == 6 {
-                (State::Alive, State::Alive)
+                (Some(State::Alive), Some(State::Alive))
             } else {
-                (State::Unknown, State::Unknown)
+                (None, None)
             },
-            _ => (State::Unknown, State::Unknown),
+            _ => (None, None),
         }
     }
 
@@ -263,9 +264,9 @@ impl World<Index> for Life {
         for y in 0..self.height {
             for x in 0..self.width {
                 let s = match self.get_cell((x, y, 0)).state {
-                    State::Dead => ".",
-                    State::Alive => "o",
-                    State::Unknown => "?",
+                    Some(State::Dead) => ".",
+                    Some(State::Alive) => "o",
+                    None => "?",
                 };
                 print!("{}", s);
             }

@@ -27,19 +27,12 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
     // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
     // 并且把细胞记录到 set_table 中
     fn put_cell(&mut self, ix: Index, state: State) -> bool {
-        match state {
-            State::Unknown => true,
-            _ => {
-                let old_state = self.world.get_cell(ix).state;
-                match old_state {
-                    State::Unknown => {
-                        self.world.set_cell(ix, Cell {state, free: false});
-                        self.set_table.push(ix);
-                        true
-                    },
-                    _ => state == old_state,
-                }
-            }
+        if let Some(old_state) = self.world.get_cell(ix).state{
+            state == old_state
+        } else {
+            self.world.set_cell(ix, Cell {state: Some(state), free: false});
+            self.set_table.push(ix);
+            true
         }
     }
 
@@ -49,23 +42,24 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         let pred = self.world.pred(ix);
         let pred_state = self.world.get_cell(pred).state;
         let pred_nbhd = self.world.nbhd_state(self.world.neighbors(pred));
-        let state = W::transit(pred_state, &pred_nbhd);
-        if !self.put_cell(ix, state) {
-            return false;
+        if let Some(state) = W::transit(pred_state, &pred_nbhd) {
+            if !self.put_cell(ix, state) {
+                return false;
+            }
         }
 
         // 如果上一步没有矛盾，就用 implic 来看前一代的邻域的状态
-        let (state, nbhd_state) = W::implic(pred_state, &pred_nbhd, self.world.get_cell(ix).state);
-        if !self.put_cell(pred, state) {
-            return false;
-        }
-        self.world.neighbors(pred).iter().all(|&i| {
-            if let State::Unknown = self.world.get_cell(i).state {
-                self.put_cell(i, nbhd_state)
-            } else {
-                true
+        let (this_state, nbhd_state) = W::implic(pred_state, &pred_nbhd, self.world.get_cell(ix).state);
+        if let Some(state) = this_state {
+            if !self.put_cell(pred, state) {
+                return false;
             }
-        })
+        }
+        match nbhd_state {
+            Some(state) => self.world.neighbors(pred).iter()
+                .all(|&i| !self.world.get_cell(i).state.is_none() || self.put_cell(i, state)),
+            _ => true
+        }
     }
 
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
@@ -79,9 +73,9 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
     fn proceed(&mut self) -> bool {
         while self.next_set < self.set_table.len() {
             let ix = self.set_table[self.next_set];
-            let state = self.world.get_cell(ix).state;
+            let state = self.world.get_cell(ix).state.unwrap();
             if self.world.sym(ix).iter().any(|&i| !self.put_cell(i, state))
-                 || !self.consistify10(ix) {
+                || !self.consistify10(ix) {
                 return false;
             }
             self.next_set += 1;
@@ -97,16 +91,15 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
             let ix = self.set_table[self.next_set];
             self.set_table.pop();
             if self.world.get_cell(ix).free {
-                let state = match self.world.get_cell(ix).state {
+                let state = match self.world.get_cell(ix).state.unwrap() {
                     State::Dead => State::Alive,
                     State::Alive => State::Dead,
-                    State::Unknown => panic!("Something is wrong!"),
                 };
-                self.world.set_cell(ix, Cell {state, free: false});
+                self.world.set_cell(ix, Cell {state: Some(state), free: false});
                 self.set_table.push(ix);
                 return true;
             } else {
-                self.world.set_cell(ix, Cell {state: State::Unknown, free: true});
+                self.world.set_cell(ix, Cell {state: None, free: true});
             }
         }
         false
@@ -135,7 +128,7 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         }
         while self.go() {
             if let Some(ix) = self.world.get_unknown() {
-                self.world.set_cell(ix, Cell {state: State::Dead, free: true});
+                self.world.set_cell(ix, Cell {state: Some(State::Dead), free: true});
                 self.set_table.push(ix);
             } else if self.world.subperiod() {
                 return true;
