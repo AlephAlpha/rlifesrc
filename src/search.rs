@@ -38,27 +38,27 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
 
     // 确保由一个细胞前一代的邻域能得到这一代的状态；若不能则返回 false
     fn consistify(&mut self, ix: Index) -> bool {
-        // 先用 transit 来看这个细胞本来的状态
         let pred = self.world.pred(ix);
-        let pred_state = self.world.get_cell(pred).state;
-        let pred_nbhd = self.world.nbhd_state(self.world.neighbors(pred));
-        if let Some(state) = W::transit(pred_state, &pred_nbhd) {
+        let pred_nbhd = self.world.nbhd_state(pred);
+        if let Some(state) = W::transition(&pred_nbhd) {
             if !self.put_cell(ix, state) {
                 return false;
             }
         }
-
-        // 如果上一步没有矛盾，就用 implic 来看前一代的邻域的状态
-        let (this_state, nbhd_state) = W::implic(pred_state, &pred_nbhd, self.world.get_cell(ix).state);
-        if let Some(state) = this_state {
-            if !self.put_cell(pred, state) {
-                return false;
+        match self.world.get_cell(ix).state {
+            Some(state) => {
+                if let Some(state) = W::implication(&pred_nbhd, state) {
+                    if !self.put_cell(pred, state) {
+                        return false;
+                    }
+                };
+                match W::implication_nbhd(&pred_nbhd, state) {
+                    Some(state) => self.world.neighbors(pred).iter()
+                        .all(|&i| !self.world.get_cell(i).state.is_none() || self.put_cell(i, state)),
+                    _ => true
+                }
             }
-        }
-        match nbhd_state {
-            Some(state) => self.world.neighbors(pred).iter()
-                .all(|&i| !self.world.get_cell(i).state.is_none() || self.put_cell(i, state)),
-            _ => true
+            _ => true,
         }
     }
 

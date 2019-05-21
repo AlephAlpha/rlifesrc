@@ -35,15 +35,16 @@ pub trait World<Index: Copy> {
     fn get_unknown(&self) -> Option<Index>;
 
     // 从邻域的列表得到邻域的状态
-    fn nbhd_state(&self, neighbors: Vec<Index>) -> Self::NbhdState;
+    fn nbhd_state(&self, ix: Index) -> Self::NbhdState;
+
     // 由一个细胞及其邻域的状态得到其后一代的状态
-    fn transit(state: Option<State>, nbhd: &Self::NbhdState) -> Option<State>;
+    fn transition(nbhd: &Self::NbhdState) -> Option<State>;
 
     // 由一个细胞本身、邻域以及其后一代的状态，决定其本身或者邻域中某些未知细胞的状态
-    // 返回两个值，一个表示本身的状态，另一个表示邻域中未知细胞的状态
+    // implication表示本身的状态，implication_nbhd表示邻域中未知细胞的状态
     // 这样写并不好扩展到 non-totalistic 的规则的情形，不过以后再说吧
-    fn implic(state: Option<State>, nbhd: &Self::NbhdState, succ_state: Option<State>)
-        -> (Option<State>, Option<State>);
+    fn implication(nbhd: &Self::NbhdState, succ_state: State) -> Option<State>;
+    fn implication_nbhd(nbhd: &Self::NbhdState, succ_state: State) -> Option<State>;
 
     // 确保搜振荡子不会搜出静物，或者周期比指定的要小的振荡子
     fn subperiod(&self) -> bool;

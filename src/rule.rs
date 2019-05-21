@@ -16,18 +16,17 @@ pub struct Life {
 
     // 一个共用的死细胞
     dead: Cell,
-
-    // 以后再添加别的内容，比如说对称性
 }
 
 // 横座标，纵座标，时间
 type Index = (isize, isize, isize);
 
-// 邻域的状态，两个数加起来不能超过 8
-// 有点想像 lifesrc 一样用一个字节来保持邻域状态，不过那样看起来太不直观
+// 邻域的状态，state 表示细胞本身的状态，后两个数加起来不能超过 8
+// 有点想像 lifesrc 一样用一个字节来保持邻域状态，不过试过之后发现并没有更快
 pub struct NbhdState {
-    alives: u8,     // 活细胞的个数
-    deads: u8,   // 未知细胞的个数
+    state: Option<State>,
+    alives: u8,
+    deads: u8,
 }
 
 // 对称性
@@ -58,20 +57,16 @@ impl Life {
         Life {width, height, period, dx, dy, symmetry, cells, dead}
     }
 
-    // 细胞是否在范围之内
-    #[inline]
-    fn includes(&self, ix: Index) -> bool {
+    fn inside(&self, ix: Index) -> bool {
          return ix.0 >= 0 && ix.0 < self.width &&
                 ix.1 >= 0 && ix.1 < self.height &&
                 ix.2 >= 0 && ix.2 < self.period
     }
 
-    #[inline]
     fn index(&self, ix: Index) -> usize {
         ((ix.0 * self.height + ix.1) * self.period + ix.2) as usize
     }
 
-    #[inline]
     fn to_index(&self, i: usize) -> Index {
         let i = i as isize;
         let j = i / self.period;
@@ -88,7 +83,7 @@ impl World<Index> for Life {
     }
 
     fn get_cell(&self, ix: Index) -> &Cell {
-        if self.includes(ix) {
+        if self.inside(ix) {
             &self.cells[self.index(ix)]
         } else {
             &self.dead
@@ -97,7 +92,7 @@ impl World<Index> for Life {
 
     fn set_cell(&mut self, ix: Index, cell: Cell) {
         let index = self.index(ix);
-        if self.includes(ix) {
+        if self.inside(ix) {
             self.cells[index] = cell;
         }
     }
@@ -113,10 +108,10 @@ impl World<Index> for Life {
              (ix.0 + 1, ix.1 + 1, ix.2)]
     }
 
-    fn nbhd_state(&self, neighbors: Vec<Index>) -> Self::NbhdState {
+    fn nbhd_state(&self, ix: Index) -> Self::NbhdState {
         let mut alives = 0;
         let mut unknowns = 0;
-        for n in neighbors {
+        for n in self.neighbors(ix) {
             match self.get_cell(n).state {
                 Some(State::Alive) => alives += 1,
                 None => unknowns += 1,
@@ -124,7 +119,8 @@ impl World<Index> for Life {
             }
         }
         let deads = 8 - alives - unknowns;
-        NbhdState {alives, deads}
+        let state = self.get_cell(ix).state;
+        NbhdState {state, alives, deads}
     }
 
     fn pred(&self, ix: Index) -> Index {
@@ -178,7 +174,8 @@ impl World<Index> for Life {
 
     // 仅适用于生命游戏
     // 这些条件是从 lifesrc 抄来的
-    fn transit(state: Option<State>, nbhd: &Self::NbhdState) -> Option<State> {
+    fn transition(nbhd: &Self::NbhdState) -> Option<State> {
+        let state = nbhd.state;
         let alives = nbhd.alives;
         let deads = nbhd.deads;
         match state {
@@ -208,48 +205,31 @@ impl World<Index> for Life {
     }
 
     // 从 lifesrc 抄来的
-    fn implic(state: Option<State>, nbhd: &Self::NbhdState, succ_state: Option<State>)
-        -> (Option<State>, Option<State>) {
+    fn implication(nbhd: &Self::NbhdState, succ_state: State) -> Option<State> {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
-        match (state, succ_state) {
-            (Some(State::Dead), Some(State::Dead)) => if alives == 2 && deads == 5 {
-                (None, Some(State::Dead))
-            } else {
-                (None, None)
-            },
-            (Some(State::Dead), Some(State::Alive)) => if deads == 5 {
-                (None, Some(State::Alive))
-            } else {
-                (None, None)
-            },
-            (Some(State::Alive), Some(State::Dead)) => if alives == 2 && deads == 4 {
-                (None, Some(State::Alive))
-            } else if alives == 1 && (deads == 5 || deads == 6) {
-                (None, Some(State::Dead))
-            } else {
-                (None, None)
-            },
-            (Some(State::Alive), Some(State::Alive)) => if deads == 6 {
-                (None, Some(State::Alive))
-            } else {
-                (None, None)
-            },
-            (None, Some(State::Dead)) => if alives == 2 && deads == 6 {
-                (Some(State::Dead), None)
-            } else if alives == 2 && deads == 5 {
-                (Some(State::Dead), Some(State::Dead))
-            } else {
-                (None, None)
-            },
-            (None, Some(State::Alive)) => if alives == 2 && deads == 6 {
-                (Some(State::Alive), None)
-            } else if deads == 6 {
-                (Some(State::Alive), Some(State::Alive))
-            } else {
-                (None, None)
-            },
-            _ => (None, None),
+        match (succ_state, alives, deads) {
+            (State::Dead, 2, 6) => Some(State::Dead),
+            (State::Dead, 2, 5) => Some(State::Dead),
+            (State::Alive, _, 6) => Some(State::Alive),
+            _ => None,
+        }
+    }
+
+    fn implication_nbhd(nbhd: &Self::NbhdState, succ_state: State) -> Option<State> {
+        let state = nbhd.state;
+        let alives = nbhd.alives;
+        let deads = nbhd.deads;
+        match (state, succ_state, alives, deads) {
+            (Some(State::Dead), State::Dead, 2, 5) => Some(State::Dead),
+            (Some(State::Dead), State::Alive, _, 5) => Some(State::Alive),
+            (Some(State::Alive), State::Dead, 2, 4) => Some(State::Alive),
+            (Some(State::Alive), State::Dead, 1, 5) => Some(State::Dead),
+            (Some(State::Alive), State::Dead, 1, 6) => Some(State::Dead),
+            (Some(State::Alive), State::Alive, _, 6) => Some(State::Alive),
+            (None, State::Dead, 2, 5) => Some(State::Dead),
+            (None, State::Alive, _, 6) => Some(State::Alive),
+            _ => None,
         }
     }
 
@@ -274,4 +254,3 @@ impl World<Index> for Life {
         }
     }
 }
-
