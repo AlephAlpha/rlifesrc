@@ -7,38 +7,38 @@ mod search;
 mod rule;
 mod world;
 
-fn main() {
+fn main() -> Result<(), ()> {
     let matches = App::new("rlifesrc")
         .arg(Arg::with_name("WIDTH")
-             .help("Number of columns")
-             .required(true)
-             .index(1))
+            .help("Number of columns")
+            .required(true)
+            .index(1))
         .arg(Arg::with_name("HEIGHT")
-             .help("Number of rows")
-             .required(true)
-             .index(2))
+            .help("Number of rows")
+            .required(true)
+            .index(2))
         .arg(Arg::with_name("PERIOD")
-             .help("Number of generations")
-             .index(3))
+            .help("Number of generations")
+            .index(3))
         .arg(Arg::with_name("DX")
-             .help("Row translation")
-             .index(4))
+            .help("Row translation")
+            .index(4))
         .arg(Arg::with_name("DY")
-             .help("Column translation")
-             .index(5))
+            .help("Column translation")
+            .index(5))
         .arg(Arg::with_name("SYMMETRY")
-             .help("Symmetry of the pattern")
-             .short("s")
-             .long("symmetry")
-             .takes_value(true))
+            .help("Symmetry of the pattern")
+            .short("s")
+            .long("symmetry")
+            .takes_value(true))
         .arg(Arg::with_name("ALL")
-             .help("Search for all possible patterns")
-             .short("a")
-             .long("all"))
+            .help("Search for all possible patterns")
+            .short("a")
+            .long("all"))
         .arg(Arg::with_name("TIME")
-             .help("Show how long the search takes")
-             .short("t")
-             .long("time"))
+            .help("Show how long the search takes")
+            .short("t")
+            .long("time"))
         .get_matches();
     let width = matches.value_of("WIDTH").unwrap().parse().unwrap();
     let height = matches.value_of("HEIGHT").unwrap().parse().unwrap();
@@ -62,11 +62,13 @@ fn main() {
     let time = matches.is_present("TIME");
     let mut search = Search::new(Life::new(width, height, period, dx, dy, symmetry), time);
     if all {
-        while search.search() {
+        while search.search().is_ok() {
             search.display();
             println!("");
         }
-    } else if search.search() {
+    } else {
+        search.search()?;
         search.display();
     }
+    Ok(())
 }
