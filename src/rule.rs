@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::{Rc, Weak};
+use std::collections::HashMap;
 use crate::world::State;
 use crate::world::Cell;
 use crate::world::World;
@@ -7,15 +10,13 @@ pub struct Life {
     width: isize,
     height: isize,
     period: isize,
-    dx: isize,  // 每周期平移的列数
-    dy: isize,  // 每周期平移的行数
     symmetry: Symmetry,
 
     // 搜索范围内的所有细胞的列表
-    cells: Vec<Cell>,
+    cells: Vec<Rc<RefCell<Cell>>>,
 
-    // 一个共用的死细胞
-    dead: Cell,
+    // 搜索范围之外的辅助细胞
+    aux_cells: HashMap<Index, Rc<RefCell<Cell>>>,
 }
 
 // 横座标，纵座标，时间
@@ -23,7 +24,7 @@ type Index = (isize, isize, isize);
 
 // 邻域的状态，state 表示细胞本身的状态，后两个数加起来不能超过 8
 // 有点想像 lifesrc 一样用一个字节来保持邻域状态，不过试过之后发现并没有更快
-pub struct NbhdState {
+pub struct NbhdDesc {
     state: Option<State>,
     alives: u8,
     deads: u8,
@@ -44,141 +45,161 @@ pub enum Symmetry {
 }
 
 impl Life {
-    pub fn new(width: isize, height: isize, period: isize, dx: isize, dy: isize,
-               symmetry: Symmetry) -> Life {
-        let size = width * height * period;
+    pub fn new(width: isize, height: isize, period: isize,
+        dx: isize, dy: isize, symmetry: Symmetry) -> Self {
+        let size = (width + 2) * (height + 2) * period;
+        let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
         let mut cells = Vec::with_capacity(size as usize);
-        let dead = Cell {state: Some(State::Dead), free: false};
-
+        let aux_cells = HashMap::new();
         for _ in 0..size {
-            cells.push(Cell {state: None, free: true});
+            cells.push(Cell::new_rc(Some(State::Dead), false));
+        }
+        let mut life = Life {width, height, period, symmetry, cells, aux_cells};
+
+        // 给范围内的细胞添加各种等信息
+        for x in -1..width + 1 {
+            for y in -1..height + 1 {
+                for t in 0..period {
+                    let cell_rc = life.find_cell((x, y, t)).unwrap().upgrade().unwrap();
+                    let mut cell = cell_rc.borrow_mut();
+
+                    // 设定细胞状态
+                    if x >= 0 && x < width && y >= 0 && y < height {
+                        cell.state = None;
+                        cell.free = true;
+                    }
+
+                    // 设定前一代；若前一代不在范围内则添加相应的辅助细胞
+                    if t != 0 {
+                        cell.pred = life.find_cell((x, y, t - 1)).unwrap();
+                    } else {
+                        let pred_ix = (x - dx, y - dy, period - 1);
+                        match life.find_cell(pred_ix) {
+                            Some(pred) => cell.pred = pred,
+                            None => {
+                                let pred = Cell::new_rc(Some(State::Dead), false);
+                                life.aux_cells.insert(pred_ix, pred.clone());
+                                cell.pred = Rc::downgrade(&pred);
+                                pred.borrow_mut().succ = Rc::downgrade(&cell_rc);
+                            },
+                        }
+                    }
+
+                    // 设定后一代；若后一代不在范围内则添加相应的辅助细胞
+                    if t != period - 1 {
+                        cell.succ = life.find_cell((x, y, t + 1)).unwrap();
+                    } else {
+                        let succ_ix = (x + dx, y + dy, 0);
+                        match life.find_cell(succ_ix) {
+                            Some(succ) => cell.succ = succ,
+                            None => {
+                                let succ = Cell::new_rc(Some(State::Dead), false);
+                                life.aux_cells.insert(succ_ix, succ.clone());
+                                cell.succ = Rc::downgrade(&succ);
+                                succ.borrow_mut().pred = Rc::downgrade(&cell_rc);
+                            },
+                        }
+                    }
+
+                    // 设定对称的细胞
+                    let sym_ix = match life.symmetry {
+                        Symmetry::C1 => vec![],
+                        Symmetry::C2 => vec![(width - 1 - x, height - 1 - y, t)],
+                        Symmetry::C4 => vec![(y, width - 1 - x, t),
+                            (width - 1 - x, height - 1 - y, t),
+                            (height - 1 - y, x, t)],
+                        Symmetry::D2Row => vec![(width - 1 - x, y, t)],
+                        Symmetry::D2Column => vec![(x, height - 1 - y, t)],
+                        Symmetry::D2Diag => vec![(y, x, t)],
+                        Symmetry::D2Antidiag => vec![(height - 1 - y, width - 1 - x, t)],
+                        Symmetry::D4Ortho => vec![(width - 1 - x, y, t),
+                            (x, height - 1 - y, t),
+                            (width - 1 - x, height - 1 - y, t)],
+                        Symmetry::D4Diag => vec![(y, x, t),
+                            (height - 1 - y, width - 1 - x, t),
+                            (width - 1 - x, height - 1 - y, t)],
+                        Symmetry::D8 => vec![(y, width - 1 - x, t),
+                            (height - 1 - y, x, t),
+                            (width - 1 - x, y, t),
+                            (x, height - 1 - y, t),
+                            (y, x, t),
+                            (height - 1 - y, width - 1 - x, t),
+                            (width - 1 - x, height - 1 - y, t)],
+                    };
+                    for ix in sym_ix {
+                        if let Some(sym) = life.find_cell(ix) {
+                            cell.sym.push(sym)
+                        }
+                    }
+
+                    // 设定邻域
+                    for (nx, ny) in neighbors.iter() {
+                        if let Some(neigh) = life.find_cell((x + nx, y + ny, t)) {
+                            cell.nbhd.push(neigh)
+                        }
+                    }
+                }
+            }
         }
 
-        Life {width, height, period, dx, dy, symmetry, cells, dead}
+        // 辅助细胞添加邻域信息就够了
+        for (ix, cell_rc) in &life.aux_cells {
+            let mut cell = cell_rc.borrow_mut();
+            for (nx, ny) in neighbors.iter() {
+                if let Some(neigh) = life.find_cell((ix.0 + nx, ix.1 + ny, ix.2)) {
+                    cell.nbhd.push(neigh)
+                }
+            }
+        }
+        life
     }
 
-    fn inside(&self, ix: Index) -> bool {
-         return ix.0 >= 0 && ix.0 < self.width &&
-                ix.1 >= 0 && ix.1 < self.height &&
-                ix.2 >= 0 && ix.2 < self.period
+    fn find_cell(&self, ix: Index) -> Option<Weak<RefCell<Cell>>> {
+        let (x, y, t) = ix;
+        if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
+            let index = ((x + 1) * (self.height + 2) + y + 1) * self.period + t;
+            Some(Rc::downgrade(&self.cells[index as usize]))
+        } else {
+            self.aux_cells.get(&ix).map(Rc::downgrade)
+        }
     }
 
-    fn index(&self, ix: Index) -> usize {
-        ((ix.0 * self.height + ix.1) * self.period + ix.2) as usize
-    }
-
-    fn to_index(&self, i: usize) -> Index {
-        let i = i as isize;
-        let j = i / self.period;
-        let k = j / self.height;
-        (k % self.width, j % self.height, i % self.period)
+    fn get_state(&self, ix: Index) -> Option<State> {
+        match self.find_cell(ix).and_then(|c| c.upgrade()) {
+            Some(cell0) => cell0.borrow().state,
+            None => Some(State::Dead),
+        }
     }
 }
 
-impl World<Index> for Life {
-    type NbhdState = NbhdState;
+impl World for Life {
+    type NbhdDesc = NbhdDesc;
 
     fn size(&self) -> usize {
         (self.width * self.height * self.period) as usize
     }
 
-    fn get_cell(&self, ix: Index) -> &Cell {
-        if self.inside(ix) {
-            &self.cells[self.index(ix)]
-        } else {
-            &self.dead
-        }
-    }
-
-    fn set_cell(&mut self, ix: Index, cell: Cell) {
-        let index = self.index(ix);
-        if self.inside(ix) {
-            self.cells[index] = cell;
-        }
-    }
-
-    fn neighbors(&self, ix: Index) -> Vec<Index> {
-        vec![(ix.0 - 1, ix.1 - 1, ix.2),
-             (ix.0 - 1, ix.1, ix.2),
-             (ix.0 - 1, ix.1 + 1, ix.2),
-             (ix.0, ix.1 - 1, ix.2),
-             (ix.0, ix.1 + 1, ix.2),
-             (ix.0 + 1, ix.1 - 1, ix.2),
-             (ix.0 + 1, ix.1, ix.2),
-             (ix.0 + 1, ix.1 + 1, ix.2)]
-    }
-
-    fn nbhd_state(&self, ix: Index) -> Self::NbhdState {
+        fn get_desc(cell: &Cell) -> Self::NbhdDesc {
+        let state = cell.state;
         let mut alives = 0;
         let mut unknowns = 0;
-        for n in self.neighbors(ix) {
-            match self.get_cell(n).state {
-                Some(State::Alive) => alives += 1,
-                None => unknowns += 1,
-                _ => (),
+        for neigh in &cell.nbhd {
+            if let Some(neigh) = neigh.upgrade() {
+                match neigh.borrow().state {
+                    Some(State::Alive) => alives += 1,
+                    None => unknowns += 1,
+                    _ => (),
+                }
             }
         }
         let deads = 8 - alives - unknowns;
-        let state = self.get_cell(ix).state;
-        NbhdState {state, alives, deads}
+        NbhdDesc {state, alives, deads}
     }
 
-    fn pred(&self, ix: Index) -> Index {
-        if ix.2 == 0 {
-            (ix.0 - self.dx, ix.1 - self.dy, self.period - 1)
-        } else {
-            (ix.0, ix.1, ix.2 - 1)
-        }
-    }
-
-    fn succ(&self, ix: Index) -> Index {
-        if ix.2 == self.period - 1 {
-            (ix.0 + self.dx, ix.1 + self.dy, 0)
-        } else {
-            (ix.0, ix.1, ix.2 + 1)
-        }
-    }
-
-    fn sym(&self, ix: Index) -> Vec<Index> {
-        match &self.symmetry {
-            Symmetry::C1 => vec![],
-            Symmetry::C2 => vec![(self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
-            Symmetry::C4 => vec![(ix.1, self.width - 1 - ix.0, ix.2),
-                                 (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2),
-                                 (self.height - 1 - ix.1, ix.0, ix.2)],
-            Symmetry::D2Row => vec![(self.width - 1 - ix.0, ix.1, ix.2)],
-            Symmetry::D2Column => vec![(ix.0, self.height - 1 - ix.1, ix.2)],
-            Symmetry::D2Diag => vec![(ix.1, ix.0, ix.2)],
-            Symmetry::D2Antidiag => vec![(self.height - 1 - ix.1, self.width - 1 - ix.0, ix.2)],
-            Symmetry::D4Ortho => vec![(self.width - 1 - ix.0, ix.1, ix.2),
-                                      (ix.0, self.height - 1 - ix.1, ix.2),
-                                      (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
-            Symmetry::D4Diag => vec![(ix.1, ix.0, ix.2),
-                                     (self.height - 1 - ix.1, self.width - 1 - ix.0, ix.2),
-                                     (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
-            Symmetry::D8 => vec![(ix.1, self.width - 1 - ix.0, ix.2),
-                                 (self.height - 1 - ix.1, ix.0, ix.2),
-                                 (self.width - 1 - ix.0, ix.1, ix.2),
-                                 (ix.0, self.height - 1 - ix.1, ix.2),
-                                 (ix.1, ix.0, ix.2),
-                                 (self.height - 1 - ix.1, self.width - 1 - ix.0, ix.2),
-                                 (self.width - 1 - ix.0, self.height - 1 - ix.1, ix.2)],
-        }
-    }
-
-    // 搜索顺序不太好决定……先随便按顺序搜，以后慢慢调整
-    fn get_unknown(&self) -> Option<Index> {
-        self.cells.iter().position(|cell| cell.state.is_none())
-            .map(|i| self.to_index(i))
-    }
-
-    // 仅适用于生命游戏
-    // 这些条件是从 lifesrc 抄来的
-    fn transition(nbhd: &Self::NbhdState) -> Option<State> {
-        let state = nbhd.state;
-        let alives = nbhd.alives;
-        let deads = nbhd.deads;
-        match state {
+    fn transition(desc: &Self::NbhdDesc) -> Option<State> {
+        let alives = desc.alives;
+        let deads = desc.deads;
+        match desc.state {
             Some(State::Dead) => if deads > 5 || alives > 3 {
                 Some(State::Dead)
             } else if alives == 3 && deads == 5 {
@@ -204,11 +225,8 @@ impl World<Index> for Life {
         }
     }
 
-    // 从 lifesrc 抄来的
-    fn implication(nbhd: &Self::NbhdState, succ_state: State) -> Option<State> {
-        let alives = nbhd.alives;
-        let deads = nbhd.deads;
-        match (succ_state, alives, deads) {
+    fn implication(desc: &Self::NbhdDesc, succ_state: State) -> Option<State> {
+        match (succ_state, desc.alives, desc.deads) {
             (State::Dead, 2, 6) => Some(State::Dead),
             (State::Dead, 2, 5) => Some(State::Dead),
             (State::Alive, _, 6) => Some(State::Alive),
@@ -216,11 +234,8 @@ impl World<Index> for Life {
         }
     }
 
-    fn implication_nbhd(nbhd: &Self::NbhdState, succ_state: State) -> Option<State> {
-        let state = nbhd.state;
-        let alives = nbhd.alives;
-        let deads = nbhd.deads;
-        match (state, succ_state, alives, deads) {
+    fn implication_nbhd(desc: &Self::NbhdDesc, succ_state: State) -> Option<State> {
+        match (desc.state, succ_state, desc.alives, desc.deads) {
             (Some(State::Dead), State::Dead, 2, 5) => Some(State::Dead),
             (Some(State::Dead), State::Alive, _, 5) => Some(State::Alive),
             (Some(State::Alive), State::Dead, 2, 4) => Some(State::Alive),
@@ -233,17 +248,20 @@ impl World<Index> for Life {
         }
     }
 
+    fn get_unknown(&self) -> Option<Rc<RefCell<Cell>>> {
+        self.cells.iter().find(|cell| cell.borrow().state.is_none()).map(Rc::clone)
+    }
+
     fn subperiod(&self) -> bool {
-        (1..self.period).all(|t| self.period % t != 0
-            || (0..self.height).any(|y|
-                (0..self.width).any(|x|
-                    self.get_cell((x, y, 0)).state != self.get_cell((x, y, t)).state)))
+        (1..self.period).all(|t|
+            self.period % t != 0 || (0..self.height).any(|y| (0..self.width).any(|x|
+                self.get_state((x, y, 0)) != self.get_state((x, y, t)))))
     }
 
     fn display(&self) {
         for y in 0..self.height {
             for x in 0..self.width {
-                let s = match self.get_cell((x, y, 0)).state {
+                let s = match self.get_state((x, y, 0)) {
                     Some(State::Dead) => ".",
                     Some(State::Alive) => "o",
                     None => "?",
