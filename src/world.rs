@@ -1,5 +1,5 @@
-use std::cell::RefCell;
-use std::rc::{Rc,Weak};
+use std::cell::{Cell, RefCell};
+use std::rc::{Rc, Weak};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum State {
@@ -7,26 +7,29 @@ pub enum State {
     Alive,
 }
 
-pub struct Cell {
-    pub state: Option<State>,
-    pub free: bool,     // 此细胞的状态是否取决于其它细胞的状态
-    pub pred: Weak<RefCell<Cell>>,
-    pub succ: Weak<RefCell<Cell>>,
-    pub nbhd: Vec<Weak<RefCell<Cell>>>,
-    pub sym: Vec<Weak<RefCell<Cell>>>,
+// 改名 LifeCell 以免和 std::cell::Cell 混淆
+pub struct LifeCell {
+    pub state: Cell<Option<State>>,
+    pub free: Cell<bool>,
+    pub pred: RefCell<Weak<LifeCell>>,
+    pub succ: RefCell<Weak<LifeCell>>,
+    pub nbhd: RefCell<Vec<Weak<LifeCell>>>,
+    pub sym: RefCell<Vec<Weak<LifeCell>>>,
 }
 
-impl Cell {
+impl LifeCell {
     pub fn new(state: Option<State>, free: bool) -> Self {
-        let pred = Weak::new();
-        let succ = Weak::new();
-        let nbhd = vec![];
-        let sym = vec![];
-        Cell {state, free, pred, succ, nbhd, sym}
+        let state = Cell::new(state);
+        let free = Cell::new(free);
+        let pred = RefCell::new(Weak::new());
+        let succ = RefCell::new(Weak::new());
+        let nbhd = RefCell::new(vec![]);
+        let sym = RefCell::new(vec![]);
+        LifeCell {state, free, pred, succ, nbhd, sym}
     }
 
-    pub fn new_rc(state: Option<State>, free: bool) -> Rc<RefCell<Cell>> {
-        Rc::new(RefCell::new(Cell::new(state, free)))
+    pub fn new_rc(state: Option<State>, free: bool) -> Rc<LifeCell> {
+        Rc::new(LifeCell::new(state, free))
     }
 }
 
@@ -40,10 +43,10 @@ pub trait World {
     fn size(&self) -> usize;
 
     // 获取一个未知的细胞
-    fn get_unknown(&self) -> Option<Rc<RefCell<Cell>>>;
+    fn get_unknown(&self) -> Option<Rc<LifeCell>>;
 
     // 一个细胞邻域的状态
-    fn get_desc(cell: &Cell) -> Self::NbhdDesc;
+    fn get_desc(cell: &LifeCell) -> Self::NbhdDesc;
 
     // 由一个细胞及其邻域的状态得到其后一代的状态
     fn transition(desc: &Self::NbhdDesc) -> Option<State>;
