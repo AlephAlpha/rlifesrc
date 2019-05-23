@@ -166,7 +166,7 @@ impl Life {
 
     fn get_state(&self, ix: Index) -> Option<State> {
         match self.find_cell(ix).and_then(|c| c.upgrade()) {
-            Some(cell0) => cell0.borrow().state,
+            Some(cell) => cell.borrow().state,
             None => Some(State::Dead),
         }
     }
@@ -179,17 +179,15 @@ impl World for Life {
         (self.width * self.height * self.period) as usize
     }
 
-        fn get_desc(cell: &Cell) -> Self::NbhdDesc {
+    fn get_desc(cell: &Cell) -> Self::NbhdDesc {
         let state = cell.state;
         let mut alives = 0;
         let mut unknowns = 0;
         for neigh in &cell.nbhd {
-            if let Some(neigh) = neigh.upgrade() {
-                match neigh.borrow().state {
-                    Some(State::Alive) => alives += 1,
-                    None => unknowns += 1,
-                    _ => (),
-                }
+            match neigh.upgrade().unwrap().borrow().state {
+                Some(State::Alive) => alives += 1,
+                None => unknowns += 1,
+                _ => (),
             }
         }
         let deads = 8 - alives - unknowns;

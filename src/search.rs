@@ -44,10 +44,7 @@ impl<W: World> Search<W> {
 
     // 确保由一个细胞前一代的邻域能得到这一代的状态；若不能则返回 false
     fn consistify(&mut self, cell: Rc<RefCell<Cell>>) -> Result<(), ()> {
-        let pred = match cell.borrow().pred.upgrade() {
-            Some(pred) => pred,
-            None => return Ok(()),
-        };
+        let pred = cell.borrow().pred.upgrade().unwrap();
         let desc = W::get_desc(&pred.borrow());
         if let Some(state) = W::transition(&desc) {
             self.set_cell(cell.clone(), state)?;
@@ -71,10 +68,7 @@ impl<W: World> Search<W> {
 
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
     fn consistify10(&mut self, cell: Rc<RefCell<Cell>>) -> Result<(), ()> {
-        let succ = match cell.borrow().succ.upgrade() {
-            Some(succ) => succ,
-            None => return Ok(()),
-        };
+        let succ = cell.borrow().succ.upgrade().unwrap();
         self.consistify(cell)?;
         self.consistify(succ.clone())?;
         for neigh in &succ.borrow().nbhd {
