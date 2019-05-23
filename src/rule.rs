@@ -13,9 +13,6 @@ pub struct Life {
 
     // 搜索范围内的所有细胞的列表
     cells: Vec<Cell>,
-
-    // 一个共用的死细胞
-    dead: Cell,
 }
 
 // 横座标，纵座标，时间
@@ -23,7 +20,7 @@ type Index = (isize, isize, isize);
 
 // 邻域的状态，state 表示细胞本身的状态，后两个数加起来不能超过 8
 // 有点想像 lifesrc 一样用一个字节来保持邻域状态，不过试过之后发现并没有更快
-pub struct NbhdState {
+pub struct NbhdDesc {
     state: Option<State>,
     alives: u8,
     deads: u8,
@@ -48,13 +45,12 @@ impl Life {
                symmetry: Symmetry) -> Life {
         let size = width * height * period;
         let mut cells = Vec::with_capacity(size as usize);
-        let dead = Cell {state: Some(State::Dead), free: false};
 
         for _ in 0..size {
             cells.push(Cell {state: None, free: true});
         }
 
-        Life {width, height, period, dx, dy, symmetry, cells, dead}
+        Life {width, height, period, dx, dy, symmetry, cells}
     }
 
     fn inside(&self, ix: Index) -> bool {
@@ -76,24 +72,33 @@ impl Life {
 }
 
 impl World<Index> for Life {
-    type NbhdState = NbhdState;
+    type NbhdDesc = NbhdDesc;
 
     fn size(&self) -> usize {
         (self.width * self.height * self.period) as usize
     }
 
-    fn get_cell(&self, ix: Index) -> &Cell {
+    fn get_state(&self, ix: Index) -> Option<State> {
         if self.inside(ix) {
-            &self.cells[self.index(ix)]
+            self.cells[self.index(ix)].state
         } else {
-            &self.dead
+            Some(State::Dead)
         }
     }
 
-    fn set_cell(&mut self, ix: Index, cell: Cell) {
+    fn get_free(&self, ix: Index) -> bool {
+        if self.inside(ix) {
+            self.cells[self.index(ix)].free
+        } else {
+            false
+        }
+    }
+
+    fn set_cell(&mut self, ix: Index, state: Option<State>, free: bool) {
         let index = self.index(ix);
         if self.inside(ix) {
-            self.cells[index] = cell;
+            self.cells[index].state = state;
+            self.cells[index].free = free;
         }
     }
 
@@ -108,19 +113,19 @@ impl World<Index> for Life {
              (ix.0 + 1, ix.1 + 1, ix.2)]
     }
 
-    fn nbhd_state(&self, ix: Index) -> Self::NbhdState {
+    fn get_desc(&self, ix: Index) -> Self::NbhdDesc {
         let mut alives = 0;
         let mut unknowns = 0;
         for n in self.neighbors(ix) {
-            match self.get_cell(n).state {
+            match self.get_state(n) {
                 Some(State::Alive) => alives += 1,
                 None => unknowns += 1,
                 _ => (),
             }
         }
         let deads = 8 - alives - unknowns;
-        let state = self.get_cell(ix).state;
-        NbhdState {state, alives, deads}
+        let state = self.get_state(ix);
+        NbhdDesc {state, alives, deads}
     }
 
     fn pred(&self, ix: Index) -> Index {
@@ -174,7 +179,7 @@ impl World<Index> for Life {
 
     // 仅适用于生命游戏
     // 这些条件是从 lifesrc 抄来的
-    fn transition(nbhd: &Self::NbhdState) -> Option<State> {
+    fn transition(nbhd: &Self::NbhdDesc) -> Option<State> {
         let state = nbhd.state;
         let alives = nbhd.alives;
         let deads = nbhd.deads;
@@ -205,7 +210,7 @@ impl World<Index> for Life {
     }
 
     // 从 lifesrc 抄来的
-    fn implication(nbhd: &Self::NbhdState, succ_state: State) -> Option<State> {
+    fn implication(nbhd: &Self::NbhdDesc, succ_state: State) -> Option<State> {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
         match (succ_state, alives, deads) {
@@ -216,7 +221,7 @@ impl World<Index> for Life {
         }
     }
 
-    fn implication_nbhd(nbhd: &Self::NbhdState, succ_state: State) -> Option<State> {
+    fn implication_nbhd(nbhd: &Self::NbhdDesc, succ_state: State) -> Option<State> {
         let state = nbhd.state;
         let alives = nbhd.alives;
         let deads = nbhd.deads;
@@ -237,13 +242,13 @@ impl World<Index> for Life {
         (1..self.period).all(|t| self.period % t != 0
             || (0..self.height).any(|y|
                 (0..self.width).any(|x|
-                    self.get_cell((x, y, 0)).state != self.get_cell((x, y, t)).state)))
+                    self.get_state((x, y, 0)) != self.get_state((x, y, t)))))
     }
 
     fn display(&self) {
         for y in 0..self.height {
             for x in 0..self.width {
-                let s = match self.get_cell((x, y, 0)).state {
+                let s = match self.get_state((x, y, 0)) {
                     Some(State::Dead) => ".",
                     Some(State::Alive) => "o",
                     None => "?",
