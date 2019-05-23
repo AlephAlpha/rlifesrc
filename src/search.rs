@@ -135,11 +135,11 @@ impl<W: World> Search<W> {
         if self.time {
             self.stopwatch.restart();
         }
-        if let None = self.world.get_unknown() {
+        if let None = self.world.get_unknown().upgrade() {
             self.backup()?;
         }
         while self.go().is_ok() {
-            if let Some(cell) = self.world.get_unknown() {
+            if let Some(cell) = self.world.get_unknown().upgrade() {
                 cell.state.set(Some(State::Dead));
                 cell.free.set(true);
                 self.set_table.push(Rc::downgrade(&cell));

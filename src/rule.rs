@@ -9,7 +9,6 @@ pub struct Life {
     width: isize,
     height: isize,
     period: isize,
-    symmetry: Symmetry,
 
     // 搜索范围内的所有细胞的列表
     cells: Vec<Rc<LifeCell>>,
@@ -51,9 +50,9 @@ impl Life {
         let mut cells = Vec::with_capacity(size as usize);
         let aux_cells = HashMap::new();
         for _ in 0..size {
-            cells.push(LifeCell::new_rc(Some(State::Dead), false));
+            cells.push(Rc::new(LifeCell::new(Some(State::Dead), false)));
         }
-        let mut life = Life {width, height, period, symmetry, cells, aux_cells};
+        let mut life = Life {width, height, period, cells, aux_cells};
 
         // 给范围内的细胞添加各种等信息
         for x in -1..width + 1 {
@@ -76,7 +75,7 @@ impl Life {
                         if pred_weak.upgrade().is_some() {
                             *cell.pred.borrow_mut() = pred_weak;
                         } else {
-                            let pred = LifeCell::new_rc(Some(State::Dead), false);
+                            let pred = Rc::new(LifeCell::new(Some(State::Dead), false));
                             life.aux_cells.insert(pred_ix, pred.clone());
                             *cell.pred.borrow_mut() = Rc::downgrade(&pred);
                             *pred.succ.borrow_mut() = Rc::downgrade(&cell);
@@ -92,7 +91,7 @@ impl Life {
                         if succ_weak.upgrade().is_some() {
                             *cell.succ.borrow_mut() = succ_weak;
                         } else {
-                            let succ = LifeCell::new_rc(Some(State::Dead), false);
+                            let succ = Rc::new(LifeCell::new(Some(State::Dead), false));
                             life.aux_cells.insert(succ_ix, succ.clone());
                             *cell.succ.borrow_mut() = Rc::downgrade(&succ);
                             *succ.pred.borrow_mut() = Rc::downgrade(&cell);
@@ -100,7 +99,7 @@ impl Life {
                     }
 
                     // 设定对称的细胞
-                    let sym_ix = match life.symmetry {
+                    let sym_ix = match symmetry {
                         Symmetry::C1 => vec![],
                         Symmetry::C2 => vec![(width - 1 - x, height - 1 - y, t)],
                         Symmetry::C4 => vec![(y, width - 1 - x, t),
@@ -129,7 +128,7 @@ impl Life {
                         if sym_weak.upgrade().is_some() {
                             cell.sym.borrow_mut().push(sym_weak);
                         } else {
-                            let sym = LifeCell::new_rc(Some(State::Dead), false);
+                            let sym = Rc::new(LifeCell::new(Some(State::Dead), false));
                             life.aux_cells.insert(ix, sym.clone());
                             cell.sym.borrow_mut().push(Rc::downgrade(&sym));
                         }
@@ -250,8 +249,9 @@ impl World for Life {
         }
     }
 
-    fn get_unknown(&self) -> Option<Rc<LifeCell>> {
-        self.cells.iter().find(|cell| cell.state.get().is_none()).map(Rc::clone)
+    fn get_unknown(&self) -> Weak<LifeCell> {
+        self.cells.iter().find(|cell| cell.state.get().is_none())
+            .map(Rc::downgrade).unwrap_or_default()
     }
 
     fn subperiod(&self) -> bool {

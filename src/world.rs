@@ -1,5 +1,5 @@
 use std::cell::{Cell, RefCell};
-use std::rc::{Rc, Weak};
+use std::rc::Weak;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum State {
@@ -27,10 +27,6 @@ impl LifeCell {
         let sym = RefCell::new(vec![]);
         LifeCell {state, free, pred, succ, nbhd, sym}
     }
-
-    pub fn new_rc(state: Option<State>, free: bool) -> Rc<LifeCell> {
-        Rc::new(LifeCell::new(state, free))
-    }
 }
 
 // 写成一个 Trait，方便以后支持更多的规则
@@ -43,7 +39,7 @@ pub trait World {
     fn size(&self) -> usize;
 
     // 获取一个未知的细胞
-    fn get_unknown(&self) -> Option<Rc<LifeCell>>;
+    fn get_unknown(&self) -> Weak<LifeCell>;
 
     // 一个细胞邻域的状态
     fn get_desc(cell: &LifeCell) -> Self::NbhdDesc;
