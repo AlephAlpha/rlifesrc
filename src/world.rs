@@ -1,51 +1,67 @@
-#[derive(Clone, Copy, PartialEq)]
+use std::cell::{Cell, RefCell};
+use std::rc::Weak;
+
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum State {
     Dead,
     Alive,
 }
 
-pub struct Cell<NbhdDesc> {
-    pub free: bool,     // 细胞本身的状态是否由别的细胞决定
-    pub desc: NbhdDesc, // 邻域的状态和细胞本身的状态都在这里
+// 邻域的状态也应该满足一个 trait
+// 此外这个类型还应该有内部可变性，但在这里体现不出来
+pub trait Desc {
+    fn new(state: Option<State>) -> Self;
+
+    // 从邻域的状态还原出细胞本身的状态
+    fn state(&self) -> Option<State>;
+}
+
+// 改名 LifeCell 以免和 std::cell::Cell 混淆
+pub struct LifeCell<NbhdDesc: Desc> {
+    pub desc: NbhdDesc,
+    pub free: Cell<bool>,
+    pub pred: RefCell<Weak<LifeCell<NbhdDesc>>>,
+    pub succ: RefCell<Weak<LifeCell<NbhdDesc>>>,
+    pub nbhd: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
+    pub sym: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
+}
+
+impl<NbhdDesc: Desc> LifeCell<NbhdDesc> {
+    pub fn new(state: Option<State>, free: bool) -> Self {
+        let desc = NbhdDesc::new(state);
+        let free = Cell::new(free);
+        let pred = RefCell::new(Weak::new());
+        let succ = RefCell::new(Weak::new());
+        let nbhd = RefCell::new(vec![]);
+        let sym = RefCell::new(vec![]);
+        LifeCell {desc, free, pred, succ, nbhd, sym}
+    }
+
+    pub fn state(&self) -> Option<State> {
+        self.desc.state()
+    }
 }
 
 // 写成一个 Trait，方便以后支持更多的规则
 // Index 代表细胞的索引，由细胞的位置和时间决定
-pub trait World<Index: Copy> {
-    // 用一个类型来记录邻域的状态
-    type NbhdDesc;
-
+pub trait World<NbhdDesc: Desc> {
     // 世界的大小，即所有回合的细胞总数
     fn size(&self) -> usize;
 
-    fn get_state(&self, ix: Index) -> Option<State>;
-    fn get_free(&self, ix: Index) -> bool;
-    fn set_cell(&mut self, ix: Index, state: Option<State>, free: bool);
-
-    // 细胞的邻域
-    fn neighbors(&self, ix: Index) -> [Index; 8];
-    // 同一位置前一代的细胞
-    fn pred(&self, ix: Index) -> Index;
-    // 同一位置后一代的细胞
-    fn succ(&self, ix: Index) -> Index;
-
-    // 按照对称性和一个细胞状态一致的所有细胞
-    fn sym(&self, ix: Index) -> Vec<Index>;
-
     // 获取一个未知的细胞
-    fn get_unknown(&self) -> Option<Index>;
+    fn get_unknown(&self) -> Weak<LifeCell<NbhdDesc>>;
 
-    // 从邻域的列表得到邻域的状态
-    fn get_desc(&self, ix: Index) -> Self::NbhdDesc;
+    // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
+    fn set_cell(cell: &LifeCell<NbhdDesc>, state: Option<State>, free: bool);
 
     // 由一个细胞及其邻域的状态得到其后一代的状态
-    fn transition(nbhd: &Self::NbhdDesc) -> Option<State>;
+    fn transition(desc: &NbhdDesc) -> Option<State>;
 
     // 由一个细胞本身、邻域以及其后一代的状态，决定其本身或者邻域中某些未知细胞的状态
     // implication表示本身的状态，implication_nbhd表示邻域中未知细胞的状态
     // 这样写并不好扩展到 non-totalistic 的规则的情形，不过以后再说吧
-    fn implication(nbhd: &Self::NbhdDesc, succ_state: State) -> Option<State>;
-    fn implication_nbhd(nbhd: &Self::NbhdDesc, succ_state: State) -> Option<State>;
+    fn implication(desc: &NbhdDesc, succ_state: State) -> Option<State>;
+    fn implication_nbhd(desc: &NbhdDesc, succ_state: State) -> Option<State>;
 
     // 确保搜振荡子不会搜出静物，或者周期比指定的要小的振荡子
     fn subperiod(&self) -> bool;
