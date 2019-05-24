@@ -12,13 +12,14 @@ pub struct Life {
     symmetry: Symmetry,
 
     // 搜索范围内的所有细胞的列表
-    cells: Vec<Cell>,
+    cells: Vec<Cell<NbhdDesc>>,
 }
 
 // 横座标，纵座标，时间
 type Index = (isize, isize, isize);
 
 // 邻域的状态
+#[derive(Clone, Copy)]
 pub struct NbhdDesc {
     state: Option<State>,
     alives: u8,
@@ -42,31 +43,37 @@ pub enum Symmetry {
 impl Life {
     pub fn new(width: isize, height: isize, period: isize, dx: isize, dy: isize,
                symmetry: Symmetry) -> Life {
-        let size = width * height * period;
-        let mut cells = Vec::with_capacity(size as usize);
-
+        let size = (width + 2) * (height + 2) * period;
+        let cells = Vec::with_capacity(size as usize);
+        let mut life = Life {width, height, period, dx, dy, symmetry, cells};
         for _ in 0..size {
-            cells.push(Cell {state: None, free: true});
+            let state = Some(State::Dead);
+            let desc = NbhdDesc {state, alives: 0, deads: 8};
+            life.cells.push(Cell {free: false, desc});
         }
-
-        Life {width, height, period, dx, dy, symmetry, cells}
+        for x in 0..width {
+            for y in 0..height {
+                for t in 0..period {
+                    life.set_cell((x, y, t), None, true);
+                }
+            }
+        }
+        life
     }
 
     fn inside(&self, ix: Index) -> bool {
-         return ix.0 >= 0 && ix.0 < self.width &&
-                ix.1 >= 0 && ix.1 < self.height &&
-                ix.2 >= 0 && ix.2 < self.period
+        ix.0 >= 0 && ix.0 < self.width && ix.1 >= 0 && ix.1 < self.height
     }
 
     fn index(&self, ix: Index) -> usize {
-        ((ix.0 * self.height + ix.1) * self.period + ix.2) as usize
+        (((ix.0 + 1) * (self.height + 2) + ix.1 + 1) * self.period + ix.2) as usize
     }
 
     fn to_index(&self, i: usize) -> Index {
         let i = i as isize;
         let j = i / self.period;
-        let k = j / self.height;
-        (k % self.width, j % self.height, i % self.period)
+        let k = j / (self.height + 2);
+        (k % (self.width + 2) - 1, j % (self.height + 2) - 1, i % self.period)
     }
 }
 
@@ -79,7 +86,7 @@ impl World<Index> for Life {
 
     fn get_state(&self, ix: Index) -> Option<State> {
         if self.inside(ix) {
-            self.cells[self.index(ix)].state
+            self.cells[self.index(ix)].desc.state
         } else {
             Some(State::Dead)
         }
@@ -95,9 +102,24 @@ impl World<Index> for Life {
 
     fn set_cell(&mut self, ix: Index, state: Option<State>, free: bool) {
         let index = self.index(ix);
-        if self.inside(ix) {
-            self.cells[index].state = state;
-            self.cells[index].free = free;
+        let old_state = self.cells[index].desc.state;
+        if old_state == state {
+            return ();
+        }
+        self.cells[index].desc.state = state;
+        self.cells[index].free = free;
+        for &n in self.neighbors(ix).iter() {
+            let index = self.index(n);
+            match old_state {
+                Some(State::Dead) => self.cells[index].desc.deads -= 1,
+                Some(State::Alive) => self.cells[index].desc.alives -= 1,
+                None => (),
+            };
+            match state {
+                Some(State::Dead) => self.cells[index].desc.deads += 1,
+                Some(State::Alive) => self.cells[index].desc.alives += 1,
+                None => (),
+            };
         }
     }
 
@@ -113,18 +135,11 @@ impl World<Index> for Life {
     }
 
     fn get_desc(&self, ix: Index) -> Self::NbhdDesc {
-        let mut alives = 0;
-        let mut unknowns = 0;
-        for &n in self.neighbors(ix).iter() {
-            match self.get_state(n) {
-                Some(State::Alive) => alives += 1,
-                None => unknowns += 1,
-                _ => (),
-            }
+        if ix.0 >= -1 && ix.0 <= self.width && ix.1 >= -1 && ix.1 <= self.height {
+            self.cells[self.index(ix)].desc
+        } else {
+            NbhdDesc {state: Some(State::Dead), alives: 0, deads: 8}
         }
-        let deads = 8 - alives - unknowns;
-        let state = self.get_state(ix);
-        NbhdDesc {state, alives, deads}
     }
 
     fn pred(&self, ix: Index) -> Index {
@@ -172,7 +187,7 @@ impl World<Index> for Life {
 
     // 搜索顺序不太好决定……先随便按顺序搜，以后慢慢调整
     fn get_unknown(&self) -> Option<Index> {
-        self.cells.iter().position(|cell| cell.state.is_none())
+        self.cells.iter().position(|cell| cell.desc.state.is_none())
             .map(|i| self.to_index(i))
     }
 

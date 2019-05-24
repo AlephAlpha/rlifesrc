@@ -4,9 +4,9 @@ pub enum State {
     Alive,
 }
 
-pub struct Cell {
-    pub state: Option<State>,
-    pub free: bool,
+pub struct Cell<NbhdDesc> {
+    pub free: bool,     // 细胞本身的状态是否由别的细胞决定
+    pub desc: NbhdDesc, // 邻域的状态和细胞本身的状态都在这里
 }
 
 // 写成一个 Trait，方便以后支持更多的规则
