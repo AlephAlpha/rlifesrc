@@ -1,5 +1,5 @@
 use std::rc::{Rc, Weak};
-use std::collections::HashMap;
+use std::cell::Cell;
 use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
@@ -7,72 +7,22 @@ use crate::world::State::{Dead, Alive};
 type Index = (isize, isize, isize);
 
 // 邻域的状态，state 表示细胞本身的状态，后两个数加起来不能超过 8
-#[derive(Clone, Copy)]
 pub struct NbhdDesc {
-    state: Option<State>,
-    alives: u8,
-    deads: u8,
+    state: Cell<Option<State>>,
+    alives: Cell<u8>,
+    deads: Cell<u8>,
 }
 
 impl Desc for NbhdDesc {
     fn new(state: Option<State>) -> Self {
-        NbhdDesc {state, alives: 0, deads: 8}
+        let state = Cell::new(state);
+        let alives = Cell::new(0);
+        let deads = Cell::new(8);
+        NbhdDesc {state, alives, deads}
     }
 
     fn state(&self) -> Option<State> {
-        self.state
-    }
-
-    fn transition(&self) -> Option<State> {
-        let alives = self.alives;
-        let deads = self.deads;
-        match self.state {
-            Some(Dead) => if deads > 5 || alives > 3 {
-                Some(Dead)
-            } else if alives == 3 && deads == 5 {
-                Some(Alive)
-            } else {
-                None
-            },
-            Some(Alive) => if deads > 6 || alives > 3 {
-                Some(Dead)
-            } else if (alives == 2 && (deads == 5 || deads == 6)) ||
-                      (alives == 3 && deads == 5) {
-                Some(Alive)
-            } else {
-                None
-            },
-            None => if deads > 6 || alives > 3 {
-                Some(Dead)
-            } else if alives == 3 && deads == 5 {
-                Some(Alive)
-            } else {
-                None
-            },
-        }
-    }
-
-    fn implication(&self, succ_state: State) -> Option<State> {
-        match (succ_state, self.alives, self.deads) {
-            (Dead, 2, 6) => Some(Dead),
-            (Dead, 2, 5) => Some(Dead),
-            (Alive, _, 6) => Some(Alive),
-            _ => None,
-        }
-    }
-
-    fn implication_nbhd(&self, succ_state: State) -> Option<State> {
-        match (self.state, succ_state, self.alives, self.deads) {
-            (Some(Dead), Dead, 2, 5) => Some(Dead),
-            (Some(Dead), Alive, _, 5) => Some(Alive),
-            (Some(Alive), Dead, 2, 4) => Some(Alive),
-            (Some(Alive), Dead, 1, 5) => Some(Dead),
-            (Some(Alive), Dead, 1, 6) => Some(Dead),
-            (Some(Alive), Alive, _, 6) => Some(Alive),
-            (None, Dead, 2, 5) => Some(Dead),
-            (None, Alive, _, 6) => Some(Alive),
-            _ => None,
-        }
+        self.state.get()
     }
 }
 
@@ -102,9 +52,6 @@ pub struct Life {
 
     // 搜索范围内的所有细胞的列表
     cells: Vec<Rc<LifeCell<NbhdDesc>>>,
-
-    // 搜索范围之外的辅助细胞
-    aux_cells: HashMap<Index, Rc<LifeCell<NbhdDesc>>>,
 }
 
 impl Life {
@@ -114,26 +61,49 @@ impl Life {
         let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
         let col_first = {
             let (width, height) = match symmetry {
-                Symmetry::D2Row => (width / 2, height),
-                Symmetry::D2Column => (width, height / 2),
+                Symmetry::D2Row => ((width + 1) / 2, height),
+                Symmetry::D2Column => (width, (height + 1) / 2),
                 _ => (width, height),
             };
-            width > height
+            if width == height {
+                dx >= dy
+            } else {
+                width > height
+            }
         };
         let mut cells = Vec::with_capacity(size as usize);
-        let aux_cells = HashMap::new();
         for _ in 0..size {
             cells.push(Rc::new(LifeCell::new(Some(Dead), false)));
         }
-        let mut life = Life {width, height, period, col_first, cells, aux_cells};
+        let life = Life {width, height, period, col_first, cells};
 
-        // 给范围内的细胞添加各种信息
+        // 先设定细胞的邻域
+        for x in -1..width + 1 {
+            for y in -1..height + 1 {
+                for t in 0..period {
+                    let cell = life.find_cell((x, y, t)).upgrade().unwrap();
+                    for (nx, ny) in neighbors.iter() {
+                        let neigh_weak = life.find_cell((x + nx, y + ny, t));
+                        if neigh_weak.upgrade().is_some() {
+                            cell.nbhd.borrow_mut().push(neigh_weak);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 再给范围内的细胞添加别的信息
         for x in -1..width + 1 {
             for y in -1..height + 1 {
                 for t in 0..period {
                     let cell = life.find_cell((x, y, t)).upgrade().unwrap();
 
-                    // 设定前一代；若前一代不在范围内则添加相应的辅助细胞
+                    // 用 set_cell 设置细胞状态
+                    if 0 <= x && x < width && 0 <= y && y < height {
+                        Life::set_cell(&cell, None, true);
+                    }
+
+                    // 设定前一代；若前一代不在范围内则把此细胞设为 Dead
                     if t != 0 {
                         *cell.pred.borrow_mut() = life.find_cell((x, y, t - 1));
                     } else {
@@ -142,14 +112,11 @@ impl Life {
                         if pred_weak.upgrade().is_some() {
                             *cell.pred.borrow_mut() = pred_weak;
                         } else {
-                            let pred = Rc::new(LifeCell::new(Some(Dead), false));
-                            life.aux_cells.insert(pred_ix, pred.clone());
-                            *cell.pred.borrow_mut() = Rc::downgrade(&pred);
-                            *pred.succ.borrow_mut() = Rc::downgrade(&cell);
+                            Life::set_cell(&cell, Some(Dead), false);
                         }
                     }
 
-                    // 设定后一代；若后一代不在范围内则添加相应的辅助细胞
+                    // 设定后一代；若后一代不在范围内则把此细胞设为 Dead
                     if t != period - 1 {
                         *cell.succ.borrow_mut() = life.find_cell((x, y, t + 1));
                     } else {
@@ -158,14 +125,11 @@ impl Life {
                         if succ_weak.upgrade().is_some() {
                             *cell.succ.borrow_mut() = succ_weak;
                         } else {
-                            let succ = Rc::new(LifeCell::new(Some(Dead), false));
-                            life.aux_cells.insert(succ_ix, succ.clone());
-                            *cell.succ.borrow_mut() = Rc::downgrade(&succ);
-                            *succ.pred.borrow_mut() = Rc::downgrade(&cell);
+                            Life::set_cell(&cell, Some(Dead), false);
                         }
                     }
 
-                    // 设定对称的细胞
+                    // 设定对称的细胞；若对称的细胞不在范围内则把此细胞设为 Dead
                     let sym_ix = match symmetry {
                         Symmetry::C1 => vec![],
                         Symmetry::C2 => vec![(width - 1 - x, height - 1 - y, t)],
@@ -195,39 +159,9 @@ impl Life {
                         if sym_weak.upgrade().is_some() {
                             cell.sym.borrow_mut().push(sym_weak);
                         } else {
-                            let sym = Rc::new(LifeCell::new(Some(Dead), false));
-                            life.aux_cells.insert(ix, sym.clone());
-                            cell.sym.borrow_mut().push(Rc::downgrade(&sym));
+                            Life::set_cell(&cell, Some(Dead), false);
                         }
                     }
-
-                    // 设定邻域
-                    for (nx, ny) in neighbors.iter() {
-                        let neigh_weak = life.find_cell((x + nx, y + ny, t));
-                        if neigh_weak.upgrade().is_some() {
-                            cell.nbhd.borrow_mut().push(neigh_weak);
-                        }
-                    }
-                }
-            }
-        }
-
-        // 辅助细胞添加邻域信息就够了
-        for (ix, cell) in &life.aux_cells {
-            for (nx, ny) in neighbors.iter() {
-                let neigh_weak = life.find_cell((ix.0 + nx, ix.1 + ny, ix.2));
-                if neigh_weak.upgrade().is_some() {
-                    cell.nbhd.borrow_mut().push(neigh_weak);
-                }
-            }
-        }
-
-        // 最后才用 set_cell 设置细胞状态
-        for x in 0..width {
-            for y in 0..height {
-                for t in 0..period {
-                    let cell = life.find_cell((x, y, t)).upgrade().unwrap();
-                    Life::set_cell(&cell, None, true);
                 }
             }
         }
@@ -245,7 +179,7 @@ impl Life {
             };
             Rc::downgrade(&self.cells[index as usize])
         } else {
-            self.aux_cells.get(&ix).map(Rc::downgrade).unwrap_or_default()
+            Weak::new()
         }
     }
 
@@ -264,33 +198,82 @@ impl World<NbhdDesc> for Life {
 
     fn set_cell(cell: &LifeCell<NbhdDesc>, state: Option<State>, free: bool) {
         let old_state = cell.state();
-        if old_state == state {
-            return ();
-        }
-        let mut desc = cell.desc.get();
-        desc.state = state;
-        cell.desc.set(desc);
+        cell.desc.state.set(state);
         cell.free.set(free);
         for neigh in cell.nbhd.borrow().iter() {
             let neigh = neigh.upgrade().unwrap();
-            let mut desc = neigh.desc.get();
+            let mut deads = neigh.desc.deads.get();
+            let mut alives = neigh.desc.alives.get();
             match old_state {
-                Some(Dead) => desc.deads -= 1,
-                Some(Alive) => desc.alives -= 1,
+                Some(Dead) => deads -= 1,
+                Some(Alive) => alives -= 1,
                 None => (),
             };
             match state {
-                Some(Dead) => desc.deads += 1,
-                Some(Alive) => desc.alives += 1,
+                Some(Dead) => deads += 1,
+                Some(Alive) => alives += 1,
                 None => (),
             };
-            neigh.desc.set(desc);
+            neigh.desc.deads.set(deads);
+            neigh.desc.alives.set(alives);
         }
     }
 
     fn get_unknown(&self) -> Weak<LifeCell<NbhdDesc>> {
         self.cells.iter().find(|cell| cell.state().is_none())
             .map(Rc::downgrade).unwrap_or_default()
+    }
+
+    fn transition(desc: &NbhdDesc) -> Option<State> {
+        let alives = desc.alives.get();
+        let deads = desc.deads.get();
+        match desc.state() {
+            Some(Dead) => if deads > 5 || alives > 3 {
+                Some(Dead)
+            } else if alives == 3 && deads == 5 {
+                Some(Alive)
+            } else {
+                None
+            },
+            Some(Alive) => if deads > 6 || alives > 3 {
+                Some(Dead)
+            } else if (alives == 2 && (deads == 5 || deads == 6)) ||
+                      (alives == 3 && deads == 5) {
+                Some(Alive)
+            } else {
+                None
+            },
+            None => if deads > 6 || alives > 3 {
+                Some(Dead)
+            } else if alives == 3 && deads == 5 {
+                Some(Alive)
+            } else {
+                None
+            },
+        }
+    }
+
+    fn implication(desc: &NbhdDesc, succ_state: State) -> Option<State> {
+        match (succ_state, desc.alives.get(), desc.deads.get()) {
+            (Dead, 2, 6) => Some(Dead),
+            (Dead, 2, 5) => Some(Dead),
+            (Alive, _, 6) => Some(Alive),
+            _ => None,
+        }
+    }
+
+    fn implication_nbhd(desc: &NbhdDesc, succ_state: State) -> Option<State> {
+        match (desc.state(), succ_state, desc.alives.get(), desc.deads.get()) {
+            (Some(Dead), Dead, 2, 5) => Some(Dead),
+            (Some(Dead), Alive, _, 5) => Some(Alive),
+            (Some(Alive), Dead, 2, 4) => Some(Alive),
+            (Some(Alive), Dead, 1, 5) => Some(Dead),
+            (Some(Alive), Dead, 1, 6) => Some(Dead),
+            (Some(Alive), Alive, _, 6) => Some(Alive),
+            (None, Dead, 2, 5) => Some(Dead),
+            (None, Alive, _, 6) => Some(Alive),
+            _ => None,
+        }
     }
 
     fn subperiod(&self) -> bool {

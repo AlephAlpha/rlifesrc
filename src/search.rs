@@ -5,10 +5,10 @@ use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
 // 搜索时除了世界本身的状态，还需要记录别的一些信息。
-pub struct Search<W: World<N>, N: Desc + Copy> {
+pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc> {
     world: W,
     // 存放在搜索过程中设定了值的细胞
-    set_table: Vec<Weak<LifeCell<N>>>,
+    set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
     // 是否计时
@@ -17,40 +17,40 @@ pub struct Search<W: World<N>, N: Desc + Copy> {
     stopwatch: Stopwatch,
 }
 
-impl<W: World<N>, N: Desc + Copy> Search<W, N> {
-    pub fn new(world: W, time: bool) -> Search<W, N> {
+impl<W: World<NbhdDesc>, NbhdDesc: Desc> Search<W, NbhdDesc> {
+    pub fn new(world: W, time: bool) -> Search<W, NbhdDesc> {
         let set_table = Vec::with_capacity(world.size());
         let stopwatch = Stopwatch::new();
         Search {world, set_table, next_set: 0, time, stopwatch}
     }
 
-    // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
-    // 并且把细胞记录到 set_table 中
-    fn put_cell(&mut self, cell: Rc<LifeCell<N>>, state: State) -> Result<(), ()> {
+    // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
+    fn put_cell(&mut self, cell: Rc<LifeCell<NbhdDesc>>, state: State) -> Result<(), ()> {
         if let Some(old_state) = cell.state() {
             if state == old_state {
-                return Ok(());
+                Ok(())
             } else {
-                return Err(());
+                Err(())
             }
-        };
-        W::set_cell(&cell, Some(state), false);
-        self.set_table.push(Rc::downgrade(&cell));
-        Ok(())
+        } else {
+            W::set_cell(&cell, Some(state), false);
+            self.set_table.push(Rc::downgrade(&cell));
+            Ok(())
+        }
     }
 
-    // 确保由一个细胞前一代的邻域能得到这一代的状态；若不能则返回 false
-    fn consistify(&mut self, cell: Rc<LifeCell<N>>) -> Result<(), ()> {
+    // 确保由一个细胞前一代的邻域能得到这一代的状态
+    fn consistify(&mut self, cell: Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
         let pred = cell.pred.borrow().upgrade().unwrap();
         let desc = &pred.desc;
-        if let Some(state) = desc.get().transition() {
+        if let Some(state) = W::transition(desc) {
             self.put_cell(cell.clone(), state)?;
         }
         if let Some(state) = cell.state() {
-            if let Some(state) = desc.get().implication(state) {
+            if let Some(state) = W::implication(desc, state) {
                 self.put_cell(pred.clone(), state)?;
             }
-            if let Some(state) = desc.get().implication_nbhd(state) {
+            if let Some(state) = W::implication_nbhd(desc, state) {
                 for neigh in pred.nbhd.borrow().iter() {
                     if let Some(neigh) = neigh.upgrade() {
                         if neigh.state().is_none() {
@@ -64,7 +64,7 @@ impl<W: World<N>, N: Desc + Copy> Search<W, N> {
     }
 
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
-    fn consistify10(&mut self, cell: Rc<LifeCell<N>>) -> Result<(), ()> {
+    fn consistify10(&mut self, cell: Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
         let succ = cell.succ.borrow().upgrade().unwrap();
         self.consistify(cell)?;
         self.consistify(succ.clone())?;
