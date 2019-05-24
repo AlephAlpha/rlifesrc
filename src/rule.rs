@@ -7,8 +7,8 @@ pub struct Life {
     width: isize,
     height: isize,
     period: isize,
-    dx: isize,  // 每周期平移的列数
-    dy: isize,  // 每周期平移的行数
+    dx: isize,
+    dy: isize,
     symmetry: Symmetry,
 
     // 搜索范围内的所有细胞的列表
@@ -18,8 +18,7 @@ pub struct Life {
 // 横座标，纵座标，时间
 type Index = (isize, isize, isize);
 
-// 邻域的状态，state 表示细胞本身的状态，后两个数加起来不能超过 8
-// 有点想像 lifesrc 一样用一个字节来保持邻域状态，不过试过之后发现并没有更快
+// 邻域的状态
 pub struct NbhdDesc {
     state: Option<State>,
     alives: u8,
@@ -116,7 +115,14 @@ impl World<Index> for Life {
     fn get_desc(&self, ix: Index) -> Self::NbhdDesc {
         let mut alives = 0;
         let mut unknowns = 0;
-        for n in self.neighbors(ix) {
+        for &n in [(ix.0 - 1, ix.1 - 1, ix.2),
+            (ix.0 - 1, ix.1, ix.2),
+            (ix.0 - 1, ix.1 + 1, ix.2),
+            (ix.0, ix.1 - 1, ix.2),
+            (ix.0, ix.1 + 1, ix.2),
+            (ix.0 + 1, ix.1 - 1, ix.2),
+            (ix.0 + 1, ix.1, ix.2),
+            (ix.0 + 1, ix.1 + 1, ix.2)].iter() {
             match self.get_state(n) {
                 Some(State::Alive) => alives += 1,
                 None => unknowns += 1,

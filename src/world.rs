@@ -5,8 +5,8 @@ pub enum State {
 }
 
 pub struct Cell {
-    pub state: Option<State>,   // None 表示未知
-    pub free: bool,             // 此状态是否取决于其它细胞的状态
+    pub state: Option<State>,
+    pub free: bool,
 }
 
 // 写成一个 Trait，方便以后支持更多的规则

@@ -23,8 +23,7 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         Search {world, set_table, next_set: 0, time, stopwatch}
     }
 
-    // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
-    // 并且把细胞记录到 set_table 中
+    // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
     fn put_cell(&mut self, ix: Index, state: State) -> Result<(), ()> {
         if let Some(old_state) = self.world.get_state(ix) {
             if state == old_state {
@@ -39,7 +38,7 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         }
     }
 
-    // 确保由一个细胞前一代的邻域能得到这一代的状态；若不能则返回 false
+    // 确保由一个细胞前一代的邻域能得到这一代的状态
     fn consistify(&mut self, ix: Index) -> Result<(), ()> {
         let pred = self.world.pred(ix);
         let pred_nbhd = self.world.get_desc(pred);
