@@ -26,7 +26,7 @@ impl<W: World<N>, N: Desc + Copy> Search<W, N> {
 
     // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
     // 并且把细胞记录到 set_table 中
-    fn set_cell(&mut self, cell: Rc<LifeCell<N>>, state: State) -> Result<(), ()> {
+    fn put_cell(&mut self, cell: Rc<LifeCell<N>>, state: State) -> Result<(), ()> {
         if let Some(old_state) = cell.state() {
             if state == old_state {
                 return Ok(());
@@ -44,17 +44,17 @@ impl<W: World<N>, N: Desc + Copy> Search<W, N> {
         let pred = cell.pred.borrow().upgrade().unwrap();
         let desc = &pred.desc;
         if let Some(state) = desc.get().transition() {
-            self.set_cell(cell.clone(), state)?;
+            self.put_cell(cell.clone(), state)?;
         }
         if let Some(state) = cell.state() {
             if let Some(state) = desc.get().implication(state) {
-                self.set_cell(pred.clone(), state)?;
+                self.put_cell(pred.clone(), state)?;
             }
             if let Some(state) = desc.get().implication_nbhd(state) {
                 for neigh in pred.nbhd.borrow().iter() {
                     if let Some(neigh) = neigh.upgrade() {
                         if neigh.state().is_none() {
-                            self.set_cell(neigh, state)?;
+                            self.put_cell(neigh, state)?;
                         }
                     }
                 }
@@ -84,7 +84,7 @@ impl<W: World<N>, N: Desc + Copy> Search<W, N> {
             let state = cell.state().unwrap();
             for sym in cell.sym.borrow().iter() {
                 if let Some(sym) = sym.upgrade() {
-                    self.set_cell(sym, state)?;
+                    self.put_cell(sym, state)?;
                 }
             }
             self.consistify10(cell)?;

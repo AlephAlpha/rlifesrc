@@ -96,6 +96,10 @@ pub struct Life {
     height: isize,
     period: isize,
 
+    // 搜索顺序是先行后列还是先列后行
+    // 通过比较行数和列数的大小来自动决定
+    col_first: bool,
+
     // 搜索范围内的所有细胞的列表
     cells: Vec<Rc<LifeCell<NbhdDesc>>>,
 
@@ -108,12 +112,20 @@ impl Life {
         dx: isize, dy: isize, symmetry: Symmetry) -> Self {
         let size = (width + 2) * (height + 2) * period;
         let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
+        let col_first = {
+            let (width, height) = match symmetry {
+                Symmetry::D2Row => (width / 2, height),
+                Symmetry::D2Column => (width, height / 2),
+                _ => (width, height),
+            };
+            width > height
+        };
         let mut cells = Vec::with_capacity(size as usize);
         let aux_cells = HashMap::new();
         for _ in 0..size {
             cells.push(Rc::new(LifeCell::new(Some(Dead), false)));
         }
-        let mut life = Life {width, height, period, cells, aux_cells};
+        let mut life = Life {width, height, period, col_first, cells, aux_cells};
 
         // 给范围内的细胞添加各种信息
         for x in -1..width + 1 {
@@ -226,7 +238,11 @@ impl Life {
     fn find_cell(&self, ix: Index) -> Weak<LifeCell<NbhdDesc>> {
         let (x, y, t) = ix;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
-            let index = ((x + 1) * (self.height + 2) + y + 1) * self.period + t;
+            let index = if self.col_first {
+                ((x + 1) * (self.height + 2) + y + 1) * self.period + t
+            } else {
+                ((y + 1) * (self.width + 2) + x + 1) * self.period + t
+            };
             Rc::downgrade(&self.cells[index as usize])
         } else {
             self.aux_cells.get(&ix).map(Rc::downgrade).unwrap_or_default()
