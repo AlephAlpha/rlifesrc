@@ -1,8 +1,7 @@
 extern crate clap;
 use clap::{Arg, App};
 use crate::search::Search;
-use crate::rule::Life;
-use crate::rule::Symmetry;
+use crate::rule::{Life, Symmetry};
 mod search;
 mod rule;
 mod world;

@@ -1,7 +1,7 @@
 extern crate stopwatch;
 use stopwatch::Stopwatch;
-use crate::world::State;
-use crate::world::World;
+use crate::world::{State, World};
+use crate::world::State::{Dead, Alive};
 
 // 搜索时除了世界本身的状态，还需要记录别的一些信息。
 pub struct Search<W: World<Index>, Index: Copy> {
@@ -94,8 +94,8 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
             self.set_table.pop();
             if self.world.get_free(ix) {
                 let state = match self.world.get_state(ix).unwrap() {
-                    State::Dead => State::Alive,
-                    State::Alive => State::Dead,
+                    Dead => Alive,
+                    Alive => Dead,
                 };
                 self.world.set_cell(ix, Some(state), false);
                 self.set_table.push(ix);
@@ -128,7 +128,7 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         }
         while self.go().is_ok() {
             if let Some(ix) = self.world.get_unknown() {
-                self.world.set_cell(ix, Some(State::Dead), true);
+                self.world.set_cell(ix, Some(Dead), true);
                 self.set_table.push(ix);
             } else if self.world.subperiod() {
                 return Ok(());

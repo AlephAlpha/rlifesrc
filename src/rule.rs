@@ -1,6 +1,5 @@
-use crate::world::State;
-use crate::world::Cell;
-use crate::world::World;
+use crate::world::{State, Cell, World};
+use crate::world::State::{Dead, Alive};
 
 // 先实现生命游戏，以后再修改以满足其它规则
 pub struct Life {
@@ -10,6 +9,10 @@ pub struct Life {
     dx: isize,
     dy: isize,
     symmetry: Symmetry,
+
+    // 搜索顺序是先行后列还是先列后行
+    // 通过比较行数和列数的大小来自动决定
+    col_first: bool,
 
     // 搜索范围内的所有细胞的列表
     cells: Vec<Cell<NbhdDesc>>,
@@ -45,9 +48,17 @@ impl Life {
                symmetry: Symmetry) -> Life {
         let size = (width + 2) * (height + 2) * period;
         let cells = Vec::with_capacity(size as usize);
-        let mut life = Life {width, height, period, dx, dy, symmetry, cells};
+        let col_first = {
+            let (width, height) = match symmetry {
+                Symmetry::D2Row => (width / 2, height),
+                Symmetry::D2Column => (width, height / 2),
+                _ => (width, height),
+            };
+            width > height
+        };
+        let mut life = Life {width, height, period, dx, dy, symmetry, col_first, cells};
         for _ in 0..size {
-            let state = Some(State::Dead);
+            let state = Some(Dead);
             let desc = NbhdDesc {state, alives: 0, deads: 8};
             life.cells.push(Cell {free: false, desc});
         }
@@ -66,13 +77,24 @@ impl Life {
     }
 
     fn index(&self, ix: Index) -> usize {
-        (((ix.0 + 1) * (self.height + 2) + ix.1 + 1) * self.period + ix.2) as usize
+        let index = if self.col_first {
+            ((ix.0 + 1) * (self.height + 2) + ix.1 + 1) * self.period + ix.2
+        } else {
+            ((ix.1 + 1) * (self.width + 2) + ix.0 + 1) * self.period + ix.2
+        };
+        index as usize
     }
 
     fn to_index(&self, i: usize) -> Index {
         let i = i as isize;
-        let j = i / self.period;
-        let k = j / (self.height + 2);
+        let (j, k);
+        if self.col_first {
+            j = i / self.period;
+            k = j / (self.height + 2);
+        } else {
+            k = i / self.period;
+            j = k / (self.width + 2);
+        }
         (k % (self.width + 2) - 1, j % (self.height + 2) - 1, i % self.period)
     }
 }
@@ -88,36 +110,29 @@ impl World<Index> for Life {
         if self.inside(ix) {
             self.cells[self.index(ix)].desc.state
         } else {
-            Some(State::Dead)
+            Some(Dead)
         }
     }
 
     fn get_free(&self, ix: Index) -> bool {
-        if self.inside(ix) {
-            self.cells[self.index(ix)].free
-        } else {
-            false
-        }
+        self.cells[self.index(ix)].free
     }
 
     fn set_cell(&mut self, ix: Index, state: Option<State>, free: bool) {
         let index = self.index(ix);
         let old_state = self.cells[index].desc.state;
-        if old_state == state {
-            return ();
-        }
         self.cells[index].desc.state = state;
         self.cells[index].free = free;
         for &n in self.neighbors(ix).iter() {
             let index = self.index(n);
             match old_state {
-                Some(State::Dead) => self.cells[index].desc.deads -= 1,
-                Some(State::Alive) => self.cells[index].desc.alives -= 1,
+                Some(Dead) => self.cells[index].desc.deads -= 1,
+                Some(Alive) => self.cells[index].desc.alives -= 1,
                 None => (),
             };
             match state {
-                Some(State::Dead) => self.cells[index].desc.deads += 1,
-                Some(State::Alive) => self.cells[index].desc.alives += 1,
+                Some(Dead) => self.cells[index].desc.deads += 1,
+                Some(Alive) => self.cells[index].desc.alives += 1,
                 None => (),
             };
         }
@@ -138,7 +153,7 @@ impl World<Index> for Life {
         if ix.0 >= -1 && ix.0 <= self.width && ix.1 >= -1 && ix.1 <= self.height {
             self.cells[self.index(ix)].desc
         } else {
-            NbhdDesc {state: Some(State::Dead), alives: 0, deads: 8}
+            NbhdDesc {state: Some(Dead), alives: 0, deads: 8}
         }
     }
 
@@ -185,7 +200,6 @@ impl World<Index> for Life {
         }
     }
 
-    // 搜索顺序不太好决定……先随便按顺序搜，以后慢慢调整
     fn get_unknown(&self) -> Option<Index> {
         self.cells.iter().position(|cell| cell.desc.state.is_none())
             .map(|i| self.to_index(i))
@@ -198,25 +212,25 @@ impl World<Index> for Life {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
         match state {
-            Some(State::Dead) => if deads > 5 || alives > 3 {
-                Some(State::Dead)
+            Some(Dead) => if deads > 5 || alives > 3 {
+                Some(Dead)
             } else if alives == 3 && deads == 5 {
-                Some(State::Alive)
+                Some(Alive)
             } else {
                 None
             },
-            Some(State::Alive) => if deads > 6 || alives > 3 {
-                Some(State::Dead)
+            Some(Alive) => if deads > 6 || alives > 3 {
+                Some(Dead)
             } else if (alives == 2 && (deads == 5 || deads == 6)) ||
                       (alives == 3 && deads == 5) {
-                Some(State::Alive)
+                Some(Alive)
             } else {
                 None
             },
             None => if deads > 6 || alives > 3 {
-                Some(State::Dead)
+                Some(Dead)
             } else if alives == 3 && deads == 5 {
-                Some(State::Alive)
+                Some(Alive)
             } else {
                 None
             },
@@ -228,9 +242,9 @@ impl World<Index> for Life {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
         match (succ_state, alives, deads) {
-            (State::Dead, 2, 6) => Some(State::Dead),
-            (State::Dead, 2, 5) => Some(State::Dead),
-            (State::Alive, _, 6) => Some(State::Alive),
+            (Dead, 2, 6) => Some(Dead),
+            (Dead, 2, 5) => Some(Dead),
+            (Alive, _, 6) => Some(Alive),
             _ => None,
         }
     }
@@ -240,14 +254,14 @@ impl World<Index> for Life {
         let alives = nbhd.alives;
         let deads = nbhd.deads;
         match (state, succ_state, alives, deads) {
-            (Some(State::Dead), State::Dead, 2, 5) => Some(State::Dead),
-            (Some(State::Dead), State::Alive, _, 5) => Some(State::Alive),
-            (Some(State::Alive), State::Dead, 2, 4) => Some(State::Alive),
-            (Some(State::Alive), State::Dead, 1, 5) => Some(State::Dead),
-            (Some(State::Alive), State::Dead, 1, 6) => Some(State::Dead),
-            (Some(State::Alive), State::Alive, _, 6) => Some(State::Alive),
-            (None, State::Dead, 2, 5) => Some(State::Dead),
-            (None, State::Alive, _, 6) => Some(State::Alive),
+            (Some(Dead), Dead, 2, 5) => Some(Dead),
+            (Some(Dead), Alive, _, 5) => Some(Alive),
+            (Some(Alive), Dead, 2, 4) => Some(Alive),
+            (Some(Alive), Dead, 1, 5) => Some(Dead),
+            (Some(Alive), Dead, 1, 6) => Some(Dead),
+            (Some(Alive), Alive, _, 6) => Some(Alive),
+            (None, Dead, 2, 5) => Some(Dead),
+            (None, Alive, _, 6) => Some(Alive),
             _ => None,
         }
     }
@@ -263,8 +277,8 @@ impl World<Index> for Life {
         for y in 0..self.height {
             for x in 0..self.width {
                 let s = match self.get_state((x, y, 0)) {
-                    Some(State::Dead) => ".",
-                    Some(State::Alive) => "o",
+                    Some(Dead) => ".",
+                    Some(Alive) => "o",
                     None => "?",
                 };
                 print!("{}", s);
