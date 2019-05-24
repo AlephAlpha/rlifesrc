@@ -101,28 +101,21 @@ impl World<Index> for Life {
         }
     }
 
-    fn neighbors(&self, ix: Index) -> Vec<Index> {
-        vec![(ix.0 - 1, ix.1 - 1, ix.2),
-             (ix.0 - 1, ix.1, ix.2),
-             (ix.0 - 1, ix.1 + 1, ix.2),
-             (ix.0, ix.1 - 1, ix.2),
-             (ix.0, ix.1 + 1, ix.2),
-             (ix.0 + 1, ix.1 - 1, ix.2),
-             (ix.0 + 1, ix.1, ix.2),
-             (ix.0 + 1, ix.1 + 1, ix.2)]
-    }
-
-    fn get_desc(&self, ix: Index) -> Self::NbhdDesc {
-        let mut alives = 0;
-        let mut unknowns = 0;
-        for &n in [(ix.0 - 1, ix.1 - 1, ix.2),
+    fn neighbors(&self, ix: Index) -> [Index; 8] {
+        [(ix.0 - 1, ix.1 - 1, ix.2),
             (ix.0 - 1, ix.1, ix.2),
             (ix.0 - 1, ix.1 + 1, ix.2),
             (ix.0, ix.1 - 1, ix.2),
             (ix.0, ix.1 + 1, ix.2),
             (ix.0 + 1, ix.1 - 1, ix.2),
             (ix.0 + 1, ix.1, ix.2),
-            (ix.0 + 1, ix.1 + 1, ix.2)].iter() {
+            (ix.0 + 1, ix.1 + 1, ix.2)]
+    }
+
+    fn get_desc(&self, ix: Index) -> Self::NbhdDesc {
+        let mut alives = 0;
+        let mut unknowns = 0;
+        for &n in self.neighbors(ix).iter() {
             match self.get_state(n) {
                 Some(State::Alive) => alives += 1,
                 None => unknowns += 1,

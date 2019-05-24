@@ -23,7 +23,7 @@ pub trait World<Index: Copy> {
     fn set_cell(&mut self, ix: Index, state: Option<State>, free: bool);
 
     // 细胞的邻域
-    fn neighbors(&self, ix: Index) -> Vec<Index>;
+    fn neighbors(&self, ix: Index) -> [Index; 8];
     // 同一位置前一代的细胞
     fn pred(&self, ix: Index) -> Index;
     // 同一位置后一代的细胞

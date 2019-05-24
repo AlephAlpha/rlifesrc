@@ -50,7 +50,7 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
                 self.put_cell(pred, state)?;
             }
             if let Some(state) = W::implication_nbhd(&pred_nbhd, state) {
-                for i in self.world.neighbors(pred) {
+                for &i in self.world.neighbors(pred).iter() {
                     if self.world.get_state(i).is_none() {
                         self.put_cell(i, state)?;
                     }
@@ -65,7 +65,7 @@ impl<W: World<Index>, Index: Copy> Search<W, Index> {
         let succ = self.world.succ(ix);
         self.consistify(ix)?;
         self.consistify(succ)?;
-        for i in self.world.neighbors(succ) {
+        for &i in self.world.neighbors(succ).iter() {
             self.consistify(i)?;
         }
         Ok(())
