@@ -1,15 +1,14 @@
 extern crate stopwatch;
 use std::rc::{Rc, Weak};
 use stopwatch::Stopwatch;
-use crate::world::State;
-use crate::world::LifeCell;
-use crate::world::World;
+use crate::world::{State, Desc, LifeCell, World};
+use crate::world::State::{Dead, Alive};
 
 // 搜索时除了世界本身的状态，还需要记录别的一些信息。
-pub struct Search<W: World> {
+pub struct Search<W: World<N>, N: Desc + Copy> {
     world: W,
     // 存放在搜索过程中设定了值的细胞
-    set_table: Vec<Weak<LifeCell>>,
+    set_table: Vec<Weak<LifeCell<N>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
     // 是否计时
@@ -18,8 +17,8 @@ pub struct Search<W: World> {
     stopwatch: Stopwatch,
 }
 
-impl<W: World> Search<W> {
-    pub fn new(world: W, time: bool) -> Search<W> {
+impl<W: World<N>, N: Desc + Copy> Search<W, N> {
+    pub fn new(world: W, time: bool) -> Search<W, N> {
         let set_table = Vec::with_capacity(world.size());
         let stopwatch = Stopwatch::new();
         Search {world, set_table, next_set: 0, time, stopwatch}
@@ -27,35 +26,34 @@ impl<W: World> Search<W> {
 
     // 只有细胞原本的状态为未知时才改变细胞的状态；若原本的状态和新的状态矛盾则返回 false
     // 并且把细胞记录到 set_table 中
-    fn set_cell(&mut self, cell: Rc<LifeCell>, state: State) -> Result<(), ()> {
-        if let Some(old_state) = cell.state.get() {
+    fn set_cell(&mut self, cell: Rc<LifeCell<N>>, state: State) -> Result<(), ()> {
+        if let Some(old_state) = cell.state() {
             if state == old_state {
                 return Ok(());
             } else {
                 return Err(());
             }
         };
-        cell.state.set(Some(state));
-        cell.free.set(false);
+        W::set_cell(&cell, Some(state), false);
         self.set_table.push(Rc::downgrade(&cell));
         Ok(())
     }
 
     // 确保由一个细胞前一代的邻域能得到这一代的状态；若不能则返回 false
-    fn consistify(&mut self, cell: Rc<LifeCell>) -> Result<(), ()> {
+    fn consistify(&mut self, cell: Rc<LifeCell<N>>) -> Result<(), ()> {
         let pred = cell.pred.borrow().upgrade().unwrap();
-        let desc = W::get_desc(&pred);
-        if let Some(state) = W::transition(&desc) {
+        let desc = &pred.desc;
+        if let Some(state) = desc.get().transition() {
             self.set_cell(cell.clone(), state)?;
         }
-        if let Some(state) = cell.state.get() {
-            if let Some(state) = W::implication(&desc, state) {
+        if let Some(state) = cell.state() {
+            if let Some(state) = desc.get().implication(state) {
                 self.set_cell(pred.clone(), state)?;
             }
-            if let Some(state) = W::implication_nbhd(&desc, state) {
+            if let Some(state) = desc.get().implication_nbhd(state) {
                 for neigh in pred.nbhd.borrow().iter() {
                     if let Some(neigh) = neigh.upgrade() {
-                        if neigh.state.get().is_none() {
+                        if neigh.state().is_none() {
                             self.set_cell(neigh, state)?;
                         }
                     }
@@ -66,7 +64,7 @@ impl<W: World> Search<W> {
     }
 
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
-    fn consistify10(&mut self, cell: Rc<LifeCell>) -> Result<(), ()> {
+    fn consistify10(&mut self, cell: Rc<LifeCell<N>>) -> Result<(), ()> {
         let succ = cell.succ.borrow().upgrade().unwrap();
         self.consistify(cell)?;
         self.consistify(succ.clone())?;
@@ -83,7 +81,7 @@ impl<W: World> Search<W> {
     fn proceed(&mut self) -> Result<(), ()> {
         while self.next_set < self.set_table.len() {
             let cell = self.set_table[self.next_set].upgrade().unwrap();
-            let state = cell.state.get().unwrap();
+            let state = cell.state().unwrap();
             for sym in cell.sym.borrow().iter() {
                 if let Some(sym) = sym.upgrade() {
                     self.set_cell(sym, state)?;
@@ -103,17 +101,15 @@ impl<W: World> Search<W> {
             let cell = self.set_table[self.next_set].upgrade().unwrap();
             self.set_table.pop();
             if cell.free.get() {
-                let state = match cell.state.get().unwrap() {
-                    State::Dead => State::Alive,
-                    State::Alive => State::Dead,
+                let state = match cell.state().unwrap() {
+                    Dead => Alive,
+                    Alive => Dead,
                 };
-                cell.state.set(Some(state));
-                cell.free.set(false);
+                W::set_cell(&cell, Some(state), false);
                 self.set_table.push(Rc::downgrade(&cell));
                 return Ok(());
             } else {
-                cell.state.set(None);
-                cell.free.set(true);
+                W::set_cell(&cell, None, true);
             }
         }
         Err(())
@@ -140,8 +136,7 @@ impl<W: World> Search<W> {
         }
         while self.go().is_ok() {
             if let Some(cell) = self.world.get_unknown().upgrade() {
-                cell.state.set(Some(State::Dead));
-                cell.free.set(true);
+                W::set_cell(&cell, Some(Dead), true);
                 self.set_table.push(Rc::downgrade(&cell));
             } else if self.world.subperiod() {
                 return Ok(());
