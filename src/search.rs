@@ -5,7 +5,7 @@ use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
 // 搜索时除了世界本身的状态，还需要记录别的一些信息。
-pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc> {
+pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
     world: W,
     // 存放在搜索过程中设定了值的细胞
     set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
@@ -17,7 +17,7 @@ pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc> {
     stopwatch: Stopwatch,
 }
 
-impl<W: World<NbhdDesc>, NbhdDesc: Desc> Search<W, NbhdDesc> {
+impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
     pub fn new(world: W, time: bool) -> Search<W, NbhdDesc> {
         let set_table = Vec::with_capacity(world.size());
         let stopwatch = Stopwatch::new();
@@ -42,15 +42,15 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc> Search<W, NbhdDesc> {
     // 确保由一个细胞前一代的邻域能得到这一代的状态
     fn consistify(&mut self, cell: Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
         let pred = cell.pred.borrow().upgrade().unwrap();
-        let desc = &pred.desc;
-        if let Some(state) = W::transition(desc) {
+        let desc = pred.desc.get();
+        if let Some(state) = self.world.transition(desc) {
             self.put_cell(cell.clone(), state)?;
         }
         if let Some(state) = cell.state() {
-            if let Some(state) = W::implication(desc, state) {
+            if let Some(state) = self.world.implication(desc, state) {
                 self.put_cell(pred.clone(), state)?;
             }
-            if let Some(state) = W::implication_nbhd(desc, state) {
+            if let Some(state) = self.world.implication_nbhd(desc, state) {
                 for neigh in pred.nbhd.borrow().iter() {
                     if let Some(neigh) = neigh.upgrade() {
                         if neigh.state().is_none() {

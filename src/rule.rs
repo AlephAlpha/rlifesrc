@@ -1,5 +1,4 @@
 use std::rc::{Rc, Weak};
-use std::cell::Cell;
 use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
@@ -7,22 +6,19 @@ use crate::world::State::{Dead, Alive};
 type Index = (isize, isize, isize);
 
 // 邻域的状态，state 表示细胞本身的状态，后两个数加起来不能超过 8
+#[derive(Clone, Copy)]
 pub struct NbhdDesc {
-    state: Cell<Option<State>>,
-    alives: Cell<u8>,
-    deads: Cell<u8>,
+    state: Option<State>,
+    count: u8,  // 用 0x01 代表活细胞，0x10 代表死细胞
 }
 
 impl Desc for NbhdDesc {
     fn new(state: Option<State>) -> Self {
-        let state = Cell::new(state);
-        let alives = Cell::new(0);
-        let deads = Cell::new(8);
-        NbhdDesc {state, alives, deads}
+        NbhdDesc {state, count: 0x80}
     }
 
     fn state(&self) -> Option<State> {
-        self.state.get()
+        self.state
     }
 }
 
@@ -40,6 +36,110 @@ pub enum Symmetry {
     D8,
 }
 
+// 用一个结构体来放三个 table 的元素
+#[derive(Clone, Copy, Default)]
+pub struct Implication {
+    dead: Option<State>,
+    alive: Option<State>,
+    none: Option<State>,
+}
+
+// 规则
+struct Rule {
+    birth: Vec<u8>,
+    survive: Vec<u8>,
+}
+
+impl Rule {
+    fn next_state(&self, state: Option<State>, alives: u8) -> Option<State> {
+        match state {
+            Some(Dead) => {
+                if self.birth.contains(&alives) {
+                    Some(Alive)
+                } else {
+                    Some(Dead)
+                }
+            },
+            Some(Alive) => {
+                if self.survive.contains(&alives) {
+                    Some(Alive)
+                } else {
+                    Some(Dead)
+                }
+            },
+            None => {
+                if self.birth.contains(&alives) && self.survive.contains(&alives) {
+                    Some(Alive)
+                } else if self.birth.contains(&alives) || self.survive.contains(&alives) {
+                    None
+                } else {
+                    Some(Dead)
+                }
+            },
+        }
+    }
+
+    fn to_trans(&self, state: Option<State>, alives: u8, deads: u8) -> Option<State> {
+        let unknowns = 8 - alives - deads;
+        let always_dead = (0..unknowns + 1).all(|i| {
+            self.next_state(state, alives + i) == Some(Dead)
+        });
+        let always_alive = (0..unknowns + 1).all(|i| {
+            self.next_state(state, alives + i) == Some(Alive)
+        });
+        if always_alive {
+            Some(Alive)
+        } else if always_dead {
+            Some(Dead)
+        } else {
+            None
+        }
+    }
+
+    fn to_impl(&self, alives: u8, deads: u8, succ_state: State) -> Option<State> {
+        let possibly_dead = match self.to_trans(Some(Dead), alives, deads) {
+            Some(succ) => succ == succ_state,
+            None => true,
+        };
+        let possibly_alive = match self.to_trans(Some(Alive), alives, deads) {
+            Some(succ) => succ == succ_state,
+            None => true,
+        };
+        if possibly_dead && !possibly_alive {
+            Some(Dead)
+        } else if !possibly_dead && possibly_alive {
+            Some(Alive)
+        } else {
+            None
+        }
+    }
+
+    fn to_impl_nbhd(&self, state: Option<State>, alives: u8, deads: u8, succ_state: State)
+        -> Option<State> {
+        let unknowns = 8 - alives - deads;
+        let must_be_dead = (1..unknowns + 1).all(|i| {
+            match self.next_state(state, alives + i) {
+                Some(succ) => succ != succ_state,
+                None => false,
+            }
+        });
+        let must_be_alive = (0..unknowns).all(|i| {
+            match self.next_state(state, alives + i) {
+                Some(succ) => succ != succ_state,
+                None => false,
+            }
+        });
+        if must_be_dead && !must_be_alive {
+            Some(Dead)
+        } else if !must_be_dead && must_be_alive {
+            Some(Alive)
+        } else {
+            None
+        }
+    }
+
+}
+
 // 先实现生命游戏，以后再修改以满足其它规则
 pub struct Life {
     width: isize,
@@ -48,10 +148,16 @@ pub struct Life {
 
     // 搜索顺序是先行后列还是先列后行
     // 通过比较行数和列数的大小来自动决定
-    col_first: bool,
+    column_first: bool,
 
     // 搜索范围内的所有细胞的列表
     cells: Vec<Rc<LifeCell<NbhdDesc>>>,
+
+    // 保存 transition 和 implication 的结果
+    // 会比直接计算慢一些，但容易扩展到一般的 life-like 的规则
+    trans_table: [Implication; 256],
+    impl_table: [Option<State>; 512],
+    impl_nbhd_table: [Implication; 512],
 }
 
 impl Life {
@@ -59,7 +165,7 @@ impl Life {
         dx: isize, dy: isize, symmetry: Symmetry) -> Self {
         let size = (width + 2) * (height + 2) * period;
         let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
-        let col_first = {
+        let column_first = {
             let (width, height) = match symmetry {
                 Symmetry::D2Row => ((width + 1) / 2, height),
                 Symmetry::D2Column => (width, (height + 1) / 2),
@@ -71,11 +177,39 @@ impl Life {
                 width > height
             }
         };
+        let rule = Rule {birth: vec![3], survive: vec![2, 3]};
+
         let mut cells = Vec::with_capacity(size as usize);
         for _ in 0..size {
             cells.push(Rc::new(LifeCell::new(Some(Dead), false)));
         }
-        let life = Life {width, height, period, col_first, cells};
+
+        // 先计算三个 table
+        let mut trans_table = [Default::default(); 256];
+        let mut impl_table = [Default::default(); 512];
+        let mut impl_nbhd_table = [Default::default(); 512];
+        for alives in 0..9 {
+            for deads in 0..9 - alives {
+                let count = (alives * 0x01 + deads * 0x10) as usize;
+                trans_table[count] = Implication {
+                    dead: rule.to_trans(Some(Dead), alives, deads),
+                    alive: rule.to_trans(Some(Alive), alives, deads),
+                    none: rule.to_trans(None, alives, deads),
+                };
+                for (i, &succ_state) in [Dead, Alive].iter().enumerate() {
+                    let index = count * 2 + i;
+                    impl_table[index] = rule.to_impl(alives, deads, succ_state);
+                    impl_nbhd_table[index] = Implication {
+                        dead: rule.to_impl_nbhd(Some(Dead), alives, deads, succ_state),
+                        alive: rule.to_impl_nbhd(Some(Alive), alives, deads, succ_state),
+                        none: rule.to_impl_nbhd(None, alives, deads, succ_state),
+                    };
+                }
+            }
+        }
+
+        let life = Life {width, height, period, column_first, cells,
+            trans_table, impl_table, impl_nbhd_table};
 
         // 先设定细胞的邻域
         for x in -1..width + 1 {
@@ -172,7 +306,7 @@ impl Life {
     fn find_cell(&self, ix: Index) -> Weak<LifeCell<NbhdDesc>> {
         let (x, y, t) = ix;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
-            let index = if self.col_first {
+            let index = if self.column_first {
                 ((x + 1) * (self.height + 2) + y + 1) * self.period + t
             } else {
                 ((y + 1) * (self.width + 2) + x + 1) * self.period + t
@@ -198,24 +332,24 @@ impl World<NbhdDesc> for Life {
 
     fn set_cell(cell: &LifeCell<NbhdDesc>, state: Option<State>, free: bool) {
         let old_state = cell.state();
-        cell.desc.state.set(state);
+        let mut desc = cell.desc.get();
+        desc.state = state;
+        cell.desc.set(desc);
         cell.free.set(free);
         for neigh in cell.nbhd.borrow().iter() {
             let neigh = neigh.upgrade().unwrap();
-            let mut deads = neigh.desc.deads.get();
-            let mut alives = neigh.desc.alives.get();
+            let mut desc = neigh.desc.get();
             match old_state {
-                Some(Dead) => deads -= 1,
-                Some(Alive) => alives -= 1,
+                Some(Dead) => desc.count -= 0x10,
+                Some(Alive) => desc.count -= 0x01,
                 None => (),
             };
             match state {
-                Some(Dead) => deads += 1,
-                Some(Alive) => alives += 1,
+                Some(Dead) => desc.count += 0x10,
+                Some(Alive) => desc.count += 0x01,
                 None => (),
             };
-            neigh.desc.deads.set(deads);
-            neigh.desc.alives.set(alives);
+            neigh.desc.set(desc);
         }
     }
 
@@ -224,55 +358,33 @@ impl World<NbhdDesc> for Life {
             .map(Rc::downgrade).unwrap_or_default()
     }
 
-    fn transition(desc: &NbhdDesc) -> Option<State> {
-        let alives = desc.alives.get();
-        let deads = desc.deads.get();
-        match desc.state() {
-            Some(Dead) => if deads > 5 || alives > 3 {
-                Some(Dead)
-            } else if alives == 3 && deads == 5 {
-                Some(Alive)
-            } else {
-                None
-            },
-            Some(Alive) => if deads > 6 || alives > 3 {
-                Some(Dead)
-            } else if (alives == 2 && (deads == 5 || deads == 6)) ||
-                      (alives == 3 && deads == 5) {
-                Some(Alive)
-            } else {
-                None
-            },
-            None => if deads > 6 || alives > 3 {
-                Some(Dead)
-            } else if alives == 3 && deads == 5 {
-                Some(Alive)
-            } else {
-                None
-            },
+    fn transition(&self, desc: NbhdDesc) -> Option<State> {
+        let transition = self.trans_table[desc.count as usize];
+        match desc.state {
+            Some(Dead) => transition.dead,
+            Some(Alive) => transition.alive,
+            None => transition.none,
         }
     }
 
-    fn implication(desc: &NbhdDesc, succ_state: State) -> Option<State> {
-        match (succ_state, desc.alives.get(), desc.deads.get()) {
-            (Dead, 2, 6) => Some(Dead),
-            (Dead, 2, 5) => Some(Dead),
-            (Alive, _, 6) => Some(Alive),
-            _ => None,
-        }
+    fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State> {
+        let index = desc.count as usize * 2 + match succ_state {
+            Dead => 0,
+            Alive => 1,
+        };
+        self.impl_table[index]
     }
 
-    fn implication_nbhd(desc: &NbhdDesc, succ_state: State) -> Option<State> {
-        match (desc.state(), succ_state, desc.alives.get(), desc.deads.get()) {
-            (Some(Dead), Dead, 2, 5) => Some(Dead),
-            (Some(Dead), Alive, _, 5) => Some(Alive),
-            (Some(Alive), Dead, 2, 4) => Some(Alive),
-            (Some(Alive), Dead, 1, 5) => Some(Dead),
-            (Some(Alive), Dead, 1, 6) => Some(Dead),
-            (Some(Alive), Alive, _, 6) => Some(Alive),
-            (None, Dead, 2, 5) => Some(Dead),
-            (None, Alive, _, 6) => Some(Alive),
-            _ => None,
+    fn implication_nbhd(&self, desc: NbhdDesc, succ_state: State) -> Option<State> {
+        let index = desc.count as usize * 2 + match succ_state {
+            Dead => 0,
+            Alive => 1,
+        };
+        let implication = self.impl_nbhd_table[index];
+        match desc.state {
+            Some(Dead) => implication.dead,
+            Some(Alive) => implication.alive,
+            None => implication.none,
         }
     }
 
