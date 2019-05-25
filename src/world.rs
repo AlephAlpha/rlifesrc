@@ -1,6 +1,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Weak;
 
+// 细胞状态
 #[derive(Clone, Copy, PartialEq)]
 pub enum State {
     Dead,
@@ -11,17 +12,24 @@ pub enum State {
 pub trait Desc {
     fn new(state: Option<State>) -> Self;
 
-    // 从邻域的状态还原出细胞本身的状态
+    // 从邻域的状态还原出细胞本身的状态，None 表示未知
     fn state(&self) -> Option<State>;
 }
 
 // 改名 LifeCell 以免和 std::cell::Cell 混淆
+// NbhdDesc 包含了细胞邻域的状态和本身的状态
 pub struct LifeCell<NbhdDesc: Desc + Copy> {
+    // 细胞自身和邻域的状态
     pub desc: Cell<NbhdDesc>,
+    // 细胞的状态是否由别的细胞决定
     pub free: Cell<bool>,
+    // 同一位置上一代的细胞
     pub pred: RefCell<Weak<LifeCell<NbhdDesc>>>,
+    // 同一位置下一代的细胞
     pub succ: RefCell<Weak<LifeCell<NbhdDesc>>>,
+    // 细胞的邻域
     pub nbhd: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
+    // 与此细胞对称（因此状态一致）的细胞
     pub sym: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
 }
 
@@ -36,6 +44,7 @@ impl<NbhdDesc: Desc + Copy> LifeCell<NbhdDesc> {
         LifeCell {desc, free, pred, succ, nbhd, sym}
     }
 
+    // 获取一个细胞的状态
     pub fn state(&self) -> Option<State> {
         self.desc.get().state()
     }

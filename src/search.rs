@@ -1,6 +1,4 @@
-extern crate stopwatch;
 use std::rc::{Rc, Weak};
-use stopwatch::Stopwatch;
 use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
@@ -11,17 +9,12 @@ pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
     set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
-    // 是否计时
-    time: bool,
-    // 记录搜索时间
-    stopwatch: Stopwatch,
 }
 
 impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
-    pub fn new(world: W, time: bool) -> Search<W, NbhdDesc> {
+    pub fn new(world: W) -> Search<W, NbhdDesc> {
         let set_table = Vec::with_capacity(world.size());
-        let stopwatch = Stopwatch::new();
-        Search {world, set_table, next_set: 0, time, stopwatch}
+        Search {world, set_table, next_set: 0}
     }
 
     // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
@@ -40,6 +33,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
     }
 
     // 确保由一个细胞前一代的邻域能得到这一代的状态
+    // 由此确定一些未知细胞的值
     fn consistify(&mut self, cell: Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
         let pred = cell.pred.borrow().upgrade().unwrap();
         let desc = pred.desc.get();
@@ -75,7 +69,6 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
         }
         Ok(())
     }
-
 
     // 通过 consistify 和对称性把所有能确定的细胞确定下来
     fn proceed(&mut self) -> Result<(), ()> {
@@ -128,9 +121,6 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
 
     // 最终搜索函数
     pub fn search(&mut self) -> Result<(), ()> {
-        if self.time {
-            self.stopwatch.restart();
-        }
         if let None = self.world.get_unknown().upgrade() {
             self.backup()?;
         }
@@ -147,10 +137,8 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
         Err(())
     }
 
+    // 显示搜索结果
     pub fn display(&self) {
         self.world.display();
-        if self.time {
-            println!("Time taken: {}ms.", self.stopwatch.elapsed_ms());
-        }
     }
 }

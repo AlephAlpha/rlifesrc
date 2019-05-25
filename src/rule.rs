@@ -1,15 +1,20 @@
+// 没想到这个文件写着写着变得这么长，不知道要不要拆成几个文件
+
+use std::str::FromStr;
 use std::rc::{Rc, Weak};
 use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
 // 横座标，纵座标，时间
-type Index = (isize, isize, isize);
+type Coord = (isize, isize, isize);
 
-// 邻域的状态，state 表示细胞本身的状态，后两个数加起来不能超过 8
+// 邻域的状态
 #[derive(Clone, Copy)]
 pub struct NbhdDesc {
+    // 细胞本身的状态
     state: Option<State>,
-    count: u8,  // 用 0x01 代表活细胞，0x10 代表死细胞
+    // 邻域的细胞统计，0x01 代表活，0x10 代表死
+    count: u8,
 }
 
 impl Desc for NbhdDesc {
@@ -36,7 +41,27 @@ pub enum Symmetry {
     D8,
 }
 
-// 用一个结构体来放三个 table 的元素
+impl FromStr for Symmetry {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "C1" => Ok(Symmetry::C1),
+            "C2" => Ok(Symmetry::C2),
+            "C4" => Ok(Symmetry::C4),
+            "D2|" => Ok(Symmetry::D2Row),
+            "D2-" => Ok(Symmetry::D2Column),
+            "D2\\" => Ok(Symmetry::D2Diag),
+            "D2/" => Ok(Symmetry::D2Antidiag),
+            "D4+" => Ok(Symmetry::D4Ortho),
+            "D4X" => Ok(Symmetry::D4Diag),
+            "D8" => Ok(Symmetry::D8),
+            _ => Err(String::from("Invalid symmetry")),
+        }
+    }
+}
+
+// 用一个结构体来放 transition 和 implication 的结果
 #[derive(Clone, Copy, Default)]
 pub struct Implication {
     dead: Option<State>,
@@ -44,13 +69,55 @@ pub struct Implication {
     none: Option<State>,
 }
 
-// 规则
-struct Rule {
+// 规则，比如说 B3/S23 表示为 Rule {birth: vec![3], survive: vec![2, 3]}
+// 不支持 B0 的规则
+pub struct Rule {
     birth: Vec<u8>,
     survive: Vec<u8>,
 }
 
+impl FromStr for Rule {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        match chars.next() {
+            Some('b') => (),
+            Some('B') => (),
+            _ => return Err(String::from("Invalid rule")),
+        }
+        let birth: Vec<u8> = chars.clone().take_while(|c| c.is_ascii_digit())
+            .map(|c| c.to_digit(10).unwrap() as u8).collect();
+        if birth.contains(&9) {
+            return Err(String::from("Invalid rule"));
+        }
+        if birth.contains(&0) {
+            return Err(String::from("Rules with B0 are not supported"));
+        }
+        let mut chars = chars.skip_while(|c| c.is_ascii_digit());
+        match chars.next() {
+            Some('s') => (),
+            Some('S') => (),
+            Some('/') => {
+                match chars.next() {
+                    Some('s') => (),
+                    Some('S') => (),
+                    _ => return Err(String::from("Invalid rule")),
+                }
+            },
+            _ => return Err(String::from("Invalid rule")),
+        }
+        let survive: Vec<u8> = chars.clone().take_while(|c| c.is_ascii_digit())
+            .map(|c| c.to_digit(10).unwrap() as u8).collect();
+        if survive.contains(&9) {
+            return Err(String::from("Invalid rule"));
+        }
+        Ok(Rule {birth, survive})
+    }
+}
+
 impl Rule {
+    // 在邻域没有未知细胞的情形下推导下一代的状态
     fn next_state(&self, state: Option<State>, alives: u8) -> Option<State> {
         match state {
             Some(Dead) => {
@@ -79,6 +146,7 @@ impl Rule {
         }
     }
 
+    // 计算 transition 的结果
     fn to_trans(&self, state: Option<State>, alives: u8, deads: u8) -> Option<State> {
         let unknowns = 8 - alives - deads;
         let always_dead = (0..unknowns + 1).all(|i| {
@@ -96,6 +164,7 @@ impl Rule {
         }
     }
 
+    // 计算 implication 的结果
     fn to_impl(&self, alives: u8, deads: u8, succ_state: State) -> Option<State> {
         let possibly_dead = match self.to_trans(Some(Dead), alives, deads) {
             Some(succ) => succ == succ_state,
@@ -114,6 +183,7 @@ impl Rule {
         }
     }
 
+    // 计算 implication_nbhd 的结果
     fn to_impl_nbhd(&self, state: Option<State>, alives: u8, deads: u8, succ_state: State)
         -> Option<State> {
         let unknowns = 8 - alives - deads;
@@ -138,9 +208,36 @@ impl Rule {
         }
     }
 
+    // 计算这个规则的 transition 和 implication，保存在三个数组中
+    fn implication_tables(&self)
+        -> ([Implication; 256], [Option<State>; 512], [Implication; 512]) {
+        let mut trans_table = [Default::default(); 256];
+        let mut impl_table = [Default::default(); 512];
+        let mut impl_nbhd_table = [Default::default(); 512];
+        for alives in 0..9 {
+            for deads in 0..9 - alives {
+                let count = (alives * 0x01 + deads * 0x10) as usize;
+                trans_table[count] = Implication {
+                    dead: self.to_trans(Some(Dead), alives, deads),
+                    alive: self.to_trans(Some(Alive), alives, deads),
+                    none: self.to_trans(None, alives, deads),
+                };
+                for (i, &succ_state) in [Dead, Alive].iter().enumerate() {
+                    let index = count * 2 + i;
+                    impl_table[index] = self.to_impl(alives, deads, succ_state);
+                    impl_nbhd_table[index] = Implication {
+                        dead: self.to_impl_nbhd(Some(Dead), alives, deads, succ_state),
+                        alive: self.to_impl_nbhd(Some(Alive), alives, deads, succ_state),
+                        none: self.to_impl_nbhd(None, alives, deads, succ_state),
+                    };
+                }
+            }
+        }
+        (trans_table, impl_table, impl_nbhd_table)
+    }
 }
 
-// 先实现生命游戏，以后再修改以满足其它规则
+// 生命游戏
 pub struct Life {
     width: isize,
     height: isize,
@@ -154,7 +251,7 @@ pub struct Life {
     cells: Vec<Rc<LifeCell<NbhdDesc>>>,
 
     // 保存 transition 和 implication 的结果
-    // 会比直接计算慢一些，但容易扩展到一般的 life-like 的规则
+    // 对生命游戏来说会比直接计算慢一些，但容易扩展到一般的 life-like 的规则
     trans_table: [Implication; 256],
     impl_table: [Option<State>; 512],
     impl_nbhd_table: [Implication; 512],
@@ -162,7 +259,7 @@ pub struct Life {
 
 impl Life {
     pub fn new(width: isize, height: isize, period: isize,
-        dx: isize, dy: isize, symmetry: Symmetry) -> Self {
+        dx: isize, dy: isize, symmetry: Symmetry, rule: Rule) -> Self {
         let size = (width + 2) * (height + 2) * period;
         let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
         let column_first = {
@@ -177,36 +274,13 @@ impl Life {
                 width > height
             }
         };
-        let rule = Rule {birth: vec![3], survive: vec![2, 3]};
 
         let mut cells = Vec::with_capacity(size as usize);
         for _ in 0..size {
             cells.push(Rc::new(LifeCell::new(Some(Dead), false)));
         }
 
-        // 先计算三个 table
-        let mut trans_table = [Default::default(); 256];
-        let mut impl_table = [Default::default(); 512];
-        let mut impl_nbhd_table = [Default::default(); 512];
-        for alives in 0..9 {
-            for deads in 0..9 - alives {
-                let count = (alives * 0x01 + deads * 0x10) as usize;
-                trans_table[count] = Implication {
-                    dead: rule.to_trans(Some(Dead), alives, deads),
-                    alive: rule.to_trans(Some(Alive), alives, deads),
-                    none: rule.to_trans(None, alives, deads),
-                };
-                for (i, &succ_state) in [Dead, Alive].iter().enumerate() {
-                    let index = count * 2 + i;
-                    impl_table[index] = rule.to_impl(alives, deads, succ_state);
-                    impl_nbhd_table[index] = Implication {
-                        dead: rule.to_impl_nbhd(Some(Dead), alives, deads, succ_state),
-                        alive: rule.to_impl_nbhd(Some(Alive), alives, deads, succ_state),
-                        none: rule.to_impl_nbhd(None, alives, deads, succ_state),
-                    };
-                }
-            }
-        }
+        let (trans_table, impl_table, impl_nbhd_table) = rule.implication_tables();
 
         let life = Life {width, height, period, column_first, cells,
             trans_table, impl_table, impl_nbhd_table};
@@ -241,8 +315,8 @@ impl Life {
                     if t != 0 {
                         *cell.pred.borrow_mut() = life.find_cell((x, y, t - 1));
                     } else {
-                        let pred_ix = (x - dx, y - dy, period - 1);
-                        let pred_weak = life.find_cell(pred_ix);
+                        let pred_coord = (x - dx, y - dy, period - 1);
+                        let pred_weak = life.find_cell(pred_coord);
                         if pred_weak.upgrade().is_some() {
                             *cell.pred.borrow_mut() = pred_weak;
                         } else {
@@ -254,8 +328,8 @@ impl Life {
                     if t != period - 1 {
                         *cell.succ.borrow_mut() = life.find_cell((x, y, t + 1));
                     } else {
-                        let succ_ix = (x + dx, y + dy, 0);
-                        let succ_weak = life.find_cell(succ_ix);
+                        let succ_coord = (x + dx, y + dy, 0);
+                        let succ_weak = life.find_cell(succ_coord);
                         if succ_weak.upgrade().is_some() {
                             *cell.succ.borrow_mut() = succ_weak;
                         } else {
@@ -264,7 +338,7 @@ impl Life {
                     }
 
                     // 设定对称的细胞；若对称的细胞不在范围内则把此细胞设为 Dead
-                    let sym_ix = match symmetry {
+                    let sym_coord = match symmetry {
                         Symmetry::C1 => vec![],
                         Symmetry::C2 => vec![(width - 1 - x, height - 1 - y, t)],
                         Symmetry::C4 => vec![(y, width - 1 - x, t),
@@ -288,8 +362,8 @@ impl Life {
                             (height - 1 - y, width - 1 - x, t),
                             (width - 1 - x, height - 1 - y, t)],
                     };
-                    for ix in sym_ix {
-                        let sym_weak = life.find_cell(ix);
+                    for coord in sym_coord {
+                        let sym_weak = life.find_cell(coord);
                         if sym_weak.upgrade().is_some() {
                             cell.sym.borrow_mut().push(sym_weak);
                         } else {
@@ -303,8 +377,9 @@ impl Life {
         life
     }
 
-    fn find_cell(&self, ix: Index) -> Weak<LifeCell<NbhdDesc>> {
-        let (x, y, t) = ix;
+    // 通过坐标查找细胞
+    fn find_cell(&self, coord: Coord) -> Weak<LifeCell<NbhdDesc>> {
+        let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = if self.column_first {
                 ((x + 1) * (self.height + 2) + y + 1) * self.period + t
@@ -317,8 +392,9 @@ impl Life {
         }
     }
 
-    fn get_state(&self, ix: Index) -> Option<State> {
-        match self.find_cell(ix).upgrade() {
+    // 通过坐标给出细胞的状态；范围外的细胞状态默认为死
+    fn get_state(&self, coord: Coord) -> Option<State> {
+        match self.find_cell(coord).upgrade() {
             Some(cell) => cell.state(),
             None => Some(Dead),
         }
@@ -389,9 +465,16 @@ impl World<NbhdDesc> for Life {
     }
 
     fn subperiod(&self) -> bool {
-        (1..self.period).all(|t|
-            self.period % t != 0 || (0..self.height).any(|y| (0..self.width).any(|x|
-                self.get_state((x, y, 0)) != self.get_state((x, y, t)))))
+        if self.period == 1 {
+            (0..self.height).any(|y|
+                (0..self.width).any(|x|
+                    self.get_state((x, y, 0)) != Some(Dead)))
+        } else {
+            (1..self.period).all(|t|
+                self.period % t != 0 || (0..self.height).any(|y|
+                    (0..self.width).any(|x|
+                        self.get_state((x, y, 0)) != self.get_state((x, y, t)))))
+        }
     }
 
     fn display(&self) {
