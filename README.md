@@ -7,29 +7,26 @@
 ## 用法
 
 ```text
-USAGE:
+用法:
     cargo run --release [FLAGS] [OPTIONS] <X> <Y> [ARGS]
+    不加 `--release` 的话会特别慢。
 
 FLAGS:
-    -a, --all        Searches for all possible patterns
-        --random     Searches for a random pattern
-    -t, --time       Shows how long the search takes
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+    -a, --all        搜索所有可能的图样
+        --random     搜索一个随机的图样（不能和 -all 同时使用）
+    -t, --time       显示搜索所用的时间
 
 OPTIONS:
-    -r, --rule <RULE>            Rule of the cellular automaton [default: B3/S23]
-    -s, --symmetry <SYMMETRY>    Symmetry of the pattern [default: C1]  [possible values: C1, C2, C4, D2|, D2-, D2\,
-                                 D2/, D4+, D4X, D8]
+    -r, --rule <RULE>            元胞自动机的规则（仅支持 Life-like） [默认: B3/S23]
+    -s, --symmetry <SYMMETRY>    对称性 [默认: C1]  [可能的值: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
+                                 其中一些对称性可能需要加引号。这些对称性的用法和 Logic Life Search 一样。
 
 ARGS:
-    <X>     Number of columns
-    <Y>     Number of rows
-    <P>     Number of generations [default: 1]
-    <DX>    Column translation [default: 0]
-    <DY>    Row translation [default: 0]
+    <X>     图样的宽度
+    <Y>     图样的高度
+    <P>     图样的周期 [默认: 1]
+    <DX>    水平方向的平移 [默认: 0]
+    <DY>    竖直方向的平移 [默认: 0]
 ```
 
 比如说，用 `cargo run --release 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。
-
-不加 `--release` 的话会特别慢。
