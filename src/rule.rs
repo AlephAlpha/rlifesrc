@@ -482,7 +482,7 @@ impl World<NbhdDesc> for Life {
             for x in 0..self.width {
                 let s = match self.get_state((x, y, 0)) {
                     Some(Dead) => ".",
-                    Some(Alive) => "o",
+                    Some(Alive) => "O",
                     None => "?",
                 };
                 print!("{}", s);

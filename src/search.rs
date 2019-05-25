@@ -1,3 +1,4 @@
+extern crate rand;
 use std::rc::{Rc, Weak};
 use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
@@ -5,6 +6,8 @@ use crate::world::State::{Dead, Alive};
 // 搜索时除了世界本身的状态，还需要记录别的一些信息。
 pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
     world: W,
+    // 搜索时给未知细胞选取的值是否随机
+    random: bool,
     // 存放在搜索过程中设定了值的细胞
     set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
@@ -12,9 +15,9 @@ pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
 }
 
 impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
-    pub fn new(world: W) -> Search<W, NbhdDesc> {
+    pub fn new(world: W, random: bool) -> Search<W, NbhdDesc> {
         let set_table = Vec::with_capacity(world.size());
-        Search {world, set_table, next_set: 0}
+        Search {world, random, set_table, next_set: 0}
     }
 
     // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
@@ -126,7 +129,12 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
         }
         while self.go().is_ok() {
             if let Some(cell) = self.world.get_unknown().upgrade() {
-                W::set_cell(&cell, Some(Dead), true);
+                let state = if self.random {
+                    rand::random()
+                } else {
+                    Dead
+                };
+                W::set_cell(&cell, Some(state), true);
                 self.set_table.push(Rc::downgrade(&cell));
             } else if self.world.subperiod() {
                 return Ok(());

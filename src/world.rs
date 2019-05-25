@@ -1,3 +1,6 @@
+extern crate rand;
+use rand::distributions::{Distribution, Standard};
+use rand::Rng;
 use std::cell::{Cell, RefCell};
 use std::rc::Weak;
 
@@ -6,6 +9,15 @@ use std::rc::Weak;
 pub enum State {
     Dead,
     Alive,
+}
+
+impl Distribution<State> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> State {
+        match rng.gen_range(0, 2) {
+            0 => State::Dead,
+            _ => State::Alive,
+        }
+    }
 }
 
 // 邻域的状态也应该满足一个 trait
