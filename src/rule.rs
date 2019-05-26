@@ -108,7 +108,8 @@ impl FromStr for Rule {
         }
         let survive: Vec<u8> = chars.clone().take_while(|c| c.is_ascii_digit())
             .map(|c| c.to_digit(10).unwrap() as u8).collect();
-        if birth.contains(&9) || survive.contains(&9) {
+        let mut chars = chars.skip_while(|c| c.is_ascii_digit());
+        if chars.next().is_some() || birth.contains(&9) || survive.contains(&9) {
             Err(String::from("Invalid rule"))
         } else {
             Ok(Rule {birth, survive})
