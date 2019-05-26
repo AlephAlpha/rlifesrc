@@ -53,7 +53,7 @@ fn main() {
             .conflicts_with("ALL")
             .long("random"))
         .arg(Arg::with_name("TIME")
-            .help("Shows how long the search takes")
+            .help("Shows the time used in milliseconds")
             .short("t")
             .long("time"))
         .get_matches();
@@ -80,11 +80,11 @@ fn main() {
         random);
     if all {
         while search.search().is_ok() {
-            search.display();
+            search.world.display();
             println!("");
         }
     } else if search.search().is_ok() {
-        search.display();
+        search.world.display();
     }
     if time {
         println!("Time taken: {}ms.", stopwatch.elapsed_ms());

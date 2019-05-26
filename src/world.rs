@@ -85,7 +85,4 @@ pub trait World<NbhdDesc: Desc + Copy> {
 
     // 确保搜振荡子不会搜出静物，或者周期比指定的要小的振荡子
     fn subperiod(&self) -> bool;
-
-    // 输出图样
-    fn display(&self);
 }

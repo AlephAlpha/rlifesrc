@@ -5,7 +5,7 @@ use crate::world::State::{Dead, Alive};
 
 // 搜索时除了世界本身的状态，还需要记录别的一些信息。
 pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
-    world: W,
+    pub world: W,
     // 搜索时给未知细胞选取的值是否随机
     random: bool,
     // 存放在搜索过程中设定了值的细胞
@@ -143,10 +143,5 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
             }
         }
         Err(())
-    }
-
-    // 显示搜索结果
-    pub fn display(&self) {
-        self.world.display();
     }
 }
