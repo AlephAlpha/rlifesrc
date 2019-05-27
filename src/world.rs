@@ -1,4 +1,3 @@
-extern crate rand;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::cell::{Cell, RefCell};

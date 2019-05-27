@@ -1,8 +1,12 @@
-extern crate clap;
-extern crate stopwatch;
 use clap::{Arg, App};
-use stopwatch::Stopwatch;
-use crate::search::Search;
+use termion::{async_stdin, cursor};
+use termion::cursor::Goto;
+use termion::event::Key;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
+use termion::screen::AlternateScreen;
+use std::io::{Write, stdout};
+use crate::search::{Search, Status};
 use crate::rule::Life;
 mod search;
 mod rule;
@@ -44,18 +48,10 @@ fn main() {
             .long("rule")
             .default_value("B3/S23")
             .takes_value(true))
-        .arg(Arg::with_name("ALL")
-            .help("Searches for all possible patterns")
-            .short("a")
-            .long("all"))
         .arg(Arg::with_name("RANDOM")
             .help("Searches for a random pattern")
             .conflicts_with("ALL")
             .long("random"))
-        .arg(Arg::with_name("TIME")
-            .help("Shows the time used in milliseconds")
-            .short("t")
-            .long("time"))
         .get_matches();
 
     let width = matches.value_of("X").unwrap().parse().unwrap();
@@ -65,28 +61,43 @@ fn main() {
     let dy = matches.value_of("DY").unwrap().parse().unwrap();
 
     let symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
-    let all = matches.is_present("ALL");
     let random = matches.is_present("RANDOM");
 
     let rule = matches.value_of("RULE").unwrap().parse().unwrap();
 
-    let time = matches.is_present("TIME");
-    let mut stopwatch = Stopwatch::new();
-    if time {
-        stopwatch.start();
-    }
+    let life = Life::new(width, height, period, dx, dy, symmetry, rule);
+    let mut search = Search::new(life, random, Some(10000));
 
-    let mut search = Search::new(Life::new(width, height, period, dx, dy, symmetry, rule),
-        random);
-    if all {
-        while search.search().is_ok() {
-            search.world.display();
-            println!("");
+    let mut async_stdin = async_stdin().keys();
+    let mut screen = AlternateScreen::from(stdout()).into_raw_mode().unwrap();
+    let mut pause = true;
+    write!(screen, "{}{}{}", Goto(1, 1), search.world, cursor::Hide).unwrap();
+    screen.flush().unwrap();
+    loop {
+        match async_stdin.next() {
+            Some(Ok(Key::Char('q'))) => break,
+            Some(Ok(Key::Ctrl('c'))) => break,
+            Some(Ok(Key::Char('p'))) => pause = true,
+            Some(Ok(_)) => pause = false,
+            _ => if !pause {
+                match search.search() {
+                    Status::Found => {
+                        write!(screen, "{}{}", Goto(1, 1), search.world).unwrap();
+                        screen.flush().unwrap();
+                        pause = true;
+                    },
+                    Status::None => {
+                        write!(screen, "{}{}", Goto(1, 1), search.world).unwrap();
+                        screen.flush().unwrap();
+                        pause = true;
+                    },
+                    Status::Searching => {
+                        write!(screen, "{}{}", Goto(1, 1), search.world).unwrap();
+                        screen.flush().unwrap();
+                    },
+                }
+            },
         }
-    } else if search.search().is_ok() {
-        search.world.display();
     }
-    if time {
-        println!("Time taken: {:?}.", stopwatch.elapsed());
-    }
+    write!(screen, "{}", cursor::Show).unwrap();
 }

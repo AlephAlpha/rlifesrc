@@ -1,7 +1,8 @@
 // 没想到这个文件写着写着变得这么长，不知道要不要拆成几个文件
 
-use std::str::FromStr;
+use std::fmt;
 use std::rc::{Rc, Weak};
+use std::str::FromStr;
 use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
@@ -411,9 +412,10 @@ impl Life {
             Weak::new()
         }
     }
+}
 
-    // 输出图样
-    pub fn display(&self) {
+impl fmt::Display for Life {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for y in 0..self.height {
             for x in 0..self.width {
                 let s = match self.find_cell((x, y, 0)).upgrade().unwrap().state() {
@@ -421,10 +423,11 @@ impl Life {
                     Some(Alive) => "O",
                     None => "?",
                 };
-                print!("{}", s);
+                write!(f, "{}", s)?;
             }
-            println!("");
+            write!(f, "\n\r")?;
         }
+        Ok(())
     }
 }
 

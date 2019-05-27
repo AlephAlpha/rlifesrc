@@ -12,9 +12,7 @@ USAGE:
     不加 --release 的话会特别慢。
 
 FLAGS:
-    -a, --all        搜索所有可能的图样
-        --random     搜索一个随机的图样（不能和 -all 同时使用）
-    -t, --time       显示所用的时间
+        --random     搜索一个随机的图样
     -h, --help       显示此帮助信息的英文版
 
 OPTIONS:
@@ -29,5 +27,7 @@ ARGS:
     <DX>    水平方向的平移 [默认: 0]
     <DY>    竖直方向的平移 [默认: 0]
 ```
+
+输入命令后会进入一个 TUI，按任意键开始/继续搜索，按 q 键退出，按 p 键暂停。
 
 比如说，用 `cargo run --release 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。

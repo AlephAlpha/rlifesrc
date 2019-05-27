@@ -7,4 +7,4 @@ edition = "2018"
 [dependencies]
 clap = "2.33.0"
 rand = "0.6.5"
-stopwatch = "0.0.7"
+termion = "1.5.2"
