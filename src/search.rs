@@ -3,12 +3,12 @@ use std::rc::{Rc, Weak};
 use crate::world::{State, Desc, LifeCell, World};
 use crate::world::State::{Dead, Alive};
 
-// 搜索时除了世界本身的状态，还需要记录别的一些信息。
+// 搜索时除了世界本身，还需要记录别的一些信息。
 pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
     pub world: W,
-    // 搜索时给未知细胞选取的值是否随机
+    // 搜索时给未知细胞选取的状态是否随机
     random: bool,
-    // 存放在搜索过程中设定了值的细胞
+    // 存放在搜索过程中设定了状态的细胞
     set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
@@ -21,7 +21,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
     }
 
     // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
-    fn put_cell(&mut self, cell: Rc<LifeCell<NbhdDesc>>, state: State) -> Result<(), ()> {
+    fn put_cell(&mut self, cell: &Rc<LifeCell<NbhdDesc>>, state: State) -> Result<(), ()> {
         if let Some(old_state) = cell.state() {
             if state == old_state {
                 Ok(())
@@ -29,29 +29,29 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                 Err(())
             }
         } else {
-            W::set_cell(&cell, Some(state), false);
-            self.set_table.push(Rc::downgrade(&cell));
+            W::set_cell(cell, Some(state), false);
+            self.set_table.push(Rc::downgrade(cell));
             Ok(())
         }
     }
 
     // 确保由一个细胞前一代的邻域能得到这一代的状态
-    // 由此确定一些未知细胞的值
-    fn consistify(&mut self, cell: Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
+    // 由此确定一些未知细胞的状态
+    fn consistify(&mut self, cell: &Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
         let pred = cell.pred.borrow().upgrade().unwrap();
         let desc = pred.desc.get();
         if let Some(state) = self.world.transition(desc) {
-            self.put_cell(cell.clone(), state)?;
+            self.put_cell(cell, state)?;
         }
         if let Some(state) = cell.state() {
             if let Some(state) = self.world.implication(desc, state) {
-                self.put_cell(pred.clone(), state)?;
+                self.put_cell(&pred, state)?;
             }
             if let Some(state) = self.world.implication_nbhd(desc, state) {
                 for neigh in pred.nbhd.borrow().iter() {
                     if let Some(neigh) = neigh.upgrade() {
                         if neigh.state().is_none() {
-                            self.put_cell(neigh, state)?;
+                            self.put_cell(&neigh, state)?;
                         }
                     }
                 }
@@ -61,13 +61,13 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
     }
 
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
-    fn consistify10(&mut self, cell: Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
+    fn consistify10(&mut self, cell: &Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
         let succ = cell.succ.borrow().upgrade().unwrap();
         self.consistify(cell)?;
-        self.consistify(succ.clone())?;
+        self.consistify(&succ)?;
         for neigh in succ.nbhd.borrow().iter() {
             if let Some(neigh) = neigh.upgrade() {
-                self.consistify(neigh)?;
+                self.consistify(&neigh)?;
             }
         }
         Ok(())
@@ -80,10 +80,10 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
             let state = cell.state().unwrap();
             for sym in cell.sym.borrow().iter() {
                 if let Some(sym) = sym.upgrade() {
-                    self.put_cell(sym, state)?;
+                    self.put_cell(&sym, state)?;
                 }
             }
-            self.consistify10(cell)?;
+            self.consistify10(&cell)?;
             self.next_set += 1;
         }
         Ok(())
@@ -136,7 +136,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                 };
                 W::set_cell(&cell, Some(state), true);
                 self.set_table.push(Rc::downgrade(&cell));
-            } else if self.world.subperiod() {
+            } else if self.world.nontrivial() {
                 return Ok(());
             } else {
                 self.backup()?;

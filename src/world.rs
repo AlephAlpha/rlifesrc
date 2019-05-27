@@ -83,6 +83,6 @@ pub trait World<NbhdDesc: Desc + Copy> {
     fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State>;
     fn implication_nbhd(&self, desc: NbhdDesc, succ_state: State) -> Option<State>;
 
-    // 确保搜振荡子不会搜出静物，或者周期比指定的要小的振荡子
-    fn subperiod(&self) -> bool;
+    // 确保搜出的图样是非空的，而且振荡子的最小周期不会比指定的小
+    fn nontrivial(&self) -> bool;
 }

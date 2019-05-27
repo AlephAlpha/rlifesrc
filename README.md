@@ -14,7 +14,7 @@ USAGE:
 FLAGS:
     -a, --all        搜索所有可能的图样
         --random     搜索一个随机的图样（不能和 -all 同时使用）
-    -t, --time       显示所用的时间（单位为毫秒）
+    -t, --time       显示所用的时间
     -h, --help       显示此帮助信息的英文版
 
 OPTIONS:

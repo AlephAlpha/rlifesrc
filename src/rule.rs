@@ -13,7 +13,9 @@ type Coord = (isize, isize, isize);
 pub struct NbhdDesc {
     // 细胞本身的状态
     state: Option<State>,
-    // 邻域的细胞统计，0x01 代表活，0x10 代表死
+    // 邻域的细胞统计
+    // 由于死细胞和活细胞的数量都不超过 8，可以一起放到一个字节中
+    // 0x01 代表活，0x10 代表死
     count: u8,
 }
 
@@ -147,7 +149,7 @@ impl Rule {
         }
     }
 
-    // 计算 transition 的结果
+    // 由一个细胞及其邻域的状态得到其后一代的状态
     fn to_trans(&self, state: Option<State>, alives: u8, deads: u8) -> Option<State> {
         let unknowns = 8 - alives - deads;
         let always_dead = (0..unknowns + 1).all(|i| {
@@ -165,7 +167,7 @@ impl Rule {
         }
     }
 
-    // 计算 implication 的结果
+    // 由一个细胞的邻域及其后一代的状态，决定其本身的状态
     fn to_impl(&self, alives: u8, deads: u8, succ_state: State) -> Option<State> {
         let possibly_dead = match self.to_trans(Some(Dead), alives, deads) {
             Some(succ) => succ == succ_state,
@@ -184,7 +186,7 @@ impl Rule {
         }
     }
 
-    // 计算 implication_nbhd 的结果
+    // 由一个细胞本身、邻域以及其后一代的状态，决定其域中未知细胞的状态
     fn to_impl_nbhd(&self, state: Option<State>, alives: u8, deads: u8, succ_state: State)
         -> Option<State> {
         let unknowns = 8 - alives - deads;
@@ -209,7 +211,7 @@ impl Rule {
         }
     }
 
-    // 计算这个规则的 transition 和 implication，保存在三个数组中
+    // 计算以上推导结果，保存在三个数组中
     fn implication_tables(&self)
         -> ([Implication; 256], [Option<State>; 512], [Implication; 512]) {
         let mut trans_table = [Default::default(); 256];
@@ -238,7 +240,7 @@ impl Rule {
     }
 }
 
-// 生命游戏
+// 生命游戏，和一般的 Life-like 的规则
 pub struct Life {
     width: isize,
     height: isize,
@@ -260,7 +262,7 @@ pub struct Life {
 impl Life {
     pub fn new(width: isize, height: isize, period: isize,
         dx: isize, dy: isize, symmetry: Symmetry, rule: Rule) -> Self {
-        let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
+        // 自动决定搜索顺序
         let column_first = {
             let (width, height) = match symmetry {
                 Symmetry::D2Row => ((width + 1) / 2, height),
@@ -278,7 +280,7 @@ impl Life {
 
         let mut cells = Vec::with_capacity(((width + 2) * (height + 2) * period) as usize);
 
-        // 先全部填上死细胞；如果时 B0 的规则，则在奇数代填上活细胞
+        // 先全部填上死细胞；如果是 B0 的规则，则在奇数代填上活细胞
         for _ in 0..(width + 2) * (height + 2) {
             for t in 0..period {
                 let state = if b0 && t % 2 == 1 {
@@ -296,6 +298,7 @@ impl Life {
             trans_table, impl_table, impl_nbhd_table};
 
         // 先设定细胞的邻域
+        let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
         for x in -1..width + 1 {
             for y in -1..height + 1 {
                 for t in 0..period {
@@ -355,7 +358,7 @@ impl Life {
                     }
 
                     // 设定对称的细胞；若对称的细胞不在范围内则把此细胞设为 default
-                    let sym_coord = match symmetry {
+                    let sym_coords = match symmetry {
                         Symmetry::C1 => vec![],
                         Symmetry::C2 => vec![(width - 1 - x, height - 1 - y, t)],
                         Symmetry::C4 => vec![(y, width - 1 - x, t),
@@ -379,7 +382,7 @@ impl Life {
                             (height - 1 - y, width - 1 - x, t),
                             (width - 1 - x, height - 1 - y, t)],
                     };
-                    for coord in sym_coord {
+                    for coord in sym_coords {
                         let sym_weak = life.find_cell(coord);
                         if sym_weak.upgrade().is_some() {
                             cell.sym.borrow_mut().push(sym_weak);
@@ -409,19 +412,11 @@ impl Life {
         }
     }
 
-    // 通过坐标给出细胞的状态；范围外的细胞状态默认为死
-    fn get_state(&self, coord: Coord) -> Option<State> {
-        match self.find_cell(coord).upgrade() {
-            Some(cell) => cell.state(),
-            None => Some(Dead),
-        }
-    }
-
     // 输出图样
     pub fn display(&self) {
         for y in 0..self.height {
             for x in 0..self.width {
-                let s = match self.get_state((x, y, 0)) {
+                let s = match self.find_cell((x, y, 0)).upgrade().unwrap().state() {
                     Some(Dead) => ".",
                     Some(Alive) => "O",
                     None => "?",
@@ -496,14 +491,13 @@ impl World<NbhdDesc> for Life {
         }
     }
 
-    fn subperiod(&self) -> bool {
-        let nonzero = (0..self.height).any(|y|
-            (0..self.width).any(|x|
-                self.get_state((x, y, 0)) != Some(Dead)));
+    fn nontrivial(&self) -> bool {
+        let nonzero = self.cells.iter().step_by(self.period as usize)
+            .any(|c| c.state() != Some(Dead));
         nonzero && (self.period == 1 ||
             (1..self.period).all(|t|
-                self.period % t != 0 || (0..self.height).any(|y|
-                    (0..self.width).any(|x|
-                        self.get_state((x, y, 0)) != self.get_state((x, y, t))))))
+                self.period % t != 0 ||
+                    self.cells.chunks(self.period as usize)
+                        .any(|c| c[0].state() != c[t as usize].state())))
     }
 }

@@ -87,6 +87,6 @@ fn main() {
         search.world.display();
     }
     if time {
-        println!("Time taken: {}ms.", stopwatch.elapsed_ms());
+        println!("Time taken: {:?}.", stopwatch.elapsed());
     }
 }
