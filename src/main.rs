@@ -1,11 +1,5 @@
 use clap::{Arg, App};
-use termion::{async_stdin, cursor};
-use termion::cursor::Goto;
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-use termion::screen::AlternateScreen;
-use std::io::{Write, stdout};
+use pancurses::{curs_set, endwin, initscr, noecho, Input};
 use crate::search::{Search, Status};
 use crate::rule::Life;
 mod search;
@@ -13,6 +7,7 @@ mod rule;
 mod world;
 
 fn main() {
+    // 处理命令行参数
     let matches = App::new("rlifesrc")
         .version("0.1.0")
         .arg(Arg::with_name("X")
@@ -68,36 +63,40 @@ fn main() {
     let life = Life::new(width, height, period, dx, dy, symmetry, rule);
     let mut search = Search::new(life, random, Some(10000));
 
-    let mut async_stdin = async_stdin().keys();
-    let mut screen = AlternateScreen::from(stdout()).into_raw_mode().unwrap();
-    let mut pause = true;
-    write!(screen, "{}{}{}", Goto(1, 1), search.world, cursor::Hide).unwrap();
-    screen.flush().unwrap();
+    // 进入 TUI
+    let window = initscr();
+    curs_set(0);
+    noecho();
+    window.nodelay(false);
+    window.printw(&format!("{}", search.world));
+    window.refresh();
     loop {
-        match async_stdin.next() {
-            Some(Ok(Key::Char('q'))) => break,
-            Some(Ok(Key::Ctrl('c'))) => break,
-            Some(Ok(Key::Char('p'))) => pause = true,
-            Some(Ok(_)) => pause = false,
-            _ => if !pause {
+        match window.getch() {
+            Some(Input::Character('q')) => break,
+            Some(Input::Character('p')) => window.nodelay(false),
+            Some(_) => window.nodelay(true),
+            _ => {
                 match search.search() {
                     Status::Found => {
-                        write!(screen, "{}{}", Goto(1, 1), search.world).unwrap();
-                        screen.flush().unwrap();
-                        pause = true;
+                        window.mv(0, 0);
+                        window.printw(&format!("{}", search.world));
+                        window.refresh();
+                        window.nodelay(false)
                     },
                     Status::None => {
-                        write!(screen, "{}{}", Goto(1, 1), search.world).unwrap();
-                        screen.flush().unwrap();
-                        pause = true;
+                        window.mv(0, 0);
+                        window.printw(&format!("{}", search.world));
+                        window.refresh();
+                        window.nodelay(false)
                     },
                     Status::Searching => {
-                        write!(screen, "{}{}", Goto(1, 1), search.world).unwrap();
-                        screen.flush().unwrap();
+                        window.mv(0, 0);
+                        window.printw(&format!("{}", search.world));
+                        window.refresh()
                     },
                 }
             },
-        }
+        };
     }
-    write!(screen, "{}", cursor::Show).unwrap();
+    endwin();
 }
