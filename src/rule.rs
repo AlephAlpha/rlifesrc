@@ -412,6 +412,7 @@ impl Life {
         }
     }
 
+    // 显示某一代的整个世界
     pub fn display_gen(&self, t: isize) -> String {
         let mut str = String::new();
         let t = t % self.period;

@@ -6,30 +6,66 @@
 
 ## 用法
 
-Rlifesrc 的文本界面是用 pancurses 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。
+Rlifesrc 的 TUI （文本界面）是用 pancurses 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。
+
+用 `cargo build` 或者 `cargo build --release` 来编译即可。由于我把默认的优化等级设成了3，编译会比较慢；不优化的话程序会因为速度太慢而毫无意义。
+
+如果完全不需要 TUI，而且懒得安装以上的依赖，或者是想节省编译时间，可以在编译和运行的时候加上 `--no-default-features`。
 
 ```text
 USAGE:
-    cargo run --release [FLAGS] [OPTIONS] <X> <Y> [ARGS]
-    不加 --release 的话会特别慢。
+    cargo run [FLAGS] [OPTIONS] <X> <Y> [ARGS]
 
 FLAGS:
-        --random     搜索一个随机的图样
-    -h, --help       显示此帮助信息的英文版
+    -a, --all
+            搜索所有的满足条件的图样
+            仅适用于不进入 TUI 的情况
+
+    -n, --no-tui
+            不进入 TUI，直接开始搜索
+
+        --random
+            搜索时给未知的细胞选取随机的状态
+            默认情况下会把未知的细胞设为死亡，直到退出矛盾
+
+        --reset-time
+            开始新的搜索时重置计时
+            仅适用于有 TUI 的情况
+
+    -h, --help
+            显示此帮助信息的英文版
+
 
 OPTIONS:
-    -r, --rule <RULE>            元胞自动机的规则（仅支持 Life-like 的规则） [默认: B3/S23]
-    -s, --symmetry <SYMMETRY>    对称性 [默认: C1]  [可能的值: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
-                                 其中一些对称性可能需要加引号。这些对称性的用法和 Logic Life Search 一样。
+    -r, --rule <RULE>
+            元胞自动机的规则
+            当前仅支持 Life-like 的规则
+             [默认: B3/S23]
+
+    -s, --symmetry <SYMMETRY>
+            图样的对称性
+            其中一些对称性可能需要加上引号。
+            这些对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样。
+            详见 http://conwaylife.com/wiki/Symmetry
+             [默认: C1]  [可能的值: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
 ARGS:
-    <X>     图样的宽度
-    <Y>     图样的高度
-    <P>     图样的周期 [默认: 1]
-    <DX>    水平方向的平移 [默认: 0]
-    <DY>    竖直方向的平移 [默认: 0]
+    <X>
+            图样的宽度
+
+    <Y>
+            图样的高度
+
+    <P>
+            图样的周期 [默认: 1]
+
+    <DX>
+            水平方向的平移 [默认: 0]
+
+    <DY>
+            竖直方向的平移 [默认: 0]
 ```
 
-输入命令后会进入一个简陋的 TUI（文本界面）。按空格键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一个/下一个相位。（注意此用法和 lifesrc 不同。）
+若没有 `--no-tui`，输入命令后会进入一个简陋的 TUI。按空格键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一个/下一个相位。（注意此用法和 lifesrc 不同。）
 
-比如说，用 `cargo run --release 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。
+比如说，用 `cargo run 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。
