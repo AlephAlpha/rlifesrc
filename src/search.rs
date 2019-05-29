@@ -10,6 +10,8 @@ pub enum Status {
     None,
     // 还在找
     Searching,
+    // 暂停
+    Paused,
 }
 
 // 搜索时除了世界本身，还需要记录别的一些信息。
@@ -21,16 +23,12 @@ pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
     set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
-    // 每搜索若干步就暂停一下
-    step: Option<usize>,
-    // 每搜索若干步就暂停一下
-    step_count: usize,
 }
 
 impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
-    pub fn new(world: W, random: bool, step: Option<usize>) -> Search<W, NbhdDesc> {
+    pub fn new(world: W, random: bool) -> Search<W, NbhdDesc> {
         let set_table = Vec::with_capacity(world.size());
-        Search {world, random, set_table, next_set: 0, step, step_count: 0}
+        Search {world, random, set_table, next_set: 0}
     }
 
     // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
@@ -136,14 +134,15 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
     }
 
     // 最终搜索函数
-    pub fn search(&mut self) -> Status {
+    pub fn search(&mut self, max_step: Option<usize>) -> Status {
+        let mut step_count = 0;
         if let None = self.world.get_unknown().upgrade() {
             if self.backup().is_err() {
                 return Status::None;
             }
         }
         while self.go().is_ok() {
-            self.step_count += 1;
+            step_count += 1;
             if let Some(cell) = self.world.get_unknown().upgrade() {
                 let state = if self.random {
                     rand::random()
@@ -152,21 +151,17 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                 };
                 W::set_cell(&cell, Some(state), true);
                 self.set_table.push(Rc::downgrade(&cell));
-                if Some(self.step_count) >= self.step {
-                    self.step_count = 0;
+                if Some(step_count) == max_step {
                     return Status::Searching;
                 }
             } else if self.world.nontrivial() {
-                self.step_count = 0;
                 return Status::Found;
             } else {
                 if self.backup().is_err() {
-                    self.step_count = 0;
                     return Status::None;
                 }
             }
         }
-        self.step_count = 0;
         Status::None
     }
 }

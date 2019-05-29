@@ -2,9 +2,11 @@
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch)。
 
-由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕。和原版的 lifesrc 相比速度要慢一些，而且缺少很多功能。
+由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和原版的 lifesrc 相比缺少很多功能，不过速度可能会稍微快一些。
 
 ## 用法
+
+Rlifesrc 的文本界面是用 pancurses 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。
 
 ```text
 USAGE:
@@ -28,6 +30,6 @@ ARGS:
     <DY>    竖直方向的平移 [默认: 0]
 ```
 
-输入命令后会进入一个 TUI，按任意键开始/继续搜索，按 q 键退出，按 p 键暂停。
+输入命令后会进入一个简陋的 TUI（文本界面）。按空格键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一个/下一个相位。（注意此用法和 lifesrc 不同。）
 
 比如说，用 `cargo run --release 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。

@@ -1,5 +1,6 @@
 use clap::{Arg, App};
-use pancurses::{curs_set, endwin, initscr, noecho, Input};
+use pancurses::{curs_set, endwin, initscr, noecho, Input, Window};
+use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
 use crate::rule::Life;
 mod search;
@@ -61,42 +62,90 @@ fn main() {
     let rule = matches.value_of("RULE").unwrap().parse().unwrap();
 
     let life = Life::new(width, height, period, dx, dy, symmetry, rule);
-    let mut search = Search::new(life, random, Some(10000));
+    let mut search = Search::new(life, random);
 
     // 进入 TUI
     let window = initscr();
+    let (win_y, win_x) = window.get_max_yx();
+    let world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
+    let status_win = window.subwin(2, win_x, win_y - 2, 0).unwrap();
+    let mut gen = 0;
+    let mut status = Status::Paused;
+    let mut stopwatch = Stopwatch::new();
     curs_set(0);
     noecho();
+    window.keypad(true);
     window.nodelay(false);
-    window.printw(&format!("{}", search.world));
-    window.refresh();
+    print_world(&world_win, &search.world, gen);
+    print_status(&status_win, &status, gen, &stopwatch);
     loop {
         match window.getch() {
             Some(Input::Character('q')) => break,
-            Some(Input::Character('p')) => window.nodelay(false),
-            Some(_) => window.nodelay(true),
-            _ => {
-                match search.search() {
-                    Status::Found => {
-                        window.mv(0, 0);
-                        window.printw(&format!("{}", search.world));
-                        window.refresh();
-                        window.nodelay(false)
-                    },
-                    Status::None => {
-                        window.mv(0, 0);
-                        window.printw(&format!("{}", search.world));
-                        window.refresh();
-                        window.nodelay(false)
-                    },
+            Some(Input::KeyRight) | Some(Input::KeyNPage) => {
+                gen = (gen + 1) % period;
+                print_world(&world_win, &search.world, gen);
+                print_status(&status_win, &status, gen, &stopwatch)
+            },
+            Some(Input::KeyLeft) | Some(Input::KeyPPage) => {
+                gen = (gen + period - 1) % period;
+                print_world(&world_win, &search.world, gen);
+                print_status(&status_win, &status, gen, &stopwatch)
+            },
+            Some(Input::Character(' ')) | Some(Input::KeyEnter) => {
+                match status {
                     Status::Searching => {
-                        window.mv(0, 0);
-                        window.printw(&format!("{}", search.world));
-                        window.refresh()
+                        status = Status::Paused;
+                        stopwatch.stop();
+                        print_status(&status_win, &status, gen, &stopwatch);
+                        window.nodelay(false)
+                    },
+                    _ => {
+                        status = Status::Searching;
+                        print_status(&status_win, &status, gen, &stopwatch);
+                        stopwatch.start();
+                        window.nodelay(true)
+                    },
+                }
+            },
+            Some(_) => 1,
+            _ => {
+                match search.search(Some(10000)) {
+                    Status::Searching => {
+                        print_world(&world_win, &search.world, gen)
+                    },
+                    s => {
+                        status = s;
+                        stopwatch.stop();
+                        print_status(&status_win, &status, gen, &stopwatch);
+                        stopwatch.reset();
+                        print_world(&world_win, &search.world, gen);
+                        window.nodelay(false)
                     },
                 }
             },
         };
     }
     endwin();
+}
+
+fn print_world(window: &Window, world: &Life, gen: isize) -> i32 {
+    window.mvprintw(0, 0, world.display_gen(gen));
+    window.refresh()
+}
+
+fn print_status(window: &Window, status: &Status, gen: isize, stopwatch: &Stopwatch) -> i32 {
+    window.erase();
+    window.mvprintw(0, 0, format!("Showing generation {}. ", gen));
+    match status {
+        Status::Searching => 1,
+        _ => window.printw(format!("Time taken: {:?}. ", stopwatch.elapsed())),
+    };
+    let status = match status {
+        Status::Found => "Found a result. Press [space] to continue.",
+        Status::None => "No more result. Press [q] to quit.",
+        Status::Searching => "Searching... Press [space] to pause.",
+        Status::Paused => "Paused. Press [space] to continue."
+    };
+    window.mvprintw(1, 0, status);
+    window.refresh()
 }
