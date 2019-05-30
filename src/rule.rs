@@ -77,7 +77,6 @@ pub struct Implication {
 }
 
 // 规则，比如说 B3/S23 表示为 Rule {birth: vec![3], survive: vec![2, 3]}
-// 不支持 B0 的规则
 pub struct Rule {
     birth: Vec<u8>,
     survive: Vec<u8>,
@@ -88,12 +87,13 @@ impl FromStr for Rule {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
+        let err = Err(String::from("Invalid rule"));
         match chars.next() {
             Some('b') => (),
             Some('B') => (),
-            _ => return Err(String::from("Invalid rule")),
+            _ => return err,
         }
-        let birth: Vec<u8> = chars.clone().take_while(|c| c.is_ascii_digit())
+        let birth: Vec<_> = chars.clone().take_while(|c| c.is_ascii_digit())
             .map(|c| c.to_digit(10).unwrap() as u8).collect();
         let mut chars = chars.skip_while(|c| c.is_ascii_digit());
         match chars.next() {
@@ -103,16 +103,16 @@ impl FromStr for Rule {
                 match chars.next() {
                     Some('s') => (),
                     Some('S') => (),
-                    _ => return Err(String::from("Invalid rule")),
+                    _ => return err,
                 }
             },
-            _ => return Err(String::from("Invalid rule")),
+            _ => return err,
         }
-        let survive: Vec<u8> = chars.clone().take_while(|c| c.is_ascii_digit())
+        let survive: Vec<_> = chars.clone().take_while(|c| c.is_ascii_digit())
             .map(|c| c.to_digit(10).unwrap() as u8).collect();
         let mut chars = chars.skip_while(|c| c.is_ascii_digit());
         if chars.next().is_some() || birth.contains(&9) || survive.contains(&9) {
-            Err(String::from("Invalid rule"))
+            err
         } else {
             Ok(Rule {birth, survive})
         }
@@ -242,9 +242,9 @@ impl Rule {
 
 // 生命游戏，和一般的 Life-like 的规则
 pub struct Life {
-    width: isize,
-    height: isize,
-    period: isize,
+    pub width: isize,
+    pub height: isize,
+    pub period: isize,
 
     // 搜索顺序是先行后列还是先列后行
     // 通过比较行数和列数的大小来自动决定
@@ -412,13 +412,18 @@ impl Life {
         }
     }
 
+    fn get_cell(&self, coord: Coord) -> (Option<State>, bool) {
+        let cell = self.find_cell(coord).upgrade().unwrap();
+        (cell.state(), cell.free.get())
+    }
+
     // 显示某一代的整个世界
     pub fn display_gen(&self, t: isize) -> String {
         let mut str = String::new();
         let t = t % self.period;
         for y in 0..self.height {
             for x in 0..self.width {
-                let s = match self.find_cell((x, y, t)).upgrade().unwrap().state() {
+                let s = match self.get_cell((x, y, t)).0 {
                     Some(Dead) => '.',
                     Some(Alive) => 'O',
                     None => '?',

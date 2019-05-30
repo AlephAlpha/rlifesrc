@@ -3,11 +3,12 @@ extern crate clap;
 
 use clap::{Arg, App};
 #[cfg(feature = "tui")]
-use pancurses::{curs_set, endwin, initscr, noecho, Input, Window};
+use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
 use crate::rule::{Life, NbhdDesc, Rule, Symmetry};
+use crate::world::State::{Dead, Alive};
 mod search;
 mod rule;
 mod world;
@@ -58,8 +59,17 @@ fn main() {
             .help("Chooses a random state for unknown cells")
             .long_help("Chooses a random state for unknown cells\n\
                 Otherwise unknown cells will be set to Dead \
-                until a contradiction is found.")
-            .long("random"));
+                until a contradiction is found.\n\
+                Conflicts with --alive")
+            .long("random"))
+        .arg(Arg::with_name("ALIVE")
+            .help("Chooses a random state for unknown cells")
+            .long_help("Set unknown cells to Alive\n\
+                Otherwise unknown cells will be set to Dead \
+                until a contradiction is found.\n\
+                Conflicts with --random")
+            .long("alive")
+            .conflicts_with("RANDOM"));
 
     #[cfg(not(feature = "tui"))]
     {
@@ -77,7 +87,7 @@ fn main() {
                 Only useful when --no-tui is set.")
             .short("a")
             .long("all"))
-            .arg(Arg::with_name("RESET")
+        .arg(Arg::with_name("RESET")
             .help("Resets the time when starting a new search")
             .long("reset-time")
             .conflicts_with("NOTUI"))
@@ -99,10 +109,18 @@ fn main() {
     let symmetry = value_t!(matches, "SYMMETRY", Symmetry).unwrap_or_else(|e| e.exit());
     let rule = value_t!(matches, "RULE", Rule).unwrap_or_else(|e| e.exit());
     let random = matches.is_present("RANDOM");
+    let alive = matches.is_present("ALIVE");
     let all = matches.is_present("ALL");
 
     let life = Life::new(width, height, period, dx, dy, symmetry, rule);
-    let mut search = Search::new(life, random);
+    let new_state = if random {
+        None
+    } else if alive {
+        Some(Alive)
+    } else {
+        Some(Dead)
+    };
+    let mut search = Search::new(life, new_state);
 
     #[cfg(not(feature = "tui"))]
     {
@@ -117,7 +135,7 @@ fn main() {
         if notui {
             search_without_tui(&mut search, all)
         } else {
-            search_with_tui(&mut search, period, reset)
+            search_with_tui(&mut search, reset)
         }
     }
 }
@@ -140,11 +158,12 @@ fn search_without_tui(search: &mut Search<Life, NbhdDesc>, all: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn search_with_tui(search: &mut Search<Life, NbhdDesc>, period: isize, reset: bool) {
+fn search_with_tui(search: &mut Search<Life, NbhdDesc>, reset: bool) {
+    let period = search.world.period;
     let window = initscr();
     let (win_y, win_x) = window.get_max_yx();
-    let world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
-    let status_win = window.subwin(2, win_x, win_y - 2, 0).unwrap();
+    let mut world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
+    let mut status_bar = window.subwin(2, win_x, win_y - 2, 0).unwrap();
     let mut gen = 0;
     let mut status = Status::Paused;
     let mut stopwatch = Stopwatch::new();
@@ -153,25 +172,25 @@ fn search_with_tui(search: &mut Search<Life, NbhdDesc>, period: isize, reset: bo
     window.keypad(true);
     window.nodelay(false);
     print_world(&world_win, &search.world, gen);
-    print_status(&status_win, &status, gen, &stopwatch);
+    print_status(&status_bar, &status, gen, &stopwatch);
 
     loop {
         match window.getch() {
             Some(Input::Character('q')) => {
                 match status {
-                    Status::Searching => {
+                    Status::Searching | Status::Paused => {
                         status = Status::Paused;
                         stopwatch.stop();
                         window.nodelay(false);
                         print_world(&world_win, &search.world, gen);
-                        status_win.mvprintw(1, 0, "Are you sure to quit? [Y/n]");
-                        status_win.clrtoeol();
-                        status_win.refresh();
+                        status_bar.mvprintw(1, 0, "Are you sure to quit? [Y/n]");
+                        status_bar.clrtoeol();
+                        status_bar.refresh();
                         match window.getch() {
                             Some(Input::Character('Y')) => break,
                             Some(Input::Character('y')) => break,
                             Some(Input::Character('\n')) => break,
-                            _ => print_status(&status_win, &status, gen, &stopwatch),
+                            _ => print_status(&status_bar, &status, gen, &stopwatch),
                         }
                     },
                     _ => break,
@@ -180,12 +199,12 @@ fn search_with_tui(search: &mut Search<Life, NbhdDesc>, period: isize, reset: bo
             Some(Input::KeyRight) | Some(Input::KeyNPage) => {
                 gen = (gen + 1) % period;
                 print_world(&world_win, &search.world, gen);
-                print_status(&status_win, &status, gen, &stopwatch)
+                print_status(&status_bar, &status, gen, &stopwatch)
             },
             Some(Input::KeyLeft) | Some(Input::KeyPPage) => {
                 gen = (gen + period - 1) % period;
                 print_world(&world_win, &search.world, gen);
-                print_status(&status_win, &status, gen, &stopwatch)
+                print_status(&status_bar, &status, gen, &stopwatch)
             },
             Some(Input::Character(' ')) | Some(Input::Character('\n')) => {
                 match status {
@@ -194,18 +213,26 @@ fn search_with_tui(search: &mut Search<Life, NbhdDesc>, period: isize, reset: bo
                         stopwatch.stop();
                         window.nodelay(false);
                         print_world(&world_win, &search.world, gen);
-                        print_status(&status_win, &status, gen, &stopwatch)
+                        print_status(&status_bar, &status, gen, &stopwatch)
                     },
                     _ => {
                         status = Status::Searching;
-                        print_status(&status_win, &status, gen, &stopwatch);
+                        print_status(&status_bar, &status, gen, &stopwatch);
                         stopwatch.start();
                         window.nodelay(true)
                     },
                 }
             },
+            Some(Input::KeyResize) => {
+                resize_term(0, 0);
+                let (win_y, win_x) = window.get_max_yx();
+                world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
+                status_bar = window.subwin(2, win_x, win_y - 2, 0).unwrap();
+                print_world(&world_win, &search.world, gen);
+                print_status(&status_bar, &status, gen, &stopwatch)
+            },
             None => {
-                match search.search(Some(20000)) {
+                match search.search(Some(25000)) {
                     Status::Searching => {
                         print_world(&world_win, &search.world, gen)
                     },
@@ -213,7 +240,7 @@ fn search_with_tui(search: &mut Search<Life, NbhdDesc>, period: isize, reset: bo
                         status = s;
                         stopwatch.stop();
                         window.nodelay(false);
-                        print_status(&status_win, &status, gen, &stopwatch);
+                        print_status(&status_bar, &status, gen, &stopwatch);
                         if reset {
                             stopwatch.reset();
                         }

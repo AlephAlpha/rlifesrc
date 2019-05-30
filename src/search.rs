@@ -17,8 +17,8 @@ pub enum Status {
 // 搜索时除了世界本身，还需要记录别的一些信息。
 pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
     pub world: W,
-    // 搜索时给未知细胞选取的状态是否随机
-    random: bool,
+    // 搜索时给未知细胞选取的状态，None 表示随机
+    new_state: Option<State>,
     // 存放在搜索过程中设定了状态的细胞
     set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
@@ -26,9 +26,9 @@ pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
 }
 
 impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
-    pub fn new(world: W, random: bool) -> Search<W, NbhdDesc> {
+    pub fn new(world: W, new_state: Option<State>) -> Search<W, NbhdDesc> {
         let set_table = Vec::with_capacity(world.size());
-        Search {world, random, set_table, next_set: 0}
+        Search {world, new_state, set_table, next_set: 0}
     }
 
     // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
@@ -123,8 +123,9 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
     }
 
     // 走；不对就退回来，换一下细胞的状态，再走，如此下去
-    fn go(&mut self) -> Result<(), ()> {
+    fn go(&mut self, step: &mut usize) -> Result<(), ()> {
         loop {
+            *step += 1;
             if self.proceed().is_ok() {
                 return Ok(());
             } else {
@@ -141,18 +142,18 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                 return Status::None;
             }
         }
-        while self.go().is_ok() {
-            step_count += 1;
+        while self.go(&mut step_count).is_ok() {
             if let Some(cell) = self.world.get_unknown().upgrade() {
-                let state = if self.random {
-                    rand::random()
-                } else {
-                    Dead
+                let state = match self.new_state {
+                    Some(state) => state,
+                    None => rand::random(),
                 };
                 W::set_cell(&cell, Some(state), true);
                 self.set_table.push(Rc::downgrade(&cell));
-                if Some(step_count) == max_step {
-                    return Status::Searching;
+                if let Some(max) = max_step {
+                    if step_count > max {
+                        return Status::Searching;
+                    }
                 }
             } else if self.world.nontrivial() {
                 return Status::Found;
