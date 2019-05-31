@@ -63,7 +63,7 @@ impl FromStr for Symmetry {
             "D4+" => Ok(Symmetry::D4Ortho),
             "D4X" => Ok(Symmetry::D4Diag),
             "D8" => Ok(Symmetry::D8),
-            _ => Err(String::from("Invalid symmetry")),
+            _ => Err(String::from("invalid symmetry")),
         }
     }
 }
@@ -87,7 +87,7 @@ impl FromStr for Rule {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
-        let err = Err(String::from("Invalid rule"));
+        let err = Err(String::from("not a Life-like rule"));
         match chars.next() {
             Some('b') => (),
             Some('B') => (),
@@ -260,20 +260,23 @@ pub struct Life {
 }
 
 impl Life {
-    pub fn new(width: isize, height: isize, period: isize,
-        dx: isize, dy: isize, symmetry: Symmetry, rule: Rule) -> Self {
+    pub fn new(width: isize, height: isize, period: isize, dx: isize, dy: isize,
+        symmetry: Symmetry, rule: Rule, column_first: Option<bool>) -> Self {
         // 自动决定搜索顺序
-        let column_first = {
-            let (width, height) = match symmetry {
-                Symmetry::D2Row => ((width + 1) / 2, height),
-                Symmetry::D2Column => (width, (height + 1) / 2),
-                _ => (width, height),
-            };
-            if width == height {
-                dx >= dy
-            } else {
-                width > height
-            }
+        let column_first = match column_first {
+            Some(c) => c,
+            None => {
+                let (width, height) = match symmetry {
+                    Symmetry::D2Row => ((width + 1) / 2, height),
+                    Symmetry::D2Column => (width, (height + 1) / 2),
+                    _ => (width, height),
+                };
+                if width == height {
+                    dx >= dy
+                } else {
+                    width > height
+                }
+            },
         };
 
         let b0 = rule.birth.contains(&0);
@@ -384,7 +387,8 @@ impl Life {
                     };
                     for coord in sym_coords {
                         let sym_weak = life.find_cell(coord);
-                        if sym_weak.upgrade().is_some() {
+                        if 0 <= coord.0 && coord.0 < width &&
+                            0 <= coord.1 && coord.1 < height {
                             cell.sym.borrow_mut().push(sym_weak);
                         } else {
                             Life::set_cell(&cell, Some(default), false);

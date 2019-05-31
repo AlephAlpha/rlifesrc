@@ -1,41 +1,61 @@
-#[macro_use]
-extern crate clap;
-
 use clap::{Arg, App};
+use clap::AppSettings::AllowNegativeNumbers;
 #[cfg(feature = "tui")]
 use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::rule::{Life, NbhdDesc, Rule, Symmetry};
+use crate::rule::{Life, NbhdDesc, Rule};
 use crate::world::State::{Dead, Alive};
 mod search;
 mod rule;
 mod world;
 
+fn is_positive(s: &str) -> bool {
+    s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with("-")
+}
+
 fn main() {
     let mut app = App::new("rlifesrc")
         .version("0.1.0")
+        .setting(AllowNegativeNumbers)
         .arg(Arg::with_name("X")
             .help("Width of the pattern")
             .required(true)
-            .index(1))
+            .index(1)
+            .validator(|x| if is_positive(&x) {
+                Ok(())
+            } else {
+                Err(String::from("width must be a positive integer"))
+            }))
         .arg(Arg::with_name("Y")
             .help("Height of the pattern")
             .required(true)
-            .index(2))
+            .index(2)
+            .validator(|y| if is_positive(&y) {
+                Ok(())
+            } else {
+                Err(String::from("height must be a positive integer"))
+            }))
         .arg(Arg::with_name("P")
             .help("Period of the pattern")
             .default_value("1")
-            .index(3))
+            .index(3)
+            .validator(|p| if is_positive(&p) {
+                Ok(())
+            } else {
+                Err(String::from("period must be a positive integer"))
+            }))
         .arg(Arg::with_name("DX")
             .help("Horizontal translation")
             .default_value("0")
-            .index(4))
+            .index(4)
+            .validator(|d| d.parse().map(|_ : isize| ()).map_err(|e| e.to_string())))
         .arg(Arg::with_name("DY")
             .help("Vertical translation")
             .default_value("0")
-            .index(5))
+            .index(5)
+            .validator(|d| d.parse().map(|_ : isize| ()).map_err(|e| e.to_string())))
         .arg(Arg::with_name("SYMMETRY")
             .help("Symmetry of the pattern")
             .long_help("Symmetry of the pattern\n\
@@ -54,22 +74,24 @@ fn main() {
             .short("r")
             .long("rule")
             .default_value("B3/S23")
+            .takes_value(true)
+            .validator(|d| d.parse().map(|_ : Rule| ())))
+        .arg(Arg::with_name("CHOOSE")
+            .help("How to choose a state for unknown cells")
+            .short("c")
+            .long("choose")
+            .possible_values(&["dead", "alive", "random", "d", "a", "r"])
+            .default_value("dead")
             .takes_value(true))
-        .arg(Arg::with_name("RANDOM")
-            .help("Chooses a random state for unknown cells")
-            .long_help("Chooses a random state for unknown cells\n\
-                Otherwise unknown cells will be set to Dead \
-                until a contradiction is found.\n\
-                Conflicts with --alive")
-            .long("random"))
-        .arg(Arg::with_name("ALIVE")
-            .help("Chooses a random state for unknown cells")
-            .long_help("Set unknown cells to Alive\n\
-                Otherwise unknown cells will be set to Dead \
-                until a contradiction is found.\n\
-                Conflicts with --random")
-            .long("alive")
-            .conflicts_with("RANDOM"));
+        .arg(Arg::with_name("ORDER")
+            .help("Search order")
+            .long_help("Search order\n\
+                Row first or column first.")
+            .short("o")
+            .long("order")
+            .possible_values(&["row", "column", "automatic", "r", "c", "a"])
+            .default_value("automatic")
+            .takes_value(true));
 
     #[cfg(not(feature = "tui"))]
     {
@@ -100,25 +122,26 @@ fn main() {
 
     let matches = app.get_matches();
 
-    let width = value_t!(matches, "X", isize).unwrap_or_else(|e| e.exit());
-    let height = value_t!(matches, "Y", isize).unwrap_or_else(|e| e.exit());
-    let period = value_t!(matches, "P", isize).unwrap_or_else(|e| e.exit());
-    let dx = value_t!(matches, "DX", isize).unwrap_or_else(|e| e.exit());
-    let dy = value_t!(matches, "DY", isize).unwrap_or_else(|e| e.exit());
+    let width = matches.value_of("X").unwrap().parse().unwrap();
+    let height = matches.value_of("Y").unwrap().parse().unwrap();
+    let period = matches.value_of("P").unwrap().parse().unwrap();
+    let dx = matches.value_of("DX").unwrap().parse().unwrap();
+    let dy = matches.value_of("DY").unwrap().parse().unwrap();
 
-    let symmetry = value_t!(matches, "SYMMETRY", Symmetry).unwrap_or_else(|e| e.exit());
-    let rule = value_t!(matches, "RULE", Rule).unwrap_or_else(|e| e.exit());
-    let random = matches.is_present("RANDOM");
-    let alive = matches.is_present("ALIVE");
+    let symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
+    let rule = matches.value_of("RULE").unwrap().parse().unwrap();
     let all = matches.is_present("ALL");
+    let column_first = match matches.value_of("ORDER").unwrap() {
+        "row" | "r" => Some(false),
+        "column" | "c" => Some(true),
+        _ => None,
+    };
 
-    let life = Life::new(width, height, period, dx, dy, symmetry, rule);
-    let new_state = if random {
-        None
-    } else if alive {
-        Some(Alive)
-    } else {
-        Some(Dead)
+    let life = Life::new(width, height, period, dx, dy, symmetry, rule, column_first);
+    let new_state = match matches.value_of("CHOOSE").unwrap() {
+        "dead" | "d" => Some(Dead),
+        "alive" | "a" => Some(Alive),
+        _ => None,
     };
     let mut search = Search::new(life, new_state);
 
@@ -228,6 +251,7 @@ fn search_with_tui(search: &mut Search<Life, NbhdDesc>, reset: bool) {
                 let (win_y, win_x) = window.get_max_yx();
                 world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
                 status_bar = window.subwin(2, win_x, win_y - 2, 0).unwrap();
+                world_win.erase();
                 print_world(&world_win, &search.world, gen);
                 print_status(&status_bar, &status, gen, &stopwatch)
             },

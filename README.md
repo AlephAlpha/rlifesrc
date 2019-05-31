@@ -19,11 +19,6 @@ USAGE:
     cargo run [FLAGS] [OPTIONS] <X> <Y> [ARGS]
 
 FLAGS:
-        --alive
-            搜索时把未知的细胞设为活
-            默认情况下会把未知的细胞设为死，直到推出矛盾
-            与 --random 冲突
-
     -a, --all
             搜索所有的满足条件的图样
             仅适用于不进入 TUI 的情况
@@ -31,16 +26,18 @@ FLAGS:
     -n, --no-tui
             不进入 TUI，直接开始搜索
 
-        --random
-            搜索时给未知的细胞选取随机的状态
-            默认情况下会把未知的细胞设为死，直到推出矛盾
-            与 --alive 冲突
-
         --reset-time
             开始新的搜索时重置计时
             仅适用于有 TUI 的情况
 
 OPTIONS:
+    -c, --choose <CHOOSE>
+            如何为未知的细胞选取状态 [默认: dead]  [可能的值: dead, alive, random, d, a, r]
+
+    -o, --order <ORDER>
+            搜索顺序
+            先搜行还是先搜列。 [默认: automatic]  [可能的值: row, column, automatic, r, c, a]
+
     -r, --rule <RULE>
             元胞自动机的规则
             当前仅支持 Life-like 的规则

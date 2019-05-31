@@ -31,8 +31,14 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
         Search {world, new_state, set_table, next_set: 0}
     }
 
-    // 只有细胞原本的状态为未知时才改变细胞的状态，并且把细胞记录到 set_table 中
-    fn put_cell(&mut self, cell: &Rc<LifeCell<NbhdDesc>>, state: State) -> Result<(), ()> {
+    // 改变细胞的状态，并且把细胞记录到 set_table 中
+    fn set_cell(&mut self, cell: &Rc<LifeCell<NbhdDesc>>, state: State) {
+        W::set_cell(cell, Some(state), false);
+        self.set_table.push(Rc::downgrade(cell));
+    }
+
+    // 只有细胞原本的状态为未知时才 set_cell
+    fn check_cell(&mut self, cell: &Rc<LifeCell<NbhdDesc>>, state: State) -> Result<(), ()> {
         if let Some(old_state) = cell.state() {
             if state == old_state {
                 Ok(())
@@ -40,8 +46,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                 Err(())
             }
         } else {
-            W::set_cell(cell, Some(state), false);
-            self.set_table.push(Rc::downgrade(cell));
+            self.set_cell(cell, state);
             Ok(())
         }
     }
@@ -52,17 +57,19 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
         let pred = cell.pred.borrow().upgrade().unwrap();
         let desc = pred.desc.get();
         if let Some(state) = self.world.transition(desc) {
-            self.put_cell(cell, state)?;
+            self.check_cell(cell, state)?;
         }
         if let Some(state) = cell.state() {
-            if let Some(state) = self.world.implication(desc, state) {
-                self.put_cell(&pred, state)?;
+            if pred.state().is_none() {
+                if let Some(state) = self.world.implication(desc, state) {
+                    self.set_cell(&pred, state);
+                }
             }
             if let Some(state) = self.world.implication_nbhd(desc, state) {
                 for neigh in pred.nbhd.borrow().iter() {
                     if let Some(neigh) = neigh.upgrade() {
                         if neigh.state().is_none() {
-                            self.put_cell(&neigh, state)?;
+                            self.set_cell(&neigh, state);
                         }
                     }
                 }
@@ -91,7 +98,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
             let state = cell.state().unwrap();
             for sym in cell.sym.borrow().iter() {
                 if let Some(sym) = sym.upgrade() {
-                    self.put_cell(&sym, state)?;
+                    self.check_cell(&sym, state)?;
                 }
             }
             self.consistify10(&cell)?;
@@ -112,8 +119,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                     Dead => Alive,
                     Alive => Dead,
                 };
-                W::set_cell(&cell, Some(state), false);
-                self.set_table.push(Rc::downgrade(&cell));
+                self.set_cell(&cell, state);
                 return Ok(());
             } else {
                 W::set_cell(&cell, None, true);
