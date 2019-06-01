@@ -51,41 +51,14 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
         }
     }
 
-    // 确保由一个细胞前一代的邻域能得到这一代的状态
-    // 由此确定一些未知细胞的状态
-    fn consistify(&mut self, cell: &Rc<LifeCell<D>>) -> Result<(), ()> {
-        let pred = cell.pred.borrow().upgrade().unwrap();
-        let desc = pred.desc.get();
-        if let Some(state) = self.world.rule.transition(desc) {
-            self.check_cell(cell, state)?;
-        }
-        if let Some(state) = cell.state() {
-            if pred.state().is_none() {
-                if let Some(state) = self.world.rule.implication(desc, state) {
-                    self.set_cell(&pred, state);
-                }
-            }
-            if let Some(state) = self.world.rule.implication_nbhd(desc, state) {
-                for neigh in pred.nbhd.borrow().iter() {
-                    if let Some(neigh) = neigh.upgrade() {
-                        if neigh.state().is_none() {
-                            self.set_cell(&neigh, state);
-                        }
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
     fn consistify10(&mut self, cell: &Rc<LifeCell<D>>) -> Result<(), ()> {
         let succ = cell.succ.borrow().upgrade().unwrap();
-        self.consistify(cell)?;
-        self.consistify(&succ)?;
+        self.world.rule.consistify(cell, &mut self.set_table)?;
+        self.world.rule.consistify(&succ, &mut self.set_table)?;
         for neigh in succ.nbhd.borrow().iter() {
             if let Some(neigh) = neigh.upgrade() {
-                self.consistify(&neigh)?;
+                self.world.rule.consistify(&neigh, &mut self.set_table)?;
             }
         }
         Ok(())

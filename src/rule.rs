@@ -1,3 +1,4 @@
+use std::rc::{Rc, Weak};
 use std::str::FromStr;
 use crate::world::{State, Desc, LifeCell, Rule};
 
@@ -232,12 +233,6 @@ impl LifeLike {
         }
         (trans_table, impl_table, impl_nbhd_table)
     }
-}
-
-impl Rule<NbhdDesc> for LifeLike {
-    fn b0(&self) -> bool {
-        self.b0
-    }
 
     fn transition(&self, desc: NbhdDesc) -> Option<State> {
         let transition = self.trans_table[desc.count as usize];
@@ -267,5 +262,46 @@ impl Rule<NbhdDesc> for LifeLike {
             Some(State::Alive) => implication.alive,
             None => implication.none,
         }
+    }
+}
+
+impl Rule<NbhdDesc> for LifeLike {
+    fn b0(&self) -> bool {
+        self.b0
+    }
+
+    fn consistify(&self, cell: &Rc<LifeCell<NbhdDesc>>,
+        set_table: &mut Vec<Weak<LifeCell<NbhdDesc>>>) -> Result<(), ()> {
+        let pred = cell.pred.borrow().upgrade().unwrap();
+        let desc = pred.desc.get();
+        if let Some(state) = self.transition(desc) {
+            if let Some(old_state) = cell.state() {
+                if state != old_state {
+                    return Err(())
+                }
+            } else {
+                NbhdDesc::set_cell(cell, Some(state), false);
+                set_table.push(Rc::downgrade(cell));
+            }
+        }
+        if let Some(state) = cell.state() {
+            if pred.state().is_none() {
+                if let Some(state) = self.implication(desc, state) {
+                    NbhdDesc::set_cell(&pred, Some(state), false);
+                    set_table.push(Rc::downgrade(&pred));
+                }
+            }
+            if let Some(state) = self.implication_nbhd(desc, state) {
+                for neigh in pred.nbhd.borrow().iter() {
+                    if let Some(neigh) = neigh.upgrade() {
+                        if neigh.state().is_none() {
+                            NbhdDesc::set_cell(&neigh, Some(state), false);
+                            set_table.push(Rc::downgrade(&neigh));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }

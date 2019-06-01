@@ -20,37 +20,26 @@ impl Distribution<State> for Standard {
     }
 }
 
-// 邻域的状态应该满足一个 trait
-pub trait Desc: Copy {
-    fn new(state: Option<State>) -> Self;
-
-    // 从邻域的状态还原出细胞本身的状态，None 表示未知
-    fn state(&self) -> Option<State>;
-
-    // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
-    fn set_cell(cell: &LifeCell<Self>, state: Option<State>, free: bool);
-}
-
 // 改名 LifeCell 以免和 std::cell::Cell 混淆
-// NbhdDesc 包含了细胞邻域的状态和本身的状态
-pub struct LifeCell<NbhdDesc: Desc> {
+// D 包含了细胞邻域的状态和本身的状态
+pub struct LifeCell<D: Desc> {
     // 细胞自身和邻域的状态
-    pub desc: Cell<NbhdDesc>,
+    pub desc: Cell<D>,
     // 细胞的状态是否由别的细胞决定
     pub free: Cell<bool>,
     // 同一位置上一代的细胞
-    pub pred: RefCell<Weak<LifeCell<NbhdDesc>>>,
+    pub pred: RefCell<Weak<LifeCell<D>>>,
     // 同一位置下一代的细胞
-    pub succ: RefCell<Weak<LifeCell<NbhdDesc>>>,
+    pub succ: RefCell<Weak<LifeCell<D>>>,
     // 细胞的邻域
-    pub nbhd: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
+    pub nbhd: RefCell<Vec<Weak<LifeCell<D>>>>,
     // 与此细胞对称（因此状态一致）的细胞
-    pub sym: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
+    pub sym: RefCell<Vec<Weak<LifeCell<D>>>>,
 }
 
-impl<NbhdDesc: Desc> LifeCell<NbhdDesc> {
+impl<D: Desc> LifeCell<D> {
     pub fn new(state: Option<State>, free: bool) -> Self {
-        let desc = Cell::new(NbhdDesc::new(state));
+        let desc = Cell::new(D::new(state));
         let free = Cell::new(free);
         let pred = RefCell::new(Weak::new());
         let succ = RefCell::new(Weak::new());
@@ -65,20 +54,25 @@ impl<NbhdDesc: Desc> LifeCell<NbhdDesc> {
     }
 }
 
+// 邻域的状态应该满足一个 trait
+pub trait Desc: Copy {
+    fn new(state: Option<State>) -> Self;
+
+    // 从邻域的状态还原出细胞本身的状态，None 表示未知
+    fn state(&self) -> Option<State>;
+
+    // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
+    fn set_cell(cell: &LifeCell<Self>, state: Option<State>, free: bool);
+}
+
 // 把规则写成一个 Trait，方便以后支持更多的规则
-pub trait Rule<NbhdDesc: Desc> {
+pub trait Rule<D: Desc> {
     // 规则是否是 B0
     fn b0(&self) -> bool;
 
-    // 由一个细胞及其邻域的状态得到其后一代的状态
-    fn transition(&self, desc: NbhdDesc) -> Option<State>;
-
-    // 由一个细胞本身、邻域以及其后一代的状态，决定其本身或者邻域中某些未知细胞的状态
-    // implication表示本身的状态，implication_nbhd表示邻域中未知细胞的状态
-    // 这样写并不好扩展到 non-totalistic 的规则的情形，不过以后再说吧
-    fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State>;
-    fn implication_nbhd(&self, desc: NbhdDesc, succ_state: State) -> Option<State>;
-
+    // 干脆把 consistify 放到这里来好了
+    fn consistify(&self, cell: &Rc<LifeCell<D>>, set_table: &mut Vec<Weak<LifeCell<D>>>)
+        -> Result<(), ()>;
 }
 
 // 对称性
