@@ -5,8 +5,8 @@ use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::rule::{Life, NbhdDesc, Rule};
-use crate::world::State::{Dead, Alive};
+use crate::rule::{NbhdDesc, LifeLike};
+use crate::world::{State, World};
 mod search;
 mod rule;
 mod world;
@@ -75,7 +75,7 @@ fn main() {
             .long("rule")
             .default_value("B3/S23")
             .takes_value(true)
-            .validator(|d| d.parse().map(|_ : Rule| ())))
+            .validator(|d| d.parse().map(|_ : LifeLike| ())))
         .arg(Arg::with_name("CHOOSE")
             .help("How to choose a state for unknown cells")
             .short("c")
@@ -137,10 +137,10 @@ fn main() {
         _ => None,
     };
 
-    let life = Life::new(width, height, period, dx, dy, symmetry, rule, column_first);
+    let life = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
     let new_state = match matches.value_of("CHOOSE").unwrap() {
-        "dead" | "d" => Some(Dead),
-        "alive" | "a" => Some(Alive),
+        "dead" | "d" => Some(State::Dead),
+        "alive" | "a" => Some(State::Alive),
         _ => None,
     };
     let mut search = Search::new(life, new_state);
@@ -163,7 +163,7 @@ fn main() {
     }
 }
 
-fn search_without_tui(search: &mut Search<Life, NbhdDesc>, all: bool) {
+fn search_without_tui(search: &mut Search<NbhdDesc, LifeLike>, all: bool) {
     if all {
         loop {
             match search.search(None) {
@@ -181,8 +181,12 @@ fn search_without_tui(search: &mut Search<Life, NbhdDesc>, all: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn search_with_tui(search: &mut Search<Life, NbhdDesc>, reset: bool) {
+fn search_with_tui(search: &mut Search<NbhdDesc, LifeLike>, reset: bool) {
     let period = search.world.period;
+    #[cfg(debug_assertions)]
+    let view_freq = 500;
+    #[cfg(not(debug_assertions))]
+    let view_freq = 25000;
     let window = initscr();
     let (win_y, win_x) = window.get_max_yx();
     let mut world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
@@ -256,7 +260,7 @@ fn search_with_tui(search: &mut Search<Life, NbhdDesc>, reset: bool) {
                 print_status(&status_bar, &status, gen, &stopwatch)
             },
             None => {
-                match search.search(Some(25000)) {
+                match search.search(Some(view_freq)) {
                     Status::Searching => {
                         print_world(&world_win, &search.world, gen)
                     },
@@ -279,7 +283,7 @@ fn search_with_tui(search: &mut Search<Life, NbhdDesc>, reset: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn print_world(window: &Window, world: &Life, gen: isize) -> i32 {
+fn print_world(window: &Window, world: &World<NbhdDesc, LifeLike>, gen: isize) -> i32 {
     window.mvprintw(0, 0, world.display_gen(gen));
     window.refresh()
 }

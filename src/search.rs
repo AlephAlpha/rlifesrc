@@ -1,5 +1,5 @@
 use std::rc::{Rc, Weak};
-use crate::world::{State, Desc, LifeCell, World};
+use crate::world::{State, Desc, LifeCell, Rule, World};
 use crate::world::State::{Dead, Alive};
 
 // 搜索状态
@@ -15,30 +15,30 @@ pub enum Status {
 }
 
 // 搜索时除了世界本身，还需要记录别的一些信息。
-pub struct Search<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> {
-    pub world: W,
+pub struct Search<D: Desc, R: Rule<D>> {
+    pub world: World<D, R>,
     // 搜索时给未知细胞选取的状态，None 表示随机
     new_state: Option<State>,
     // 存放在搜索过程中设定了状态的细胞
-    set_table: Vec<Weak<LifeCell<NbhdDesc>>>,
+    set_table: Vec<Weak<LifeCell<D>>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
 }
 
-impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
-    pub fn new(world: W, new_state: Option<State>) -> Search<W, NbhdDesc> {
+impl<D: Desc, R: Rule<D>> Search<D, R> {
+    pub fn new(world: World<D, R>, new_state: Option<State>) -> Search<D, R> {
         let set_table = Vec::with_capacity(world.size());
         Search {world, new_state, set_table, next_set: 0}
     }
 
     // 改变细胞的状态，并且把细胞记录到 set_table 中
-    fn set_cell(&mut self, cell: &Rc<LifeCell<NbhdDesc>>, state: State) {
-        W::set_cell(cell, Some(state), false);
+    fn set_cell(&mut self, cell: &Rc<LifeCell<D>>, state: State) {
+        D::set_cell(cell, Some(state), false);
         self.set_table.push(Rc::downgrade(cell));
     }
 
     // 只有细胞原本的状态为未知时才 set_cell
-    fn check_cell(&mut self, cell: &Rc<LifeCell<NbhdDesc>>, state: State) -> Result<(), ()> {
+    fn check_cell(&mut self, cell: &Rc<LifeCell<D>>, state: State) -> Result<(), ()> {
         if let Some(old_state) = cell.state() {
             if state == old_state {
                 Ok(())
@@ -53,19 +53,19 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
 
     // 确保由一个细胞前一代的邻域能得到这一代的状态
     // 由此确定一些未知细胞的状态
-    fn consistify(&mut self, cell: &Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
+    fn consistify(&mut self, cell: &Rc<LifeCell<D>>) -> Result<(), ()> {
         let pred = cell.pred.borrow().upgrade().unwrap();
         let desc = pred.desc.get();
-        if let Some(state) = self.world.transition(desc) {
+        if let Some(state) = self.world.rule.transition(desc) {
             self.check_cell(cell, state)?;
         }
         if let Some(state) = cell.state() {
             if pred.state().is_none() {
-                if let Some(state) = self.world.implication(desc, state) {
+                if let Some(state) = self.world.rule.implication(desc, state) {
                     self.set_cell(&pred, state);
                 }
             }
-            if let Some(state) = self.world.implication_nbhd(desc, state) {
+            if let Some(state) = self.world.rule.implication_nbhd(desc, state) {
                 for neigh in pred.nbhd.borrow().iter() {
                     if let Some(neigh) = neigh.upgrade() {
                         if neigh.state().is_none() {
@@ -79,7 +79,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
     }
 
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
-    fn consistify10(&mut self, cell: &Rc<LifeCell<NbhdDesc>>) -> Result<(), ()> {
+    fn consistify10(&mut self, cell: &Rc<LifeCell<D>>) -> Result<(), ()> {
         let succ = cell.succ.borrow().upgrade().unwrap();
         self.consistify(cell)?;
         self.consistify(&succ)?;
@@ -122,7 +122,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                 self.set_cell(&cell, state);
                 return Ok(());
             } else {
-                W::set_cell(&cell, None, true);
+                D::set_cell(&cell, None, true);
             }
         }
         Err(())
@@ -154,7 +154,7 @@ impl<W: World<NbhdDesc>, NbhdDesc: Desc + Copy> Search<W, NbhdDesc> {
                     Some(state) => state,
                     None => rand::random(),
                 };
-                W::set_cell(&cell, Some(state), true);
+                D::set_cell(&cell, Some(state), true);
                 self.set_table.push(Rc::downgrade(&cell));
                 if let Some(max) = max_step {
                     if step_count > max {

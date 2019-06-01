@@ -8,7 +8,7 @@
 
 Rlifesrc 的 TUI （文本界面）是用 [pancurses](https://github.com/ihalila/pancurses) 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。
 
-用 `cargo build` 或者 `cargo build --release` 来编译即可。由于我把默认的优化等级设成了3，编译会比较慢；不优化的话程序会因为速度太慢而毫无意义。
+用 `cargo build --release` 来编译即可。用 `cargo run` 运行的时候也记得加上 `--release`，不加的话会特别慢（相差近百倍）。
 
 如果完全不需要 TUI，而且懒得安装以上的依赖，或者是想节省编译时间，可以在编译和运行的时候加上 `--no-default-features`。
 
@@ -16,7 +16,7 @@ Rlifesrc 的 TUI （文本界面）是用 [pancurses](https://github.com/ihalila
 
 ```text
 USAGE:
-    cargo run [FLAGS] [OPTIONS] <X> <Y> [ARGS]
+    cargo run --release [FLAGS] [OPTIONS] <X> <Y> [ARGS]
 
 FLAGS:
     -a, --all
@@ -67,7 +67,7 @@ ARGS:
             竖直方向的平移 [默认: 0]
 ```
 
-比如说，用 `cargo run 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。
+比如说，用 `cargo run --release 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。
 
 ## TUI
 
@@ -88,4 +88,4 @@ Paused. Press [space] to resume.
 
 按空格键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一代/下一代。注意此用法和 lifesrc 不同。
 
-`.`、`O`、`?`分别代表死细胞、活细胞、未知的细胞。搜索结果可以直接复制粘贴到 [Golly](http://golly.sourceforge.net/) 中。如果在搜索过程中，复制前请先暂停。
+`.`、`O`、`?`分别代表死细胞、活细胞、未知的细胞。搜索结果可以直接复制粘贴到 [Golly](http://golly.sourceforge.net/) 中。

@@ -13,6 +13,3 @@ stopwatch = { version = "0.0.7", optional = true }
 [features]
 default = ["tui"]
 tui = ["pancurses", "stopwatch"]
-
-[profile.dev]
-opt-level = 3
