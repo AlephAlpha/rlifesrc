@@ -1,5 +1,5 @@
-use std::rc::{Rc, Weak};
-use crate::world::{State, Desc, LifeCell, Rule, World};
+use std::rc::Rc;
+use crate::world::{State, Desc,  Rule, World, RcCell, WeakCell};
 use crate::world::State::{Dead, Alive};
 
 // 搜索状态
@@ -20,7 +20,7 @@ pub struct Search<D: Desc, R: Rule<D>> {
     // 搜索时给未知细胞选取的状态，None 表示随机
     new_state: Option<State>,
     // 存放在搜索过程中设定了状态的细胞
-    set_table: Vec<Weak<LifeCell<D>>>,
+    set_table: Vec<WeakCell<D>>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
 }
@@ -31,28 +31,8 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
         Search {world, new_state, set_table, next_set: 0}
     }
 
-    // 改变细胞的状态，并且把细胞记录到 set_table 中
-    fn set_cell(&mut self, cell: &Rc<LifeCell<D>>, state: State) {
-        D::set_cell(cell, Some(state), false);
-        self.set_table.push(Rc::downgrade(cell));
-    }
-
-    // 只有细胞原本的状态为未知时才 set_cell
-    fn check_cell(&mut self, cell: &Rc<LifeCell<D>>, state: State) -> Result<(), ()> {
-        if let Some(old_state) = cell.state() {
-            if state == old_state {
-                Ok(())
-            } else {
-                Err(())
-            }
-        } else {
-            self.set_cell(cell, state);
-            Ok(())
-        }
-    }
-
     // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
-    fn consistify10(&mut self, cell: &Rc<LifeCell<D>>) -> Result<(), ()> {
+    fn consistify10(&mut self, cell: &RcCell<D>) -> Result<(), ()> {
         let succ = cell.succ.borrow().upgrade().unwrap();
         self.world.rule.consistify(cell, &mut self.set_table)?;
         self.world.rule.consistify(&succ, &mut self.set_table)?;
@@ -68,10 +48,17 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
     fn proceed(&mut self) -> Result<(), ()> {
         while self.next_set < self.set_table.len() {
             let cell = self.set_table[self.next_set].upgrade().unwrap();
-            let state = cell.state().unwrap();
+            let state = cell.state.get().unwrap();
             for sym in cell.sym.borrow().iter() {
                 if let Some(sym) = sym.upgrade() {
-                    self.check_cell(&sym, state)?;
+                    if let Some(old_state) = cell.state.get() {
+                        if state != old_state {
+                            return Err(())
+                        }
+                    } else {
+                        sym.set(Some(state), false);
+                        self.set_table.push(Rc::downgrade(&sym));
+                    }
                 }
             }
             self.consistify10(&cell)?;
@@ -88,14 +75,15 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
             let cell = self.set_table[self.next_set].upgrade().unwrap();
             self.set_table.pop();
             if cell.free.get() {
-                let state = match cell.state().unwrap() {
+                let state = match cell.state.get().unwrap() {
                     Dead => Alive,
                     Alive => Dead,
                 };
-                self.set_cell(&cell, state);
+                cell.set(Some(state), false);
+                self.set_table.push(Rc::downgrade(&cell));
                 return Ok(());
             } else {
-                D::set_cell(&cell, None, true);
+                cell.set(None, true);
             }
         }
         Err(())
@@ -127,7 +115,7 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
                     Some(state) => state,
                     None => rand::random(),
                 };
-                D::set_cell(&cell, Some(state), true);
+                cell.set(Some(state), true);
                 self.set_table.push(Rc::downgrade(&cell));
                 if let Some(max) = max_step {
                     if step_count > max {

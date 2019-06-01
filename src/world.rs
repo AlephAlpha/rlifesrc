@@ -20,49 +20,55 @@ impl Distribution<State> for Standard {
     }
 }
 
-// 改名 LifeCell 以免和 std::cell::Cell 混淆
-// D 包含了细胞邻域的状态和本身的状态
+pub type WeakCell<D> = Weak<LifeCell<D>>;
+pub type RcCell<D> = Rc<LifeCell<D>>;
+
+// D 表示邻域的状态
 pub struct LifeCell<D: Desc> {
-    // 细胞自身和邻域的状态
+    // 细胞自身的状态
+    pub state: Cell<Option<State>>,
+    // 细胞邻域的状态
     pub desc: Cell<D>,
     // 细胞的状态是否由别的细胞决定
     pub free: Cell<bool>,
     // 同一位置上一代的细胞
-    pub pred: RefCell<Weak<LifeCell<D>>>,
+    pub pred: RefCell<WeakCell<D>>,
     // 同一位置下一代的细胞
-    pub succ: RefCell<Weak<LifeCell<D>>>,
+    pub succ: RefCell<WeakCell<D>>,
     // 细胞的邻域
-    pub nbhd: RefCell<Vec<Weak<LifeCell<D>>>>,
+    pub nbhd: RefCell<Vec<WeakCell<D>>>,
     // 与此细胞对称（因此状态一致）的细胞
-    pub sym: RefCell<Vec<Weak<LifeCell<D>>>>,
+    pub sym: RefCell<Vec<WeakCell<D>>>,
 }
 
 impl<D: Desc> LifeCell<D> {
     pub fn new(state: Option<State>, free: bool) -> Self {
         let desc = Cell::new(D::new(state));
+        let state = Cell::new(state);
         let free = Cell::new(free);
         let pred = RefCell::new(Weak::new());
         let succ = RefCell::new(Weak::new());
         let nbhd = RefCell::new(vec![]);
         let sym = RefCell::new(vec![]);
-        LifeCell {desc, free, pred, succ, nbhd, sym}
+        LifeCell {state, desc, free, pred, succ, nbhd, sym}
     }
 
-    // 获取一个细胞的状态
-    pub fn state(&self) -> Option<State> {
-        self.desc.get().state()
+    // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
+    pub fn set(&self, state: Option<State>, free: bool) {
+        let old_state = self.state.get();
+        self.state.set(state);
+        self.free.set(free);
+        D::set_nbhd(&self, old_state, state);
     }
 }
 
 // 邻域的状态应该满足一个 trait
 pub trait Desc: Copy {
+    // 通过一个细胞的状态生成一个默认的邻域
     fn new(state: Option<State>) -> Self;
 
-    // 从邻域的状态还原出细胞本身的状态，None 表示未知
-    fn state(&self) -> Option<State>;
-
-    // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
-    fn set_cell(cell: &LifeCell<Self>, state: Option<State>, free: bool);
+    // 改变一个细胞的状态时处理其邻域中所有细胞的邻域状态
+    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>);
 }
 
 // 把规则写成一个 Trait，方便以后支持更多的规则
@@ -71,7 +77,8 @@ pub trait Rule<D: Desc> {
     fn b0(&self) -> bool;
 
     // 干脆把 consistify 放到这里来好了
-    fn consistify(&self, cell: &Rc<LifeCell<D>>, set_table: &mut Vec<Weak<LifeCell<D>>>)
+    // 根据规则，由一个细胞本身，前一代，以及前一代的邻域，确保没有矛盾，并确定一些未知细胞的状态
+    fn consistify(&self, cell: &RcCell<D>, set_table: &mut Vec<WeakCell<D>>)
         -> Result<(), ()>;
 }
 
@@ -123,7 +130,7 @@ pub struct World<D: Desc, R: Rule<D>> {
     column_first: bool,
 
     // 搜索范围内的所有细胞的列表
-    cells: Vec<Rc<LifeCell<D>>>,
+    cells: Vec<RcCell<D>>,
 
     // 保存 transition 和 implication 的结果
     pub rule: R,
@@ -196,9 +203,9 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         State::Dead
                     };
 
-                    // 用 set_cell 设置细胞状态
+                    // 用 set 设置细胞状态
                     if 0 <= x && x < width && 0 <= y && y < height {
-                        D::set_cell(&cell, None, true);
+                        cell.set(None, true);
                     }
 
                     // 设定前一代；若前一代不在范围内则把此细胞设为 default
@@ -210,7 +217,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         if pred_weak.upgrade().is_some() {
                             *cell.pred.borrow_mut() = pred_weak;
                         } else {
-                            D::set_cell(&cell, Some(default), false);
+                            cell.set(Some(default), false);
                         }
                     }
 
@@ -223,7 +230,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         if succ_weak.upgrade().is_some() {
                             *cell.succ.borrow_mut() = succ_weak;
                         } else {
-                            D::set_cell(&cell, Some(default), false);
+                            cell.set(Some(default), false);
                         }
                     }
 
@@ -258,7 +265,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                             0 <= coord.1 && coord.1 < height {
                             cell.sym.borrow_mut().push(sym_weak);
                         } else {
-                            D::set_cell(&cell, Some(default), false);
+                            cell.set(Some(default), false);
                         }
                     }
                 }
@@ -273,7 +280,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
     }
 
     // 通过坐标查找细胞
-    fn find_cell(&self, coord: Coord) -> Weak<LifeCell<D>> {
+    fn find_cell(&self, coord: Coord) -> WeakCell<D> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = if self.column_first {
@@ -289,7 +296,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
 
     fn get_cell(&self, coord: Coord) -> (Option<State>, bool) {
         let cell = self.find_cell(coord).upgrade().unwrap();
-        (cell.state(), cell.free.get())
+        (cell.state.get(), cell.free.get())
     }
 
     // 显示某一代的整个世界
@@ -310,18 +317,18 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
         str
     }
 
-    pub fn get_unknown(&self) -> Weak<LifeCell<D>> {
-        self.cells.iter().find(|cell| cell.state().is_none())
+    pub fn get_unknown(&self) -> WeakCell<D> {
+        self.cells.iter().find(|cell| cell.state.get().is_none())
             .map(Rc::downgrade).unwrap_or_default()
     }
 
     pub fn nontrivial(&self) -> bool {
         let nonzero = self.cells.iter().step_by(self.period as usize)
-            .any(|c| c.state() != Some(State::Dead));
+            .any(|c| c.state.get() != Some(State::Dead));
         nonzero && (self.period == 1 ||
             (1..self.period).all(|t|
                 self.period % t != 0 ||
                     self.cells.chunks(self.period as usize)
-                        .any(|c| c[0].state() != c[t as usize].state())))
+                        .any(|c| c[0].state.get() != c[t as usize].state.get())))
     }
 }

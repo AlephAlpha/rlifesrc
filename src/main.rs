@@ -5,10 +5,10 @@ use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::rule::{NbhdDesc, LifeLike};
+use crate::life::{NbhdDesc, Life};
 use crate::world::{State, World};
 mod search;
-mod rule;
+mod life;
 mod world;
 
 fn is_positive(s: &str) -> bool {
@@ -75,7 +75,7 @@ fn main() {
             .long("rule")
             .default_value("B3/S23")
             .takes_value(true)
-            .validator(|d| d.parse().map(|_ : LifeLike| ())))
+            .validator(|d| d.parse().map(|_ : Life| ())))
         .arg(Arg::with_name("CHOOSE")
             .help("How to choose a state for unknown cells")
             .short("c")
@@ -163,7 +163,7 @@ fn main() {
     }
 }
 
-fn search_without_tui(search: &mut Search<NbhdDesc, LifeLike>, all: bool) {
+fn search_without_tui(search: &mut Search<NbhdDesc, Life>, all: bool) {
     if all {
         loop {
             match search.search(None) {
@@ -181,7 +181,7 @@ fn search_without_tui(search: &mut Search<NbhdDesc, LifeLike>, all: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn search_with_tui(search: &mut Search<NbhdDesc, LifeLike>, reset: bool) {
+fn search_with_tui(search: &mut Search<NbhdDesc, Life>, reset: bool) {
     let period = search.world.period;
     #[cfg(debug_assertions)]
     let view_freq = 500;
@@ -283,7 +283,7 @@ fn search_with_tui(search: &mut Search<NbhdDesc, LifeLike>, reset: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn print_world(window: &Window, world: &World<NbhdDesc, LifeLike>, gen: isize) -> i32 {
+fn print_world(window: &Window, world: &World<NbhdDesc, Life>, gen: isize) -> i32 {
     window.mvprintw(0, 0, world.display_gen(gen));
     window.refresh()
 }
