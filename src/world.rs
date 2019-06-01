@@ -4,6 +4,40 @@ use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
+// 改名 LifeCell 以免和 std::cell::Cell 混淆
+// D 包含了细胞邻域的状态和本身的状态
+pub struct LifeCell<D: Desc> {
+    // 细胞自身和邻域的状态
+    pub desc: Cell<D>,
+    // 细胞的状态是否由别的细胞决定
+    pub free: Cell<bool>,
+    // 同一位置上一代的细胞
+    pub pred: RefCell<Weak<LifeCell<D>>>,
+    // 同一位置下一代的细胞
+    pub succ: RefCell<Weak<LifeCell<D>>>,
+    // 细胞的邻域
+    pub nbhd: RefCell<Vec<Weak<LifeCell<D>>>>,
+    // 与此细胞对称（因此状态一致）的细胞
+    pub sym: RefCell<Vec<Weak<LifeCell<D>>>>,
+}
+
+impl<D: Desc> LifeCell<D> {
+    pub fn new(state: Option<State>, free: bool) -> Self {
+        let desc = Cell::new(D::new(state));
+        let free = Cell::new(free);
+        let pred = RefCell::new(Weak::new());
+        let succ = RefCell::new(Weak::new());
+        let nbhd = RefCell::new(vec![]);
+        let sym = RefCell::new(vec![]);
+        LifeCell {desc, free, pred, succ, nbhd, sym}
+    }
+
+    // 获取一个细胞的状态
+    pub fn state(&self) -> Option<State> {
+        self.desc.get().state()
+    }
+}
+
 // 细胞状态
 #[derive(Clone, Copy, PartialEq)]
 pub enum State {
@@ -31,53 +65,19 @@ pub trait Desc: Copy {
     fn set_cell(cell: &LifeCell<Self>, state: Option<State>, free: bool);
 }
 
-// 改名 LifeCell 以免和 std::cell::Cell 混淆
-// NbhdDesc 包含了细胞邻域的状态和本身的状态
-pub struct LifeCell<NbhdDesc: Desc> {
-    // 细胞自身和邻域的状态
-    pub desc: Cell<NbhdDesc>,
-    // 细胞的状态是否由别的细胞决定
-    pub free: Cell<bool>,
-    // 同一位置上一代的细胞
-    pub pred: RefCell<Weak<LifeCell<NbhdDesc>>>,
-    // 同一位置下一代的细胞
-    pub succ: RefCell<Weak<LifeCell<NbhdDesc>>>,
-    // 细胞的邻域
-    pub nbhd: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
-    // 与此细胞对称（因此状态一致）的细胞
-    pub sym: RefCell<Vec<Weak<LifeCell<NbhdDesc>>>>,
-}
-
-impl<NbhdDesc: Desc> LifeCell<NbhdDesc> {
-    pub fn new(state: Option<State>, free: bool) -> Self {
-        let desc = Cell::new(NbhdDesc::new(state));
-        let free = Cell::new(free);
-        let pred = RefCell::new(Weak::new());
-        let succ = RefCell::new(Weak::new());
-        let nbhd = RefCell::new(vec![]);
-        let sym = RefCell::new(vec![]);
-        LifeCell {desc, free, pred, succ, nbhd, sym}
-    }
-
-    // 获取一个细胞的状态
-    pub fn state(&self) -> Option<State> {
-        self.desc.get().state()
-    }
-}
-
 // 把规则写成一个 Trait，方便以后支持更多的规则
-pub trait Rule<NbhdDesc: Desc> {
+pub trait Rule<D: Desc> {
     // 规则是否是 B0
     fn b0(&self) -> bool;
 
     // 由一个细胞及其邻域的状态得到其后一代的状态
-    fn transition(&self, desc: NbhdDesc) -> Option<State>;
+    fn transition(&self, desc: D) -> Option<State>;
 
     // 由一个细胞本身、邻域以及其后一代的状态，决定其本身或者邻域中某些未知细胞的状态
     // implication表示本身的状态，implication_nbhd表示邻域中未知细胞的状态
     // 这样写并不好扩展到 non-totalistic 的规则的情形，不过以后再说吧
-    fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State>;
-    fn implication_nbhd(&self, desc: NbhdDesc, succ_state: State) -> Option<State>;
+    fn implication(&self, desc: D, succ_state: State) -> Option<State>;
+    fn implication_nbhd(&self, desc: D, succ_state: State) -> Option<State>;
 
 }
 
