@@ -9,6 +9,7 @@ use crate::life::{NbhdDesc, Life};
 use crate::world::{State, World};
 mod search;
 mod life;
+// mod nt_life;
 mod world;
 
 fn is_positive(s: &str) -> bool {
@@ -137,13 +138,13 @@ fn main() {
         _ => None,
     };
 
-    let life = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
+    let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
     let new_state = match matches.value_of("CHOOSE").unwrap() {
         "dead" | "d" => Some(State::Dead),
         "alive" | "a" => Some(State::Alive),
         _ => None,
     };
-    let mut search = Search::new(life, new_state);
+    let mut search = Search::new(world, new_state);
 
     #[cfg(not(feature = "tui"))]
     {

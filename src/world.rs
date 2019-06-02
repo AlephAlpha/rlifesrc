@@ -5,7 +5,7 @@ use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
 // 细胞状态
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum State {
     Dead,
     Alive,
@@ -175,6 +175,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
         let life = World {width, height, period, column_first, cells, rule};
 
         // 先设定细胞的邻域
+        // 待改：把每个邻域都放进去
         let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
         for x in -1..width + 1 {
             for y in -1..height + 1 {
@@ -280,7 +281,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
     }
 
     // 通过坐标查找细胞
-    fn find_cell(&self, coord: Coord) -> WeakCell<D> {
+    pub fn find_cell(&self, coord: Coord) -> WeakCell<D> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = if self.column_first {
