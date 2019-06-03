@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use crate::world::{State, Desc, Rule, LifeCell, RcCell, WeakCell};
 
-#[derive(Clone, Copy, Default, PartialEq, Debug)]
+#[derive(Clone, Copy, Default)]
 // 邻域的八个细胞的状态
 pub struct NbhdDesc(u16);
 
@@ -100,122 +100,142 @@ impl FromStr for NTLife {
 impl NTLife {
     fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
-        let (trans_table, impl_table, impl_nbhd_table) = Self::to_tables(b, s);
-        NTLife {b0, trans_table, impl_table, impl_nbhd_table}
-    }
 
-    // 在邻域没有未知细胞的情形下推导下一代的状态
-    // 这里 nbhd 是由八个邻域状态组成的二进制数
-    fn next_state(b: &Vec<u8>, s: &Vec<u8>, state: Option<State>, nbhd: u8) -> Option<State> {
-        match state {
-            Some(State::Dead) => {
-                if b.contains(&nbhd) {
-                    Some(State::Alive)
-                } else {
-                    Some(State::Dead)
-                }
-            },
-            Some(State::Alive) => {
-                if s.contains(&nbhd) {
-                    Some(State::Alive)
-                } else {
-                    Some(State::Dead)
-                }
-            },
-            None => {
-                if b.contains(&nbhd) && s.contains(&nbhd) {
-                    Some(State::Alive)
-                } else if b.contains(&nbhd) || s.contains(&nbhd) {
-                    None
-                } else {
-                    Some(State::Dead)
-                }
-            },
-        }
-    }
 
-    // 由一个细胞及其邻域的状态得到其后一代的状态
-    // 这里 nbhd 是由八个邻域状态通过前面的 to_num 函数得到的结果
-    fn to_trans(b: &Vec<u8>, s: &Vec<u8>, state: Option<State>, nbhd: usize)
-        -> Option<State> {
-        let knowns = (nbhd >> 8 | nbhd) & 0xff;
-        let all_nbhds = (0..256).filter_map(|n| {
-            if n & knowns == 0 {
-                Some((n | nbhd) as u8)
+        let mut trans_table: Box<[Implication<Option<State>>; 65536]> =
+            Box::new([Default::default(); 65536]);
+            // 先把 trans_table 中没有未知细胞的地方填上
+        for alives in 0..256 {
+            let nbhd = ((0xff & !alives) << 8) | alives;
+            let alives = alives as u8;
+            trans_table[nbhd].dead = if b.contains(&alives) {
+                Some(State::Alive)
+            } else {
+                Some(State::Dead)
+            };
+            trans_table[nbhd].alive = if s.contains(&alives) {
+                Some(State::Alive)
+            } else {
+                Some(State::Dead)
+            };
+            trans_table[nbhd].none = if b.contains(&alives) && s.contains(&alives) {
+                Some(State::Alive)
+            } else if !b.contains(&alives) && !s.contains(&alives) {
+                Some(State::Dead)
             } else {
                 None
-            }
-        });
-        let always_dead = all_nbhds.clone().all(|n| {
-            Self::next_state(b, s, state, n) == Some(State::Dead)
-        });
-        let always_alive = all_nbhds.clone().all(|n| {
-            Self::next_state(b, s, state, n) == Some(State::Alive)
-        });
-        if always_alive {
-            Some(State::Alive)
-        } else if always_dead {
-            Some(State::Dead)
-        } else {
-            None
-        }
-    }
-
-    // 由一个细胞的邻域及其后一代的状态，决定其本身的状态
-    fn to_impl(b: &Vec<u8>, s: &Vec<u8>, nbhd: usize, succ_state: State)
-        -> Option<State> {
-        let possibly_dead = match Self::to_trans(b, s, Some(State::Dead), nbhd) {
-            Some(succ) => succ == succ_state,
-            None => true,
-        };
-        let possibly_alive = match Self::to_trans(b, s, Some(State::Alive), nbhd) {
-            Some(succ) => succ == succ_state,
-            None => true,
-        };
-        if possibly_dead && !possibly_alive {
-            Some(State::Dead)
-        } else if !possibly_dead && possibly_alive {
-            Some(State::Alive)
-        } else {
-            None
-        }
-    }
-
-    // 由一个细胞本身、邻域以及其后一代的状态，决定其域中未知细胞的状态
-    // 对于 non-totalistic 的规则，这个很难办……以后再写
-    fn to_impl_nbhd(_b: &Vec<u8>, _s: &Vec<u8>, _state: Option<State>, _nbhd: usize,
-        _succ_state: State) -> NbhdDesc {
-        NbhdDesc::new(None)
-    }
-
-    // 计算以上推导结果，保存在三个数组中
-    fn to_tables(b: Vec<u8>, s: Vec<u8>)
-        -> (Box<[Implication<Option<State>>; 65536]>,
-            Box<[Option<State>; 65536 * 2]>,
-            Box<[Implication<NbhdDesc>; 65536 * 2]>) {
-        let mut trans_table = Box::new([Default::default(); 65536]);
-        let mut impl_table = Box::new([Default::default(); 65536 * 2]);
-        let mut impl_nbhd_table = Box::new([Default::default(); 65536 * 2]);
-        for nbhd in 0..65536 {
-            if nbhd >> 8 & nbhd != 0 {
-                continue;
-            }
-            trans_table[nbhd] = Implication {
-                dead: Self::to_trans(&b, &s, Some(State::Dead), nbhd),
-                alive: Self::to_trans(&b, &s, Some(State::Alive), nbhd),
-                none: Self::to_trans(&b, &s, None, nbhd),
             };
-            for (i, &succ_state) in [State::Dead, State::Alive].iter().enumerate() {
-                let index = nbhd * 2 + i;
-                impl_table[index] = Self::to_impl(&b, &s, nbhd, succ_state);
-                impl_nbhd_table[index] = Implication {
-                    dead: Self::to_impl_nbhd(&b, &s, Some(State::Dead), nbhd, succ_state),
-                    alive: Self::to_impl_nbhd(&b, &s, Some(State::Alive), nbhd, succ_state),
-                    none: Self::to_impl_nbhd(&b, &s, None, nbhd, succ_state),
-                };
+        }
+        // 然后根据未知细胞的情况，一个一个来
+        for unknowns in 1usize..256 {
+            // n 是 unknowns 写成二进制时最高的一位
+            // 于是处理 unknowns 时 unknowns - n 一定已经处理过了
+            let n = unknowns.next_power_of_two() >> !unknowns.is_power_of_two() as usize;
+            for alives in (0..256).filter(|a| a & unknowns == 0) {
+                let nbhd = ((0xff & !alives & !unknowns) << 8) | alives;
+                let nbhd0 = ((0xff & !alives & !unknowns | n) << 8) | alives;
+                let nbhd1 = ((0xff & !alives & !unknowns & !n) << 8) | alives | n;
+                let trans0 = trans_table[nbhd0];
+                let trans1 = trans_table[nbhd1];
+                if trans0.dead == trans1.dead {
+                    trans_table[nbhd].dead = trans0.dead;
+                }
+                if trans0.alive == trans1.alive {
+                    trans_table[nbhd].alive = trans0.alive;
+                }
+                if trans0.none == trans1.none {
+                    trans_table[nbhd].none = trans0.none;
+                }
             }
         }
-        (trans_table, impl_table, impl_nbhd_table)
+
+        // impl_table 按顺序来就行
+        let mut impl_table = Box::new([Default::default(); 65536 * 2]);
+        for unknowns in 0..256 {
+            for alives in 0..256 {
+                let nbhd = ((0xff & !alives & !unknowns) << 8) | alives;
+                for (i, &succ) in [State::Dead, State::Alive].iter().enumerate() {
+                    let index = nbhd * 2 + i;
+                    let possibly_dead = match trans_table[nbhd].dead {
+                        Some(state) => state == succ,
+                        None => true,
+                    };
+                    let possibly_alive = match trans_table[nbhd].alive {
+                        Some(state) => state == succ,
+                        None => true,
+                    };
+                    if possibly_dead && !possibly_alive {
+                        impl_table[index] = Some(State::Dead);
+                    } else if !possibly_dead && possibly_alive {
+                        impl_table[index] = Some(State::Alive);
+                    }
+                }
+            }
+        }
+
+        // 接下来是最难的 impl_nbhd_table
+        // 不确定有没有写漏什么东西
+        let mut impl_nbhd_table: Box<[Implication<NbhdDesc>; 65536 * 2]> =
+            Box::new([Default::default(); 65536 * 2]);
+        for unknowns in 0usize..256 {
+            // n 取遍 unknowns 写成二进制时所有非零的位
+            for n in (0..8).map(|i| 1 << i).filter(|n| unknowns & n != 0) {
+                for alives in 0..256 {
+                    let nbhd = ((0xff & !alives & !unknowns) << 8) | alives;
+                    let nbhd0 = ((0xff & !alives & !unknowns & !n) << 8) | alives | n;
+                    let nbhd1 = ((0xff & !alives & !unknowns | n) << 8) | alives;
+                    let trans0 = trans_table[nbhd0];
+                    let trans1 = trans_table[nbhd1];
+                    for (i, &succ) in [State::Dead, State::Alive].iter().enumerate() {
+                        let index = nbhd * 2 + i;
+
+                        let possibly_dead = match trans0.dead {
+                            Some(state) => state == succ,
+                            None => true,
+                        };
+                        let possibly_alive = match trans1.dead {
+                            Some(state) => state == succ,
+                            None => true,
+                        };
+                        if possibly_dead && !possibly_alive {
+                            impl_nbhd_table[index].dead.0 |= n as u16;
+                        } else if !possibly_dead && possibly_alive {
+                            impl_nbhd_table[index].dead.0 |= (n << 8) as u16;
+                        }
+
+                        let possibly_dead = match trans0.alive {
+                            Some(state) => state == succ,
+                            None => true,
+                        };
+                        let possibly_alive = match trans1.alive {
+                            Some(state) => state == succ,
+                            None => true,
+                        };
+                        if possibly_dead && !possibly_alive {
+                            impl_nbhd_table[index].alive.0 |= n as u16;
+                        } else if !possibly_dead && possibly_alive {
+                            impl_nbhd_table[index].alive.0 |= (n << 8) as u16;
+                        }
+
+                        let possibly_dead = match trans0.none {
+                            Some(state) => state == succ,
+                            None => true,
+                        };
+                        let possibly_alive = match trans1.none {
+                            Some(state) => state == succ,
+                            None => true,
+                        };
+                        if possibly_dead && !possibly_alive {
+                            impl_nbhd_table[index].none.0 |= n as u16;
+                        } else if !possibly_dead && possibly_alive {
+                            impl_nbhd_table[index].none.0 |= (n << 8) as u16;
+                        }
+                    }
+                }
+            }
+        }
+
+        NTLife {b0, trans_table, impl_table, impl_nbhd_table}
     }
 
     fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {

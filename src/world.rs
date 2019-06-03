@@ -5,7 +5,7 @@ use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
 // 细胞状态
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum State {
     Dead,
     Alive,
