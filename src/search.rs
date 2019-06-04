@@ -51,7 +51,7 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
             let state = cell.state.get().unwrap();
             for sym in cell.sym.borrow().iter() {
                 if let Some(sym) = sym.upgrade() {
-                    if let Some(old_state) = cell.state.get() {
+                    if let Some(old_state) = sym.state.get() {
                         if state != old_state {
                             return Err(())
                         }

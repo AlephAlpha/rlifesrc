@@ -5,11 +5,12 @@ use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::life::{NbhdDesc, Life};
-use crate::world::{State, World};
+use crate::rules::parse_nt_life;
+use crate::world::{Desc, Rule, State, World};
 mod search;
 mod life;
-// mod nt_life;
+mod nt_life;
+mod rules;
 mod world;
 
 fn is_positive(s: &str) -> bool {
@@ -51,12 +52,12 @@ fn main() {
             .help("Horizontal translation")
             .default_value("0")
             .index(4)
-            .validator(|d| d.parse().map(|_ : isize| ()).map_err(|e| e.to_string())))
+            .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())))
         .arg(Arg::with_name("DY")
             .help("Vertical translation")
             .default_value("0")
             .index(5)
-            .validator(|d| d.parse().map(|_ : isize| ()).map_err(|e| e.to_string())))
+            .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())))
         .arg(Arg::with_name("SYMMETRY")
             .help("Symmetry of the pattern")
             .long_help("Symmetry of the pattern\n\
@@ -76,7 +77,7 @@ fn main() {
             .long("rule")
             .default_value("B3/S23")
             .takes_value(true)
-            .validator(|d| d.parse().map(|_ : Life| ())))
+            .validator(|d| parse_nt_life(&d).map(|_| ())))
         .arg(Arg::with_name("CHOOSE")
             .help("How to choose a state for unknown cells")
             .short("c")
@@ -130,7 +131,7 @@ fn main() {
     let dy = matches.value_of("DY").unwrap().parse().unwrap();
 
     let symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
-    let rule = matches.value_of("RULE").unwrap().parse().unwrap();
+    let rule = parse_nt_life(&matches.value_of("RULE").unwrap()).unwrap();
     let all = matches.is_present("ALL");
     let column_first = match matches.value_of("ORDER").unwrap() {
         "row" | "r" => Some(false),
@@ -164,7 +165,7 @@ fn main() {
     }
 }
 
-fn search_without_tui(search: &mut Search<NbhdDesc, Life>, all: bool) {
+fn search_without_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, all: bool) {
     if all {
         loop {
             match search.search(None) {
@@ -182,7 +183,7 @@ fn search_without_tui(search: &mut Search<NbhdDesc, Life>, all: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn search_with_tui(search: &mut Search<NbhdDesc, Life>, reset: bool) {
+fn search_with_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, reset: bool) {
     let period = search.world.period;
     #[cfg(debug_assertions)]
     let view_freq = 500;
@@ -284,7 +285,7 @@ fn search_with_tui(search: &mut Search<NbhdDesc, Life>, reset: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn print_world(window: &Window, world: &World<NbhdDesc, Life>, gen: isize) -> i32 {
+fn print_world<D: Desc, R: Rule<D>>(window: &Window, world: &World<D, R>, gen: isize) -> i32 {
     window.mvprintw(0, 0, world.display_gen(gen));
     window.refresh()
 }

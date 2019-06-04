@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::str::FromStr;
 use crate::world::{State, Desc, Rule, LifeCell, RcCell, WeakCell};
 
 #[derive(Clone, Copy)]
@@ -52,45 +51,8 @@ pub struct Life {
     impl_nbhd_table: [Implication; 512],
 }
 
-impl FromStr for Life {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut chars = s.chars();
-        let err = Err(String::from("not a Life-like rule"));
-        match chars.next() {
-            Some('b') => (),
-            Some('B') => (),
-            _ => return err,
-        }
-        let b: Vec<_> = chars.clone().take_while(|c| c.is_ascii_digit())
-            .map(|c| c.to_digit(10).unwrap() as u8).collect();
-        let mut chars = chars.skip_while(|c| c.is_ascii_digit());
-        match chars.next() {
-            Some('s') => (),
-            Some('S') => (),
-            Some('/') => {
-                match chars.next() {
-                    Some('s') => (),
-                    Some('S') => (),
-                    _ => return err,
-                }
-            },
-            _ => return err,
-        }
-        let s: Vec<_> = chars.clone().take_while(|c| c.is_ascii_digit())
-            .map(|c| c.to_digit(10).unwrap() as u8).collect();
-        let mut chars = chars.skip_while(|c| c.is_ascii_digit());
-        if chars.next().is_some() || b.contains(&9) || s.contains(&9) {
-            err
-        } else {
-            Ok(Life::new(b, s))
-        }
-    }
-}
-
 impl Life {
-    fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
+    pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
         let (trans_table, impl_table, impl_nbhd_table) = Self::to_tables(b, s);
         Life {b0, trans_table, impl_table, impl_nbhd_table}

@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::str::FromStr;
 use crate::world::{State, Desc, Rule, LifeCell, RcCell, WeakCell};
 
 #[derive(Clone, Copy, Default)]
@@ -48,57 +47,8 @@ pub struct NTLife {
     impl_nbhd_table: Box<[Implication<NbhdDesc>; 65536 * 2]>,
 }
 
-impl FromStr for NTLife {
-    type Err = String;
-
-    // 太复杂，先总是返回一个值，以供测试
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        // let mut chars = s.chars();
-        // let err = Err(String::from("not a Life-like rule"));
-        // match chars.next() {
-        //     Some('b') => (),
-        //     Some('B') => (),
-        //     _ => return err,
-        // }
-        // let b: Vec<_> = chars.clone().take_while(|c| c.is_ascii_digit())
-        //     .map(|c| c.to_digit(10).unwrap() as u8).collect();
-        // let mut chars = chars.skip_while(|c| c.is_ascii_digit());
-        // match chars.next() {
-        //     Some('s') => (),
-        //     Some('S') => (),
-        //     Some('/') => {
-        //         match chars.next() {
-        //             Some('s') => (),
-        //             Some('S') => (),
-        //             _ => return err,
-        //         }
-        //     },
-        //     _ => return err,
-        // }
-        // let s: Vec<_> = chars.clone().take_while(|c| c.is_ascii_digit())
-        //     .map(|c| c.to_digit(10).unwrap() as u8).collect();
-        // let mut chars = chars.skip_while(|c| c.is_ascii_digit());
-        // if chars.next().is_some() || b.contains(&9) || s.contains(&9) {
-        //     err
-        // } else {
-        //     Ok(Life::new(b, s))
-        // }
-        let b = vec![7, 11, 13, 14, 19, 21, 22, 25, 26, 28, 35, 37, 38, 41, 42, 44, 49,
-            50, 52, 56, 67, 69, 70, 73, 74, 76, 81, 82, 84, 88, 97, 98, 100, 104,
-            112, 131, 133, 134, 137, 138, 140, 145, 146, 148, 152, 161, 162, 164,
-            168, 176, 193, 194, 196, 200, 208, 224];
-        let s = vec![3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 24, 25,
-            26, 28, 33, 34, 35, 36, 37, 38, 40, 41, 42, 44, 48, 49, 50, 52, 56,
-            65, 66, 67, 68, 69, 70, 72, 73, 74, 76, 80, 81, 82, 84, 88, 96, 97,
-            98, 100, 104, 112, 129, 130, 131, 132, 133, 134, 136, 137, 138, 140,
-            144, 145, 146, 148, 152, 160, 161, 162, 164, 168, 176, 192, 193, 194,
-            196, 200, 208, 224];
-        Ok(NTLife::new(b, s))
-    }
-}
-
 impl NTLife {
-    fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
+    pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
 
 
