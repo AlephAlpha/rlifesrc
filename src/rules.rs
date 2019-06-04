@@ -78,7 +78,7 @@ pub fn parse_nt_life(string: &str) -> Result<NTLife, String> {
         .iter().map(|v| v.iter().cloned().collect()).collect();
 
     // 这部份写起来好乱……
-    // 而且总觉得有哪里不对……
+    // 以后再重写
     let chars_to_number: Vec<_> = nbhd_maps.iter()
         .enumerate()
         .map(|(i, m)| {

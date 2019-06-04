@@ -5,7 +5,7 @@ use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::rules::parse_nt_life;
+use crate::rules::{parse_life, parse_nt_life};
 use crate::world::{Desc, Rule, State, World};
 mod search;
 mod life;
@@ -72,7 +72,7 @@ fn main() {
         .arg(Arg::with_name("RULE")
             .help("Rule of the cellular automaton")
             .long_help("Rule of the cellular automaton\n\
-                Currently, only Life-like rules are supported.\n")
+                Supports Life-like and isotropic non-totalistic rules.\n")
             .short("r")
             .long("rule")
             .default_value("B3/S23")
@@ -131,20 +131,36 @@ fn main() {
     let dy = matches.value_of("DY").unwrap().parse().unwrap();
 
     let symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
-    let rule = parse_nt_life(&matches.value_of("RULE").unwrap()).unwrap();
     let all = matches.is_present("ALL");
+    let reset = matches.is_present("RESET");
+    let no_tui = matches.is_present("NOTUI");
     let column_first = match matches.value_of("ORDER").unwrap() {
         "row" | "r" => Some(false),
         "column" | "c" => Some(true),
         _ => None,
     };
-
-    let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
     let new_state = match matches.value_of("CHOOSE").unwrap() {
         "dead" | "d" => Some(State::Dead),
         "alive" | "a" => Some(State::Alive),
         _ => None,
     };
+
+    let rule_string = &matches.value_of("RULE").unwrap();
+    match parse_life(rule_string) {
+        Ok(rule) => {
+            let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
+            search(world, new_state, all, reset, no_tui);
+        },
+        _ => {
+            let rule = parse_nt_life(rule_string).unwrap();
+            let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
+            search(world, new_state, all, reset, no_tui);
+        }
+    }
+}
+
+fn search<D: Desc, R: Rule<D>>(world: World<D, R>, new_state: Option<State>,
+    all: bool, reset: bool, no_tui: bool) {
     let mut search = Search::new(world, new_state);
 
     #[cfg(not(feature = "tui"))]
@@ -154,10 +170,7 @@ fn main() {
 
     #[cfg(feature = "tui")]
     {
-        let reset = matches.is_present("RESET");
-        let notui = matches.is_present("NOTUI");
-
-        if notui {
+        if no_tui {
             search_without_tui(&mut search, all)
         } else {
             search_with_tui(&mut search, reset)
