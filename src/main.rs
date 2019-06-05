@@ -5,12 +5,12 @@ use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::rules::{parse_life, parse_nt_life};
+use crate::parse_rules::{parse_life, parse_isotropic};
 use crate::world::{Desc, Rule, State, World};
 mod search;
 mod life;
-mod nt_life;
-mod rules;
+mod isotropic;
+mod parse_rules;
 mod world;
 
 fn is_positive(s: &str) -> bool {
@@ -77,7 +77,7 @@ fn main() {
             .long("rule")
             .default_value("B3/S23")
             .takes_value(true)
-            .validator(|d| parse_nt_life(&d).map(|_| ())))
+            .validator(|d| parse_isotropic(&d).map(|_| ())))
         .arg(Arg::with_name("CHOOSE")
             .help("How to choose a state for unknown cells")
             .short("c")
@@ -152,7 +152,7 @@ fn main() {
             search(world, new_state, all, reset, no_tui);
         },
         _ => {
-            let rule = parse_nt_life(rule_string).unwrap();
+            let rule = parse_isotropic(rule_string).unwrap();
             let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
             search(world, new_state, all, reset, no_tui);
         }

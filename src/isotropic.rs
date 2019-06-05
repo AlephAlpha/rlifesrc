@@ -3,22 +3,23 @@ use crate::world::{State, Desc, Rule, LifeCell, RcCell, WeakCell};
 
 #[derive(Clone, Copy, Default)]
 // 邻域的八个细胞的状态
+// 写成二进制，前八位中的 1 表示死细胞，后八位中的 1 表示活细胞
 pub struct NbhdDesc(u16);
 
 impl Desc for NbhdDesc {
     fn new(state: Option<State>) -> Self {
         match state {
             Some(State::Dead) => NbhdDesc(0xff00),
-            Some(State::Alive) => NbhdDesc(0xff),
-            None => NbhdDesc(0),
+            Some(State::Alive) => NbhdDesc(0x00ff),
+            None => NbhdDesc(0x0000),
         }
     }
 
     fn set_nbhd(cell: &LifeCell<Self>, _: Option<State>, state: Option<State>) {
         let state_num = match state {
-            Some(State::Dead) => 0x100,
-            Some(State::Alive) => 1,
-            None => 0,
+            Some(State::Dead) => 0x0100,
+            Some(State::Alive) => 0x0001,
+            None => 0x0000,
         };
         for (i, neigh) in cell.nbhd.borrow().iter().rev().enumerate() {
             let neigh = neigh.upgrade().unwrap();
@@ -40,14 +41,14 @@ pub struct Implication<T> {
 
 // Non-totalistic 的规则
 // 不提供规则本身的数据，只保存 transition 和 implication 的结果
-pub struct NTLife {
+pub struct Life {
     b0: bool,
     trans_table: Box<[Implication<Option<State>>; 65536]>,
     impl_table: Box<[Option<State>; 65536 * 2]>,
     impl_nbhd_table: Box<[Implication<NbhdDesc>; 65536 * 2]>,
 }
 
-impl NTLife {
+impl Life {
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
 
@@ -185,7 +186,7 @@ impl NTLife {
             }
         }
 
-        NTLife {b0, trans_table, impl_table, impl_nbhd_table}
+        Life {b0, trans_table, impl_table, impl_nbhd_table}
     }
 
     fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {
@@ -220,7 +221,7 @@ impl NTLife {
     }
 }
 
-impl Rule<NbhdDesc> for NTLife {
+impl Rule<NbhdDesc> for Life {
     fn b0(&self) -> bool {
         self.b0
     }
