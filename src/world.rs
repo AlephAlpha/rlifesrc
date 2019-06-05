@@ -36,7 +36,7 @@ pub struct LifeCell<D: Desc> {
     // 同一位置下一代的细胞
     pub succ: RefCell<WeakCell<D>>,
     // 细胞的邻域
-    pub nbhd: RefCell<Vec<WeakCell<D>>>,
+    pub nbhd: RefCell<[WeakCell<D>; 8]>,
     // 与此细胞对称（因此状态一致）的细胞
     pub sym: RefCell<Vec<WeakCell<D>>>,
 }
@@ -46,10 +46,10 @@ impl<D: Desc> LifeCell<D> {
         let desc = Cell::new(D::new(state));
         let state = Cell::new(state);
         let free = Cell::new(free);
-        let pred = RefCell::new(Weak::new());
-        let succ = RefCell::new(Weak::new());
-        let nbhd = RefCell::new(vec![]);
-        let sym = RefCell::new(vec![]);
+        let pred = Default::default();
+        let succ = Default::default();
+        let nbhd = Default::default();
+        let sym = Default::default();
         LifeCell {state, desc, free, pred, succ, nbhd, sym}
     }
 
@@ -130,6 +130,7 @@ pub struct World<D: Desc, R: Rule<D>> {
     pub width: isize,
     pub height: isize,
     pub period: isize,
+    pub rule: R,
 
     // 搜索顺序是先行后列还是先列后行
     // 通过比较行数和列数的大小来自动决定
@@ -138,8 +139,8 @@ pub struct World<D: Desc, R: Rule<D>> {
     // 搜索范围内的所有细胞的列表
     cells: Vec<RcCell<D>>,
 
-    // 保存 transition 和 implication 的结果
-    pub rule: R,
+    // 公用的搜索范围外的死细胞
+    dead_cell: RcCell<D>,
 }
 
 impl<D: Desc, R: Rule<D>> World<D, R> {
@@ -178,7 +179,9 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
             }
         }
 
-        let life = World {width, height, period, column_first, cells, rule};
+        let dead_cell = Rc::new(LifeCell::new(Some(State::Dead), false));
+
+        let life = World {width, height, period, rule, column_first, cells, dead_cell};
 
         // 先设定细胞的邻域
         // 注意：对于范围边缘的细胞，邻域可能指向不存在的细胞！
@@ -187,8 +190,8 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
             for y in -1..height + 1 {
                 for t in 0..period {
                     let cell = life.find_cell((x, y, t)).upgrade().unwrap();
-                    for (nx, ny) in neighbors.iter() {
-                        cell.nbhd.borrow_mut().push(life.find_cell((x + nx, y + ny, t)));
+                    for (i, (nx, ny)) in neighbors.iter().enumerate() {
+                        cell.nbhd.borrow_mut()[i] = life.find_cell((x + nx, y + ny, t));
                     }
                 }
             }
@@ -225,7 +228,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         }
                     }
 
-                    // 设定后一代；若后一代不在范围内则把此细胞设为 default
+                    // 设定后一代；若后一代不在范围内则把后一代设为 dead_cell
                     if t != period - 1 {
                         *cell.succ.borrow_mut() = life.find_cell((x, y, t + 1));
                     } else {
@@ -233,8 +236,8 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         let succ_weak = life.find_cell(succ_coord);
                         if succ_weak.upgrade().is_some() {
                             *cell.succ.borrow_mut() = succ_weak;
-                        } else if 0 <= x && x < width && 0 <= y && y < height {
-                            cell.set(Some(default), false);
+                        } else {
+                            *cell.succ.borrow_mut() = Rc::downgrade(&life.dead_cell);
                         }
                     }
 

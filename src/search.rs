@@ -32,43 +32,41 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
         Search {world, new_state, set_table, next_set: 0}
     }
 
-    // 由一个细胞本身，前一代，以及前一代的邻域，确保没有矛盾，并确定一些未知细胞的状态
+    // 确保由一个细胞本身和邻域能得到其后一代，由此确定一些未知细胞的状态
     fn consistify(&mut self, cell: &RcCell<D>) -> Result<(), ()> {
-        let pred = cell.pred.borrow().upgrade().unwrap();
-        let pred_state = pred.state.get();
-        let desc = pred.desc.get();
-        if let Some(state) = self.world.rule.transition(pred_state, desc) {
-            if let Some(old_state) = cell.state.get() {
-                if state != old_state {
+        let succ = cell.succ.borrow().upgrade().unwrap();
+        let state = cell.state.get();
+        let desc = cell.desc.get();
+        if let Some(new_state) = self.world.rule.transition(state, desc) {
+            if let Some(succ_state) = succ.state.get() {
+                if new_state != succ_state {
                     return Err(())
                 }
             } else {
-                cell.set(Some(state), false);
-                self.set_table.push(Rc::downgrade(cell));
+                succ.set(Some(new_state), false);
+                self.set_table.push(Rc::downgrade(&succ));
             }
         }
-        if let Some(state) = cell.state.get() {
-            if pred.state.get().is_none() {
-                if let Some(state) = self.world.rule.implication(desc, state) {
-                    pred.set(Some(state), false);
-                    self.set_table.push(Rc::downgrade(&pred));
+        if let Some(succ_state) = succ.state.get() {
+            if cell.state.get().is_none() {
+                if let Some(state) = self.world.rule.implication(desc, succ_state) {
+                    cell.set(Some(state), false);
+                    self.set_table.push(Rc::downgrade(cell));
                 }
             }
-            self.world.rule.consistify_nbhd(&pred, desc, pred_state,
-                state, &mut self.set_table);
+            self.world.rule.consistify_nbhd(&cell, desc, state,
+                succ_state, &mut self.set_table);
         }
         Ok(())
     }
 
-    // consistify 一个细胞本身，后一代，以及后一代的邻域中的所有细胞
+    // consistify 一个细胞前一代，本身，以及邻域中的所有细胞
     fn consistify10(&mut self, cell: &RcCell<D>) -> Result<(), ()> {
-        let succ = cell.succ.borrow().upgrade().unwrap();
         self.consistify(cell)?;
-        self.consistify(&succ)?;
-        for neigh in succ.nbhd.borrow().iter() {
-            if let Some(neigh) = neigh.upgrade() {
-                self.consistify(&neigh)?;
-            }
+        let pred = cell.pred.borrow().upgrade().unwrap();
+        self.consistify(&pred)?;
+        for neigh in cell.nbhd.borrow().iter() {
+            self.consistify(&neigh.upgrade().unwrap())?;
         }
         Ok(())
     }
