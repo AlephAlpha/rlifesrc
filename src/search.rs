@@ -27,12 +27,12 @@ pub struct Search<D: Desc, R: Rule<D>> {
 
 impl<D: Desc, R: Rule<D>> Search<D, R> {
     pub fn new(world: World<D, R>, new_state: Option<State>) -> Search<D, R> {
-        let set_table = Vec::with_capacity(world.size());
+        let size = (world.width * world.height * world.period) as usize;
+        let set_table = Vec::with_capacity(size);
         Search {world, new_state, set_table, next_set: 0}
     }
 
-    // 确保由一个细胞前一代的邻域能得到这一代的状态
-    // 由此确定一些未知细胞的状态
+    // 由一个细胞本身，前一代，以及前一代的邻域，确保没有矛盾，并确定一些未知细胞的状态
     fn consistify(&mut self, cell: &RcCell<D>) -> Result<(), ()> {
         let pred = cell.pred.borrow().upgrade().unwrap();
         let pred_state = pred.state.get();
@@ -54,7 +54,8 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
                     self.set_table.push(Rc::downgrade(&pred));
                 }
             }
-            self.world.rule.impl_nbhd(&pred, desc, pred_state, state, &mut self.set_table);
+            self.world.rule.consistify_nbhd(&pred, desc, pred_state,
+                state, &mut self.set_table);
         }
         Ok(())
     }

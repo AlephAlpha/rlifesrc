@@ -4,7 +4,7 @@
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和原版的 lifesrc 相比缺少很多功能，不过速度可能会稍微快一些。
 
-支持 Life-like 和 Isotropic non-totalistic 的规则，但后者比前者要慢几倍到几十倍。
+支持 Life-like 和 Isotropic non-totalistic 的规则，但后者比前者要慢一些。
 
 ## 编译
 

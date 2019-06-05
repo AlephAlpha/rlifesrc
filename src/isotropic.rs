@@ -3,7 +3,7 @@ use crate::world::{State, Desc, Rule, LifeCell, RcCell, WeakCell};
 
 #[derive(Clone, Copy, Default)]
 // 邻域的八个细胞的状态
-// 写成二进制，前八位中的 1 表示死细胞，后八位中的 1 表示活细胞
+// 16位的二进制数，前8位中的 1 表示死细胞，后8位中的 1 表示活细胞
 pub struct NbhdDesc(u16);
 
 impl Desc for NbhdDesc {
@@ -15,17 +15,18 @@ impl Desc for NbhdDesc {
         }
     }
 
-    fn set_nbhd(cell: &LifeCell<Self>, _: Option<State>, state: Option<State>) {
-        let state_num = match state {
-            Some(State::Dead) => 0x0100,
-            Some(State::Alive) => 0x0001,
-            None => 0x0000,
+    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+        let change_num = match (state, old_state) {
+            (Some(State::Dead), Some(State::Alive)) => 0x0101,
+            (Some(State::Alive), Some(State::Dead)) => 0x0101,
+            (Some(State::Dead), None) | (None, Some(State::Dead)) => 0x0100,
+            (Some(State::Alive), None) | (None, Some(State::Alive)) => 0x0001,
+            _ => 0x0000,
         };
         for (i, neigh) in cell.nbhd.borrow().iter().rev().enumerate() {
             let neigh = neigh.upgrade().unwrap();
             let mut desc = neigh.desc.get();
-            desc.0 &= !(0x101 << i);
-            desc.0 |= state_num << i;
+            desc.0 ^= change_num << i;
             neigh.desc.set(desc);
         }
     }
@@ -52,10 +53,9 @@ impl Life {
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
 
-
         let mut trans_table: Box<[Implication<Option<State>>; 65536]> =
             Box::new([Default::default(); 65536]);
-            // 先把 trans_table 中没有未知细胞的地方填上
+        // 先把 trans_table 中没有未知细胞的地方填上
         for alives in 0..256 {
             let nbhd = ((0xff & !alives) << 8) | alives;
             let alives = alives as u8;
@@ -226,21 +226,19 @@ impl Rule<NbhdDesc> for Life {
         self.impl_table[index]
     }
 
-    fn impl_nbhd(&self, cell: &RcCell<NbhdDesc>, desc: NbhdDesc, state: Option<State>,
+    fn consistify_nbhd(&self, cell: &RcCell<NbhdDesc>, desc: NbhdDesc, state: Option<State>,
         succ_state: State, set_table: &mut Vec<WeakCell<NbhdDesc>>) {
         let nbhd_states = self.implication_nbhd(state, desc, succ_state).0;
         if nbhd_states != 0 {
             for (i, neigh) in cell.nbhd.borrow().iter().enumerate() {
-                let state = match nbhd_states >> i & 0x101 {
-                    1 => State::Alive,
-                    0x101 => State::Dead,
+                let state = match nbhd_states >> i & 0x0101 {
+                    0x0001 => State::Alive,
+                    0x0100 => State::Dead,
                     _ => continue,
                 };
                 if let Some(neigh) = neigh.upgrade() {
-                    if neigh.state.get().is_none() {
-                        neigh.set(Some(state), false);
-                        set_table.push(Rc::downgrade(&neigh));
-                    }
+                    neigh.set(Some(state), false);
+                    set_table.push(Rc::downgrade(&neigh));
                 }
             }
         }

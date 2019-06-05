@@ -17,19 +17,21 @@ impl Desc for NbhdDesc {
     }
 
     fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+        let old_state_num = match old_state {
+                Some(State::Dead) => 0x10,
+                Some(State::Alive) => 0x01,
+                None => 0x00,
+            };
+        let state_num = match state {
+                Some(State::Dead) => 0x10,
+                Some(State::Alive) => 0x01,
+                None => 0x00,
+            };
         for neigh in cell.nbhd.borrow().iter() {
             let neigh = neigh.upgrade().unwrap();
             let mut desc = neigh.desc.get();
-            match old_state {
-                Some(State::Dead) => desc.0 -= 0x10,
-                Some(State::Alive) => desc.0 -= 0x01,
-                None => (),
-            };
-            match state {
-                Some(State::Dead) => desc.0 += 0x10,
-                Some(State::Alive) => desc.0 += 0x01,
-                None => (),
-            };
+            desc.0 -= old_state_num;
+            desc.0 += state_num;
             neigh.desc.set(desc);
         }
     }
@@ -218,7 +220,7 @@ impl Rule<NbhdDesc> for Life {
         self.impl_table[index]
     }
 
-    fn impl_nbhd(&self, cell: &RcCell<NbhdDesc>, desc: NbhdDesc, state: Option<State>,
+    fn consistify_nbhd(&self, cell: &RcCell<NbhdDesc>, desc: NbhdDesc, state: Option<State>,
         succ_state: State, set_table: &mut Vec<WeakCell<NbhdDesc>>) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
             for neigh in cell.nbhd.borrow().iter() {

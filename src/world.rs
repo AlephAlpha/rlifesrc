@@ -84,7 +84,7 @@ pub trait Rule<D: Desc> {
 
     // 由一个细胞本身、邻域以及其后一代的状态，改变其邻域中某些未知细胞的状态
     // 并把改变了值的细胞放到 set_table 中
-    fn impl_nbhd(&self, cell: &RcCell<D>, desc: D, state: Option<State>,
+    fn consistify_nbhd(&self, cell: &RcCell<D>, desc: D, state: Option<State>,
         succ_state: State, set_table: &mut Vec<WeakCell<D>>);
 }
 
@@ -181,17 +181,14 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
         let life = World {width, height, period, column_first, cells, rule};
 
         // 先设定细胞的邻域
-        // 待改：把每个邻域都放进去
+        // 注意：对于范围边缘的细胞，邻域可能指向不存在的细胞！
         let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
         for x in -1..width + 1 {
             for y in -1..height + 1 {
                 for t in 0..period {
                     let cell = life.find_cell((x, y, t)).upgrade().unwrap();
                     for (nx, ny) in neighbors.iter() {
-                        let neigh_weak = life.find_cell((x + nx, y + ny, t));
-                        if neigh_weak.upgrade().is_some() {
-                            cell.nbhd.borrow_mut().push(neigh_weak);
-                        }
+                        cell.nbhd.borrow_mut().push(life.find_cell((x + nx, y + ny, t)));
                     }
                 }
             }
@@ -223,7 +220,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         let pred_weak = life.find_cell(pred_coord);
                         if pred_weak.upgrade().is_some() {
                             *cell.pred.borrow_mut() = pred_weak;
-                        } else {
+                        } else if 0 <= x && x < width && 0 <= y && y < height {
                             cell.set(Some(default), false);
                         }
                     }
@@ -236,7 +233,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         let succ_weak = life.find_cell(succ_coord);
                         if succ_weak.upgrade().is_some() {
                             *cell.succ.borrow_mut() = succ_weak;
-                        } else {
+                        } else if 0 <= x && x < width && 0 <= y && y < height {
                             cell.set(Some(default), false);
                         }
                     }
@@ -271,7 +268,7 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
                         if 0 <= coord.0 && coord.0 < width &&
                             0 <= coord.1 && coord.1 < height {
                             cell.sym.borrow_mut().push(sym_weak);
-                        } else {
+                        } else if 0 <= x && x < width && 0 <= y && y < height {
                             cell.set(Some(default), false);
                         }
                     }
@@ -280,10 +277,6 @@ impl<D: Desc, R: Rule<D>> World<D, R> {
         }
 
         life
-    }
-
-    pub fn size(&self) -> usize {
-        (self.width * self.height * self.period) as usize
     }
 
     // 通过坐标查找细胞
