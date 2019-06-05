@@ -34,7 +34,7 @@ impl Desc for NbhdDesc {
 
 // 用一个结构体来放 transition 和 implication 的结果
 #[derive(Clone, Copy, Default)]
-pub struct Implication<T> {
+struct Implication<T> {
     dead: T,
     alive: T,
     none: T,
@@ -55,6 +55,7 @@ impl Life {
 
         let mut trans_table: Box<[Implication<Option<State>>; 65536]> =
             Box::new([Default::default(); 65536]);
+
         // 先把 trans_table 中没有未知细胞的地方填上
         for alives in 0..256 {
             let nbhd = ((0xff & !alives) << 8) | alives;
@@ -77,6 +78,7 @@ impl Life {
                 None
             };
         }
+
         // 然后根据未知细胞的情况，一个一个来
         for unknowns in 1usize..256 {
             // n 是 unknowns 写成二进制时最高的一位
@@ -85,7 +87,7 @@ impl Life {
             for alives in (0..256).filter(|a| a & unknowns == 0) {
                 let nbhd = ((0xff & !alives & !unknowns) << 8) | alives;
                 let nbhd0 = ((0xff & !alives & !unknowns | n) << 8) | alives;
-                let nbhd1 = ((0xff & !alives & !unknowns & !n) << 8) | alives | n;
+                let nbhd1 = ((0xff & !alives & !unknowns) << 8) | alives | n;
                 let trans0 = trans_table[nbhd0];
                 let trans1 = trans_table[nbhd1];
                 if trans0.dead == trans1.dead {
@@ -100,10 +102,9 @@ impl Life {
             }
         }
 
-        // impl_table 按顺序来就行
         let mut impl_table = Box::new([Default::default(); 65536 * 2]);
         for unknowns in 0..256 {
-            for alives in 0..256 {
+            for alives in (0..256).filter(|a| a & unknowns == 0) {
                 let nbhd = ((0xff & !alives & !unknowns) << 8) | alives;
                 for (i, &succ) in [State::Dead, State::Alive].iter().enumerate() {
                     let index = nbhd * 2 + i;
@@ -124,17 +125,15 @@ impl Life {
             }
         }
 
-        // 接下来是最难的 impl_nbhd_table
-        // 不确定有没有写漏什么东西
         let mut impl_nbhd_table: Box<[Implication<NbhdDesc>; 65536 * 2]> =
             Box::new([Default::default(); 65536 * 2]);
-        for unknowns in 0usize..256 {
+        for unknowns in 1usize..256 {
             // n 取遍 unknowns 写成二进制时所有非零的位
             for n in (0..8).map(|i| 1 << i).filter(|n| unknowns & n != 0) {
                 for alives in 0..256 {
                     let nbhd = ((0xff & !alives & !unknowns) << 8) | alives;
-                    let nbhd0 = ((0xff & !alives & !unknowns & !n) << 8) | alives | n;
-                    let nbhd1 = ((0xff & !alives & !unknowns | n) << 8) | alives;
+                    let nbhd0 = ((0xff & !alives & !unknowns | n) << 8) | alives;
+                    let nbhd1 = ((0xff & !alives & !unknowns) << 8) | alives | n;
                     let trans0 = trans_table[nbhd0];
                     let trans1 = trans_table[nbhd1];
                     for (i, &succ) in [State::Dead, State::Alive].iter().enumerate() {
@@ -149,9 +148,9 @@ impl Life {
                             None => true,
                         };
                         if possibly_dead && !possibly_alive {
-                            impl_nbhd_table[index].dead.0 |= n as u16;
-                        } else if !possibly_dead && possibly_alive {
                             impl_nbhd_table[index].dead.0 |= (n << 8) as u16;
+                        } else if !possibly_dead && possibly_alive {
+                            impl_nbhd_table[index].dead.0 |= n as u16;
                         }
 
                         let possibly_dead = match trans0.alive {
@@ -163,9 +162,9 @@ impl Life {
                             None => true,
                         };
                         if possibly_dead && !possibly_alive {
-                            impl_nbhd_table[index].alive.0 |= n as u16;
-                        } else if !possibly_dead && possibly_alive {
                             impl_nbhd_table[index].alive.0 |= (n << 8) as u16;
+                        } else if !possibly_dead && possibly_alive {
+                            impl_nbhd_table[index].alive.0 |= n as u16;
                         }
 
                         let possibly_dead = match trans0.none {
@@ -177,9 +176,9 @@ impl Life {
                             None => true,
                         };
                         if possibly_dead && !possibly_alive {
-                            impl_nbhd_table[index].none.0 |= n as u16;
-                        } else if !possibly_dead && possibly_alive {
                             impl_nbhd_table[index].none.0 |= (n << 8) as u16;
+                        } else if !possibly_dead && possibly_alive {
+                            impl_nbhd_table[index].none.0 |= n as u16;
                         }
                     }
                 }

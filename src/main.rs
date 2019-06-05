@@ -5,12 +5,10 @@ use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::parse_rules::{parse_life, parse_isotropic};
+use crate::rules::parse::{parse_life, parse_isotropic};
 use crate::world::{Desc, Rule, State, World};
 mod search;
-mod life;
-mod isotropic;
-mod parse_rules;
+mod rules;
 mod world;
 
 fn is_positive(s: &str) -> bool {

@@ -1,6 +1,6 @@
 use combine::{Parser, choice, many, many1, one_of, optional, satisfy, token, value};
-use crate::life;
-use crate::isotropic;
+use super::life;
+use super::isotropic;
 
 pub fn parse_life(string: &str) -> Result<life::Life, String> {
     let numbers = many(satisfy(|c: char| c.is_digit(9))
