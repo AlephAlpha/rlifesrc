@@ -5,10 +5,12 @@ use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
 use crate::search::{Search, Status};
-use crate::rule::{NbhdDesc, LifeLike};
-use crate::world::{State, World};
+use crate::parse_rules::{parse_life, parse_isotropic};
+use crate::world::{Desc, Rule, State, World};
 mod search;
-mod rule;
+mod life;
+mod isotropic;
+mod parse_rules;
 mod world;
 
 fn is_positive(s: &str) -> bool {
@@ -50,12 +52,12 @@ fn main() {
             .help("Horizontal translation")
             .default_value("0")
             .index(4)
-            .validator(|d| d.parse().map(|_ : isize| ()).map_err(|e| e.to_string())))
+            .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())))
         .arg(Arg::with_name("DY")
             .help("Vertical translation")
             .default_value("0")
             .index(5)
-            .validator(|d| d.parse().map(|_ : isize| ()).map_err(|e| e.to_string())))
+            .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())))
         .arg(Arg::with_name("SYMMETRY")
             .help("Symmetry of the pattern")
             .long_help("Symmetry of the pattern\n\
@@ -70,12 +72,12 @@ fn main() {
         .arg(Arg::with_name("RULE")
             .help("Rule of the cellular automaton")
             .long_help("Rule of the cellular automaton\n\
-                Currently, only Life-like rules are supported.\n")
+                Supports Life-like and isotropic non-totalistic rules.\n")
             .short("r")
             .long("rule")
             .default_value("B3/S23")
             .takes_value(true)
-            .validator(|d| d.parse().map(|_ : LifeLike| ())))
+            .validator(|d| parse_isotropic(&d).map(|_| ())))
         .arg(Arg::with_name("CHOOSE")
             .help("How to choose a state for unknown cells")
             .short("c")
@@ -129,21 +131,37 @@ fn main() {
     let dy = matches.value_of("DY").unwrap().parse().unwrap();
 
     let symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
-    let rule = matches.value_of("RULE").unwrap().parse().unwrap();
     let all = matches.is_present("ALL");
+    let reset = matches.is_present("RESET");
+    let no_tui = matches.is_present("NOTUI");
     let column_first = match matches.value_of("ORDER").unwrap() {
         "row" | "r" => Some(false),
         "column" | "c" => Some(true),
         _ => None,
     };
-
-    let life = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
     let new_state = match matches.value_of("CHOOSE").unwrap() {
         "dead" | "d" => Some(State::Dead),
         "alive" | "a" => Some(State::Alive),
         _ => None,
     };
-    let mut search = Search::new(life, new_state);
+
+    let rule_string = &matches.value_of("RULE").unwrap();
+    match parse_life(rule_string) {
+        Ok(rule) => {
+            let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
+            search(world, new_state, all, reset, no_tui);
+        },
+        _ => {
+            let rule = parse_isotropic(rule_string).unwrap();
+            let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
+            search(world, new_state, all, reset, no_tui);
+        }
+    }
+}
+
+fn search<D: Desc, R: Rule<D>>(world: World<D, R>, new_state: Option<State>,
+    all: bool, reset: bool, no_tui: bool) {
+    let mut search = Search::new(world, new_state);
 
     #[cfg(not(feature = "tui"))]
     {
@@ -152,10 +170,7 @@ fn main() {
 
     #[cfg(feature = "tui")]
     {
-        let reset = matches.is_present("RESET");
-        let notui = matches.is_present("NOTUI");
-
-        if notui {
+        if no_tui {
             search_without_tui(&mut search, all)
         } else {
             search_with_tui(&mut search, reset)
@@ -163,7 +178,7 @@ fn main() {
     }
 }
 
-fn search_without_tui(search: &mut Search<NbhdDesc, LifeLike>, all: bool) {
+fn search_without_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, all: bool) {
     if all {
         loop {
             match search.search(None) {
@@ -181,7 +196,7 @@ fn search_without_tui(search: &mut Search<NbhdDesc, LifeLike>, all: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn search_with_tui(search: &mut Search<NbhdDesc, LifeLike>, reset: bool) {
+fn search_with_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, reset: bool) {
     let period = search.world.period;
     #[cfg(debug_assertions)]
     let view_freq = 500;
@@ -283,7 +298,7 @@ fn search_with_tui(search: &mut Search<NbhdDesc, LifeLike>, reset: bool) {
 }
 
 #[cfg(feature = "tui")]
-fn print_world(window: &Window, world: &World<NbhdDesc, LifeLike>, gen: isize) -> i32 {
+fn print_world<D: Desc, R: Rule<D>>(window: &Window, world: &World<D, R>, gen: isize) -> i32 {
     window.mvprintw(0, 0, world.display_gen(gen));
     window.refresh()
 }

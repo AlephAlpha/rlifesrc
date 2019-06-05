@@ -4,6 +4,8 @@
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和原版的 lifesrc 相比缺少很多功能，不过速度可能会稍微快一些。
 
+支持 Life-like 和 Isotropic non-totalistic 的规则，但后者比前者要慢一些。
+
 ## 编译
 
 Rlifesrc 的 TUI （文本界面）是用 [pancurses](https://github.com/ihalila/pancurses) 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。
@@ -40,7 +42,7 @@ OPTIONS:
 
     -r, --rule <RULE>
             元胞自动机的规则
-            当前仅支持 Life-like 的规则
+            支持 Life-like 和 Isotropic non-totalistic 的规则
              [默认: B3/S23]
 
     -s, --symmetry <SYMMETRY>
