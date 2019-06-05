@@ -76,10 +76,16 @@ pub trait Rule<D: Desc> {
     // 规则是否是 B0
     fn b0(&self) -> bool;
 
-    // 干脆把 consistify 放到这里来好了
-    // 根据规则，由一个细胞本身，前一代，以及前一代的邻域，确保没有矛盾，并确定一些未知细胞的状态
-    fn consistify(&self, cell: &RcCell<D>, set_table: &mut Vec<WeakCell<D>>)
-        -> Result<(), ()>;
+    // 由一个细胞及其邻域的状态得到其后一代的状态
+    fn transition(&self, state: Option<State>, desc: D) -> Option<State>;
+
+    // 由一个细胞的邻域以及其后一代的状态，决定其本身的状态
+    fn implication(&self, desc: D, succ_state: State) -> Option<State>;
+
+    // 由一个细胞本身、邻域以及其后一代的状态，改变其邻域中某些未知细胞的状态
+    // 并把改变了值的细胞放到 set_table 中
+    fn impl_nbhd(&self, cell: &RcCell<D>, desc: D, state: Option<State>,
+        succ_state: State, set_table: &mut Vec<WeakCell<D>>);
 }
 
 // 对称性

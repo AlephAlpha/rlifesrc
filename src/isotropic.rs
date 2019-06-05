@@ -189,23 +189,6 @@ impl Life {
         Life {b0, trans_table, impl_table, impl_nbhd_table}
     }
 
-    fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {
-        let transition = self.trans_table[desc.0 as usize];
-        match state {
-            Some(State::Dead) => transition.dead,
-            Some(State::Alive) => transition.alive,
-            None => transition.none,
-        }
-    }
-
-    fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State> {
-        let index = desc.0 as usize * 2 + match succ_state {
-            State::Dead => 0,
-            State::Alive => 1,
-        };
-        self.impl_table[index]
-    }
-
     fn implication_nbhd(&self, state: Option<State>, desc: NbhdDesc, succ_state: State)
         -> NbhdDesc {
         let index = desc.0 as usize * 2 + match succ_state {
@@ -226,45 +209,40 @@ impl Rule<NbhdDesc> for Life {
         self.b0
     }
 
-    fn consistify(&self, cell: &RcCell<NbhdDesc>,
-        set_table: &mut Vec<WeakCell<NbhdDesc>>) -> Result<(), ()> {
-        let pred = cell.pred.borrow().upgrade().unwrap();
-        let pred_state = pred.state.get();
-        let desc = pred.desc.get();
-        if let Some(state) = self.transition(pred_state, desc) {
-            if let Some(old_state) = cell.state.get() {
-                if state != old_state {
-                    return Err(())
-                }
-            } else {
-                cell.set(Some(state), false);
-                set_table.push(Rc::downgrade(cell));
-            }
+    fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {
+        let transition = self.trans_table[desc.0 as usize];
+        match state {
+            Some(State::Dead) => transition.dead,
+            Some(State::Alive) => transition.alive,
+            None => transition.none,
         }
-        if let Some(state) = cell.state.get() {
-            if pred.state.get().is_none() {
-                if let Some(state) = self.implication(desc, state) {
-                    pred.set(Some(state), false);
-                    set_table.push(Rc::downgrade(&pred));
-                }
-            }
-            let nbhd_states = self.implication_nbhd(pred_state, desc, state).0;
-            if nbhd_states != 0 {
-                for (i, neigh) in pred.nbhd.borrow().iter().enumerate() {
-                    let state = match nbhd_states >> i & 0x101 {
-                        1 => State::Alive,
-                        0x101 => State::Dead,
-                        _ => continue,
-                    };
-                    if let Some(neigh) = neigh.upgrade() {
-                        if neigh.state.get().is_none() {
-                            neigh.set(Some(state), false);
-                            set_table.push(Rc::downgrade(&neigh));
-                        }
+    }
+
+    fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State> {
+        let index = desc.0 as usize * 2 + match succ_state {
+            State::Dead => 0,
+            State::Alive => 1,
+        };
+        self.impl_table[index]
+    }
+
+    fn impl_nbhd(&self, cell: &RcCell<NbhdDesc>, desc: NbhdDesc, state: Option<State>,
+        succ_state: State, set_table: &mut Vec<WeakCell<NbhdDesc>>) {
+        let nbhd_states = self.implication_nbhd(state, desc, succ_state).0;
+        if nbhd_states != 0 {
+            for (i, neigh) in cell.nbhd.borrow().iter().enumerate() {
+                let state = match nbhd_states >> i & 0x101 {
+                    1 => State::Alive,
+                    0x101 => State::Dead,
+                    _ => continue,
+                };
+                if let Some(neigh) = neigh.upgrade() {
+                    if neigh.state.get().is_none() {
+                        neigh.set(Some(state), false);
+                        set_table.push(Rc::downgrade(&neigh));
                     }
                 }
             }
         }
-        Ok(())
     }
 }
