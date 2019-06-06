@@ -1,3 +1,3 @@
-mod life;
 mod isotropic;
+mod life;
 pub mod parse;

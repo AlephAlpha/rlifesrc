@@ -1,16 +1,19 @@
-use combine::{Parser, choice, many, many1, one_of, optional, satisfy, token, value};
-use super::life;
 use super::isotropic;
+use super::life;
+use combine::{choice, many, many1, one_of, optional, satisfy, token, value, Parser};
 
 pub fn parse_life(string: &str) -> Result<life::Life, String> {
-    let numbers = many(satisfy(|c: char| c.is_digit(9))
-        .and_then(|c: char| c.to_string().parse::<u8>()));
+    let numbers =
+        many(satisfy(|c: char| c.is_digit(9)).and_then(|c: char| c.to_string().parse::<u8>()));
 
-    let mut life = (one_of("Bb".chars()),
+    let mut life = (
+        one_of("Bb".chars()),
         numbers.clone(),
         optional(token('/')),
         one_of("Ss".chars()),
-        numbers).map(|(_, b, _, _, s)| life::Life::new(b, s));
+        numbers,
+    )
+        .map(|(_, b, _, _, s)| life::Life::new(b, s));
 
     match life.easy_parse(string) {
         Ok((life, "")) => Ok(life),
@@ -20,20 +23,23 @@ pub fn parse_life(string: &str) -> Result<life::Life, String> {
 
 // 用一个宏来处理 non-totalistic 的规则
 macro_rules! chars_to_numbers {
-    ($s: expr, $($c: expr => $v: expr),*) => {
+    ($s: expr, $( $c: expr => $v: expr ),*) => {
         choice((
             many1(one_of($s.chars())),
-            token('-').with(many1(one_of($s.chars())))
-                .map(|v: Vec<_>| $s.chars()
-                    .filter(|c| !v.contains(c)).collect()),
-            value($s.chars().collect())))
-        .map(|v: Vec<_>| v.iter()
-            .map(|c| match c {
-                $($c => $v,)*
-                _ => vec![],
-            })
-            .collect::<Vec<_>>()
-            .concat())
+            token('-')
+                .with(many1(one_of($s.chars())))
+                .map(|v: Vec<_>| $s.chars().filter(|c| !v.contains(c)).collect()),
+            value($s.chars().collect()),
+        ))
+        .map(|v: Vec<_>| {
+            v.iter()
+                .map(|c| match c {
+                    $( $c => $v, )*
+                    _ => vec![],
+                })
+                .collect::<Vec<_>>()
+                .concat()
+        })
     };
 }
 
@@ -100,14 +106,17 @@ pub fn parse_isotropic(string: &str) -> Result<isotropic::Life, String> {
         token('7').with(chars_to_numbers!("ce",
             'c' => vec![0x7f, 0xdf, 0xfb, 0xfe],
             'e' => vec![0xbf, 0xef, 0xf7, 0xfd])),
-        token('8').with(value(vec![0xff]))
-        ))).map(|v: Vec<_>| v.concat());
+        token('8').with(value(vec![0xff])),
+    )))
+    .map(|v: Vec<_>| v.concat());
 
-    let mut life = (one_of("Bb".chars()),
+    let mut life = (
+        one_of("Bb".chars()),
         numbers.clone(),
         optional(token('/')),
         one_of("Ss".chars()),
-        numbers)
+        numbers,
+    )
         .map(|(_, b, _, _, s)| isotropic::Life::new(b, s));
 
     match life.easy_parse(string) {

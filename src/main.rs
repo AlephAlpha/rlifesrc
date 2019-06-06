@@ -1,132 +1,176 @@
-use clap::{Arg, App};
+use crate::cell::{Desc, State};
+use crate::rules::parse::{parse_isotropic, parse_life};
+use crate::search::{Search, Status};
+use crate::world::{Rule, World};
 use clap::AppSettings::AllowNegativeNumbers;
+use clap::{App, Arg};
 #[cfg(feature = "tui")]
 use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
-use crate::cell::{Desc, State};
-use crate::search::{Search, Status};
-use crate::rules::parse::{parse_life, parse_isotropic};
-use crate::world::{Rule, World};
 mod cell;
-mod search;
 mod rules;
+mod search;
 mod world;
 
 fn is_positive(s: &str) -> bool {
-    s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with("-")
+    s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
 }
 
 fn main() {
     let mut app = App::new("rlifesrc")
         .version("0.1.0")
         .setting(AllowNegativeNumbers)
-        .arg(Arg::with_name("X")
-            .help("Width of the pattern")
-            .required(true)
-            .index(1)
-            .validator(|x| if is_positive(&x) {
-                Ok(())
-            } else {
-                Err(String::from("width must be a positive integer"))
-            }))
-        .arg(Arg::with_name("Y")
-            .help("Height of the pattern")
-            .required(true)
-            .index(2)
-            .validator(|y| if is_positive(&y) {
-                Ok(())
-            } else {
-                Err(String::from("height must be a positive integer"))
-            }))
-        .arg(Arg::with_name("P")
-            .help("Period of the pattern")
-            .default_value("1")
-            .index(3)
-            .validator(|p| if is_positive(&p) {
-                Ok(())
-            } else {
-                Err(String::from("period must be a positive integer"))
-            }))
-        .arg(Arg::with_name("DX")
-            .help("Horizontal translation")
-            .default_value("0")
-            .index(4)
-            .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())))
-        .arg(Arg::with_name("DY")
-            .help("Vertical translation")
-            .default_value("0")
-            .index(5)
-            .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())))
-        .arg(Arg::with_name("SYMMETRY")
-            .help("Symmetry of the pattern")
-            .long_help("Symmetry of the pattern\n\
-                You may need to add quotation marks for some of the symmetries.\n\
-                The usages of these symmetries are the same as Oscar Cunningham's \
-                Logic Life Search.\nSee http://conwaylife.com/wiki/Symmetry.\n")
-            .short("s")
-            .long("symmetry")
-            .possible_values(&["C1","C2","C4","D2|","D2-","D2\\","D2/","D4+","D4X","D8"])
-            .default_value("C1")
-            .takes_value(true))
-        .arg(Arg::with_name("RULE")
-            .help("Rule of the cellular automaton")
-            .long_help("Rule of the cellular automaton\n\
-                Supports Life-like and isotropic non-totalistic rules.\n")
-            .short("r")
-            .long("rule")
-            .default_value("B3/S23")
-            .takes_value(true)
-            .validator(|d| parse_isotropic(&d).map(|_| ())))
-        .arg(Arg::with_name("CHOOSE")
-            .help("How to choose a state for unknown cells")
-            .short("c")
-            .long("choose")
-            .possible_values(&["dead", "alive", "random", "d", "a", "r"])
-            .default_value("dead")
-            .takes_value(true))
-        .arg(Arg::with_name("ORDER")
-            .help("Search order")
-            .long_help("Search order\n\
-                Row first or column first.")
-            .short("o")
-            .long("order")
-            .possible_values(&["row", "column", "automatic", "r", "c", "a"])
-            .default_value("automatic")
-            .takes_value(true));
+        .arg(
+            Arg::with_name("X")
+                .help("Width of the pattern")
+                .required(true)
+                .index(1)
+                .validator(|x| {
+                    if is_positive(&x) {
+                        Ok(())
+                    } else {
+                        Err(String::from("width must be a positive integer"))
+                    }
+                }),
+        )
+        .arg(
+            Arg::with_name("Y")
+                .help("Height of the pattern")
+                .required(true)
+                .index(2)
+                .validator(|y| {
+                    if is_positive(&y) {
+                        Ok(())
+                    } else {
+                        Err(String::from("height must be a positive integer"))
+                    }
+                }),
+        )
+        .arg(
+            Arg::with_name("P")
+                .help("Period of the pattern")
+                .default_value("1")
+                .index(3)
+                .validator(|p| {
+                    if is_positive(&p) {
+                        Ok(())
+                    } else {
+                        Err(String::from("period must be a positive integer"))
+                    }
+                }),
+        )
+        .arg(
+            Arg::with_name("DX")
+                .help("Horizontal translation")
+                .default_value("0")
+                .index(4)
+                .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
+        )
+        .arg(
+            Arg::with_name("DY")
+                .help("Vertical translation")
+                .default_value("0")
+                .index(5)
+                .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
+        )
+        .arg(
+            Arg::with_name("SYMMETRY")
+                .help("Symmetry of the pattern")
+                .long_help(
+                    "Symmetry of the pattern\n\
+                     You may need to add quotation marks for some of the symmetries.\n\
+                     The usages of these symmetries are the same as Oscar Cunningham's \
+                     Logic Life Search.\nSee http://conwaylife.com/wiki/Symmetry.\n",
+                )
+                .short("s")
+                .long("symmetry")
+                .possible_values(&[
+                    "C1", "C2", "C4", "D2|", "D2-", "D2\\", "D2/", "D4+", "D4X", "D8",
+                ])
+                .default_value("C1")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("RULE")
+                .help("Rule of the cellular automaton")
+                .long_help(
+                    "Rule of the cellular automaton\n\
+                     Supports Life-like and isotropic non-totalistic rules.\n",
+                )
+                .short("r")
+                .long("rule")
+                .default_value("B3/S23")
+                .takes_value(true)
+                .validator(|d| parse_isotropic(&d).map(|_| ())),
+        )
+        .arg(
+            Arg::with_name("CHOOSE")
+                .help("How to choose a state for unknown cells")
+                .short("c")
+                .long("choose")
+                .possible_values(&["dead", "alive", "random", "d", "a", "r"])
+                .default_value("dead")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("ORDER")
+                .help("Search order")
+                .long_help(
+                    "Search order\n\
+                     Row first or column first.",
+                )
+                .short("o")
+                .long("order")
+                .possible_values(&["row", "column", "automatic", "r", "c", "a"])
+                .default_value("automatic")
+                .takes_value(true),
+        );
 
     #[cfg(not(feature = "tui"))]
     {
-        app = app.arg(Arg::with_name("ALL")
-            .help("Searches for all possible pattern")
-            .short("a")
-            .long("all"));
+        app = app.arg(
+            Arg::with_name("ALL")
+                .help("Searches for all possible pattern")
+                .short("a")
+                .long("all"),
+        );
     }
 
     #[cfg(feature = "tui")]
     {
-        app = app.arg(Arg::with_name("ALL")
-            .help("Searches for all possible pattern")
-            .long_help("Searches for all possible pattern\n\
-                Only useful when --no-tui is set.")
-            .short("a")
-            .long("all"))
-        .arg(Arg::with_name("RESET")
-            .help("Resets the time when starting a new search")
-            .long("reset-time")
-            .conflicts_with("NOTUI"))
-        .arg(Arg::with_name("NOTUI")
-            .help("Starts searching immediately, without entering the TUI")
-            .short("n")
-            .long("no-tui"));
+        app = app
+            .arg(
+                Arg::with_name("ALL")
+                    .help("Searches for all possible pattern")
+                    .long_help(
+                        "Searches for all possible pattern\n\
+                         Only useful when --no-tui is set.",
+                    )
+                    .short("a")
+                    .long("all"),
+            )
+            .arg(
+                Arg::with_name("RESET")
+                    .help("Resets the time when starting a new search")
+                    .long("reset-time")
+                    .conflicts_with("NOTUI"),
+            )
+            .arg(
+                Arg::with_name("NOTUI")
+                    .help("Starts searching immediately, without entering the TUI")
+                    .short("n")
+                    .long("no-tui"),
+            );
     }
-
 
     let matches = app.get_matches();
 
     let width = matches.value_of("X").unwrap().parse().unwrap();
     let height = matches.value_of("Y").unwrap().parse().unwrap();
     let period = matches.value_of("P").unwrap().parse().unwrap();
+    let dimensions = (width, height, period);
+
     let dx = matches.value_of("DX").unwrap().parse().unwrap();
     let dy = matches.value_of("DY").unwrap().parse().unwrap();
 
@@ -148,19 +192,24 @@ fn main() {
     let rule_string = &matches.value_of("RULE").unwrap();
     match parse_life(rule_string) {
         Ok(rule) => {
-            let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
+            let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
             search(world, new_state, all, reset, no_tui);
-        },
+        }
         _ => {
             let rule = parse_isotropic(rule_string).unwrap();
-            let world = World::new(width, height, period, dx, dy, symmetry, rule, column_first);
+            let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
             search(world, new_state, all, reset, no_tui);
         }
     }
 }
 
-fn search<D: Desc, R: Rule<Desc = D>>(world: World<D, R>, new_state: Option<State>,
-    all: bool, reset: bool, no_tui: bool) {
+fn search<D: Desc, R: Rule<Desc = D>>(
+    world: World<D, R>,
+    new_state: Option<State>,
+    all: bool,
+    reset: bool,
+    no_tui: bool,
+) {
     let mut search = Search::new(world, new_state);
 
     #[cfg(not(feature = "tui"))]
@@ -187,11 +236,8 @@ fn search_without_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, all
                 _ => (),
             }
         }
-    } else {
-        match search.search(None) {
-            Status::Found => println!("{}", search.world.display_gen(0)),
-            _ => (),
-        }
+    } else if let Status::Found = search.search(None) {
+        println!("{}", search.world.display_gen(0))
     }
 }
 
@@ -218,51 +264,47 @@ fn search_with_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, reset:
 
     loop {
         match window.getch() {
-            Some(Input::Character('q')) => {
-                match status {
-                    Status::Searching | Status::Paused => {
-                        status = Status::Paused;
-                        stopwatch.stop();
-                        window.nodelay(false);
-                        print_world(&world_win, &search.world, gen);
-                        status_bar.mvprintw(1, 0, "Are you sure to quit? [Y/n]");
-                        status_bar.clrtoeol();
-                        status_bar.refresh();
-                        match window.getch() {
-                            Some(Input::Character('Y')) => break,
-                            Some(Input::Character('y')) => break,
-                            Some(Input::Character('\n')) => break,
-                            _ => print_status(&status_bar, &status, gen, &stopwatch),
-                        }
-                    },
-                    _ => break,
+            Some(Input::Character('q')) => match status {
+                Status::Searching | Status::Paused => {
+                    status = Status::Paused;
+                    stopwatch.stop();
+                    window.nodelay(false);
+                    print_world(&world_win, &search.world, gen);
+                    status_bar.mvprintw(1, 0, "Are you sure to quit? [Y/n]");
+                    status_bar.clrtoeol();
+                    status_bar.refresh();
+                    match window.getch() {
+                        Some(Input::Character('Y')) => break,
+                        Some(Input::Character('y')) => break,
+                        Some(Input::Character('\n')) => break,
+                        _ => print_status(&status_bar, &status, gen, &stopwatch),
+                    }
                 }
+                _ => break,
             },
             Some(Input::KeyRight) | Some(Input::KeyNPage) => {
                 gen = (gen + 1) % period;
                 print_world(&world_win, &search.world, gen);
                 print_status(&status_bar, &status, gen, &stopwatch)
-            },
+            }
             Some(Input::KeyLeft) | Some(Input::KeyPPage) => {
                 gen = (gen + period - 1) % period;
                 print_world(&world_win, &search.world, gen);
                 print_status(&status_bar, &status, gen, &stopwatch)
-            },
-            Some(Input::Character(' ')) | Some(Input::Character('\n')) => {
-                match status {
-                    Status::Searching => {
-                        status = Status::Paused;
-                        stopwatch.stop();
-                        window.nodelay(false);
-                        print_world(&world_win, &search.world, gen);
-                        print_status(&status_bar, &status, gen, &stopwatch)
-                    },
-                    _ => {
-                        status = Status::Searching;
-                        print_status(&status_bar, &status, gen, &stopwatch);
-                        stopwatch.start();
-                        window.nodelay(true)
-                    },
+            }
+            Some(Input::Character(' ')) | Some(Input::Character('\n')) => match status {
+                Status::Searching => {
+                    status = Status::Paused;
+                    stopwatch.stop();
+                    window.nodelay(false);
+                    print_world(&world_win, &search.world, gen);
+                    print_status(&status_bar, &status, gen, &stopwatch)
+                }
+                _ => {
+                    status = Status::Searching;
+                    print_status(&status_bar, &status, gen, &stopwatch);
+                    stopwatch.start();
+                    window.nodelay(true)
                 }
             },
             Some(Input::KeyResize) => {
@@ -273,22 +315,18 @@ fn search_with_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, reset:
                 world_win.erase();
                 print_world(&world_win, &search.world, gen);
                 print_status(&status_bar, &status, gen, &stopwatch)
-            },
-            None => {
-                match search.search(Some(view_freq)) {
-                    Status::Searching => {
-                        print_world(&world_win, &search.world, gen)
-                    },
-                    s => {
-                        status = s;
-                        stopwatch.stop();
-                        window.nodelay(false);
-                        print_status(&status_bar, &status, gen, &stopwatch);
-                        if reset {
-                            stopwatch.reset();
-                        }
-                        print_world(&world_win, &search.world, gen)
-                    },
+            }
+            None => match search.search(Some(view_freq)) {
+                Status::Searching => print_world(&world_win, &search.world, gen),
+                s => {
+                    status = s;
+                    stopwatch.stop();
+                    window.nodelay(false);
+                    print_status(&status_bar, &status, gen, &stopwatch);
+                    if reset {
+                        stopwatch.reset();
+                    }
+                    print_world(&world_win, &search.world, gen)
                 }
             },
             _ => 1,
@@ -298,7 +336,11 @@ fn search_with_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, reset:
 }
 
 #[cfg(feature = "tui")]
-fn print_world<D: Desc, R: Rule<Desc = D>>(window: &Window, world: &World<D, R>, gen: isize) -> i32 {
+fn print_world<D: Desc, R: Rule<Desc = D>>(
+    window: &Window,
+    world: &World<D, R>,
+    gen: isize,
+) -> i32 {
     window.mvprintw(0, 0, world.display_gen(gen));
     window.refresh()
 }
@@ -315,7 +357,7 @@ fn print_status(window: &Window, status: &Status, gen: isize, stopwatch: &Stopwa
         Status::Found => "Found a result. Press [space] to search for the next.",
         Status::None => "No more result. Press [q] to quit.",
         Status::Searching => "Searching... Press [space] to pause.",
-        Status::Paused => "Paused. Press [space] to resume."
+        Status::Paused => "Paused. Press [space] to resume.",
     };
     window.mvprintw(1, 0, status);
     window.refresh()

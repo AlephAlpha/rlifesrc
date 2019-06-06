@@ -1,7 +1,7 @@
-use std::rc::Rc;
-use crate::cell::{State, Desc, LifeCell, RcCell, WeakCell};
-use crate::cell::State::{Dead, Alive};
+use crate::cell::State::{Alive, Dead};
+use crate::cell::{Desc, LifeCell, RcCell, State, WeakCell};
 use crate::world::Rule;
+use std::rc::Rc;
 
 #[derive(Clone, Copy)]
 // 邻域的细胞统计
@@ -20,15 +20,15 @@ impl Desc for NbhdDesc {
 
     fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
         let old_state_num = match old_state {
-                Some(Dead) => 0x10,
-                Some(Alive) => 0x01,
-                None => 0x00,
-            };
+            Some(Dead) => 0x10,
+            Some(Alive) => 0x01,
+            None => 0x00,
+        };
         let state_num = match state {
-                Some(Dead) => 0x10,
-                Some(Alive) => 0x01,
-                None => 0x00,
-            };
+            Some(Dead) => 0x10,
+            Some(Alive) => 0x01,
+            None => 0x00,
+        };
         for neigh in cell.nbhd.borrow().iter() {
             let neigh = neigh.upgrade().unwrap();
             let mut desc = neigh.desc.get();
@@ -59,10 +59,23 @@ impl Life {
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
 
+        let trans_table = Self::init_trans_table(b, s);
+        let impl_table = Self::init_impl_table(&trans_table);
+        let impl_nbhd_table = Self::init_impl_trans_table(&trans_table);
+
+        Life {
+            b0,
+            trans_table,
+            impl_table,
+            impl_nbhd_table,
+        }
+    }
+
+    fn init_trans_table(b: Vec<u8>, s: Vec<u8>) -> [Implication; 256] {
         let mut trans_table: [Implication; 256] = [Default::default(); 256];
 
         // 先把 trans_table 中没有未知细胞的地方填上
-        for alives in 0..9 {
+        for alives in 0..=8 {
             let nbhd = ((8 - alives) << 4) | alives;
             let alives = alives as u8;
             trans_table[nbhd].dead = if b.contains(&alives) {
@@ -85,8 +98,8 @@ impl Life {
         }
 
         // 然后根据未知细胞的情况，一个一个来
-        for unknowns in 1usize..9 {
-            for alives in 0..9 - unknowns {
+        for unknowns in 1..=8 {
+            for alives in 0..=8 - unknowns {
                 let nbhd = ((8 - alives - unknowns) << 4) | alives;
                 let nbhd0 = ((8 - alives - unknowns + 1) << 4) | alives;
                 let nbhd1 = ((8 - alives - unknowns) << 4) | (alives + 1);
@@ -104,9 +117,14 @@ impl Life {
             }
         }
 
+        trans_table
+    }
+
+    fn init_impl_table(trans_table: &[Implication; 256]) -> [Option<State>; 512] {
         let mut impl_table = [Default::default(); 512];
-        for unknowns in 0..9 {
-            for alives in 0..9 - unknowns {
+
+        for unknowns in 0..=8 {
+            for alives in 0..=8 - unknowns {
                 let nbhd = ((8 - alives - unknowns) << 4) | alives;
                 for (i, &succ) in [Dead, Alive].iter().enumerate() {
                     let index = nbhd * 2 + i;
@@ -127,9 +145,14 @@ impl Life {
             }
         }
 
+        impl_table
+    }
+
+    fn init_impl_trans_table(trans_table: &[Implication; 256]) -> [Implication; 512] {
         let mut impl_nbhd_table: [Implication; 512] = [Default::default(); 512];
-        for unknowns in 1..9 {
-            for alives in 0..9 - unknowns {
+
+        for unknowns in 1..=8 {
+            for alives in 0..=8 - unknowns {
                 let nbhd = ((8 - alives - unknowns) << 4) | alives;
                 let nbhd0 = ((8 - alives - unknowns + 1) << 4) | alives;
                 let nbhd1 = ((8 - alives - unknowns) << 4) | (alives + 1);
@@ -182,15 +205,21 @@ impl Life {
                 }
             }
         }
-        Life {b0, trans_table, impl_table, impl_nbhd_table}
+
+        impl_nbhd_table
     }
 
-    fn implication_nbhd(&self, state: Option<State>, desc: NbhdDesc, succ_state: State)
-        -> Option<State> {
-        let index = desc.0 as usize * 2 + match succ_state {
-            Dead => 0,
-            Alive => 1,
-        };
+    fn implication_nbhd(
+        &self,
+        state: Option<State>,
+        desc: NbhdDesc,
+        succ_state: State,
+    ) -> Option<State> {
+        let index = desc.0 as usize * 2
+            + match succ_state {
+                Dead => 0,
+                Alive => 1,
+            };
         let implication = self.impl_nbhd_table[index];
         match state {
             Some(Dead) => implication.dead,
@@ -217,15 +246,22 @@ impl Rule for Life {
     }
 
     fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State> {
-        let index = desc.0 as usize * 2 + match succ_state {
-            Dead => 0,
-            Alive => 1,
-        };
+        let index = desc.0 as usize * 2
+            + match succ_state {
+                Dead => 0,
+                Alive => 1,
+            };
         self.impl_table[index]
     }
 
-    fn consistify_nbhd(&self, cell: &RcCell<NbhdDesc>, desc: NbhdDesc, state: Option<State>,
-        succ_state: State, set_table: &mut Vec<WeakCell<NbhdDesc>>) {
+    fn consistify_nbhd(
+        &self,
+        cell: &RcCell<NbhdDesc>,
+        desc: NbhdDesc,
+        state: Option<State>,
+        succ_state: State,
+        set_table: &mut Vec<WeakCell<NbhdDesc>>,
+    ) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
             for neigh in cell.nbhd.borrow().iter() {
                 if let Some(neigh) = neigh.upgrade() {

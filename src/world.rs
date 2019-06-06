@@ -1,7 +1,7 @@
+use crate::cell::State::{Alive, Dead};
+use crate::cell::{Desc, LifeCell, RcCell, State, WeakCell};
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
-use crate::cell::{Desc, State, LifeCell, RcCell, WeakCell};
-use crate::cell::State::{Dead, Alive};
 
 // 把规则写成一个 Trait，方便以后支持更多的规则
 pub trait Rule {
@@ -18,8 +18,14 @@ pub trait Rule {
 
     // 由一个细胞本身、邻域以及其后一代的状态，改变其邻域中某些未知细胞的状态
     // 并把改变了值的细胞放到 set_table 中
-    fn consistify_nbhd(&self, cell: &RcCell<Self::Desc>, desc: Self::Desc, state: Option<State>,
-        succ_state: State, set_table: &mut Vec<WeakCell<Self::Desc>>);
+    fn consistify_nbhd(
+        &self,
+        cell: &RcCell<Self::Desc>,
+        desc: Self::Desc,
+        state: Option<State>,
+        succ_state: State,
+        set_table: &mut Vec<WeakCell<Self::Desc>>,
+    );
 }
 
 // 对称性
@@ -78,8 +84,14 @@ pub struct World<D: Desc, R: Rule<Desc = D>> {
 }
 
 impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
-    pub fn new(width: isize, height: isize, period: isize, dx: isize, dy: isize,
-        symmetry: Symmetry, rule: R, column_first: Option<bool>) -> Self {
+    pub fn new(
+        (width, height, period): Coord,
+        dx: isize,
+        dy: isize,
+        symmetry: Symmetry,
+        rule: R,
+        column_first: Option<bool>,
+    ) -> Self {
         // 自动决定搜索顺序
         let column_first = match column_first {
             Some(c) => c,
@@ -94,7 +106,7 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
                 } else {
                     width > height
                 }
-            },
+            }
         };
 
         let b0 = rule.b0();
@@ -104,24 +116,37 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         // 先全部填上死细胞；如果是 B0 的规则，则在奇数代填上活细胞
         for _ in 0..(width + 2) * (height + 2) {
             for t in 0..period {
-                let state = if b0 && t % 2 == 1 {
-                    Alive
-                } else {
-                    Dead
-                };
+                let state = if b0 && t % 2 == 1 { Alive } else { Dead };
                 cells.push(Rc::new(LifeCell::new(Some(state), false)));
             }
         }
 
         let dead_cell = Rc::new(LifeCell::new(Some(Dead), false));
 
-        let life = World {width, height, period, rule, column_first, cells, dead_cell};
+        let life = World {
+            width,
+            height,
+            period,
+            rule,
+            column_first,
+            cells,
+            dead_cell,
+        };
 
         // 先设定细胞的邻域
         // 注意：对于范围边缘的细胞，邻域可能指向不存在的细胞！
-        let neighbors = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)];
-        for x in -1..width + 1 {
-            for y in -1..height + 1 {
+        let neighbors = [
+            (-1, -1),
+            (-1, 0),
+            (-1, 1),
+            (0, -1),
+            (0, 1),
+            (1, -1),
+            (1, 0),
+            (1, 1),
+        ];
+        for x in -1..=width {
+            for y in -1..=height {
                 for t in 0..period {
                     let cell = life.find_cell((x, y, t)).upgrade().unwrap();
                     for (i, (nx, ny)) in neighbors.iter().enumerate() {
@@ -132,17 +157,13 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         }
 
         // 再给范围内的细胞添加别的信息
-        for x in -1..width + 1 {
-            for y in -1..height + 1 {
+        for x in -1..=width {
+            for y in -1..=height {
                 for t in 0..period {
                     let cell = life.find_cell((x, y, t)).upgrade().unwrap();
 
                     // 默认的细胞状态
-                    let default = if b0 && t % 2 == 1 {
-                        Alive
-                    } else {
-                        Dead
-                    };
+                    let default = if b0 && t % 2 == 1 { Alive } else { Dead };
 
                     // 用 set 设置细胞状态
                     if 0 <= x && x < width && 0 <= y && y < height {
@@ -179,31 +200,38 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
                     let sym_coords = match symmetry {
                         Symmetry::C1 => vec![],
                         Symmetry::C2 => vec![(width - 1 - x, height - 1 - y, t)],
-                        Symmetry::C4 => vec![(y, width - 1 - x, t),
+                        Symmetry::C4 => vec![
+                            (y, width - 1 - x, t),
                             (width - 1 - x, height - 1 - y, t),
-                            (height - 1 - y, x, t)],
+                            (height - 1 - y, x, t),
+                        ],
                         Symmetry::D2Row => vec![(width - 1 - x, y, t)],
                         Symmetry::D2Column => vec![(x, height - 1 - y, t)],
                         Symmetry::D2Diag => vec![(y, x, t)],
                         Symmetry::D2Antidiag => vec![(height - 1 - y, width - 1 - x, t)],
-                        Symmetry::D4Ortho => vec![(width - 1 - x, y, t),
+                        Symmetry::D4Ortho => vec![
+                            (width - 1 - x, y, t),
                             (x, height - 1 - y, t),
-                            (width - 1 - x, height - 1 - y, t)],
-                        Symmetry::D4Diag => vec![(y, x, t),
+                            (width - 1 - x, height - 1 - y, t),
+                        ],
+                        Symmetry::D4Diag => vec![
+                            (y, x, t),
                             (height - 1 - y, width - 1 - x, t),
-                            (width - 1 - x, height - 1 - y, t)],
-                        Symmetry::D8 => vec![(y, width - 1 - x, t),
+                            (width - 1 - x, height - 1 - y, t),
+                        ],
+                        Symmetry::D8 => vec![
+                            (y, width - 1 - x, t),
                             (height - 1 - y, x, t),
                             (width - 1 - x, y, t),
                             (x, height - 1 - y, t),
                             (y, x, t),
                             (height - 1 - y, width - 1 - x, t),
-                            (width - 1 - x, height - 1 - y, t)],
+                            (width - 1 - x, height - 1 - y, t),
+                        ],
                     };
                     for coord in sym_coords {
                         let sym_weak = life.find_cell(coord);
-                        if 0 <= coord.0 && coord.0 < width &&
-                            0 <= coord.1 && coord.1 < height {
+                        if 0 <= coord.0 && coord.0 < width && 0 <= coord.1 && coord.1 < height {
                             cell.sym.borrow_mut().push(sym_weak);
                         } else if 0 <= x && x < width && 0 <= y && y < height {
                             cell.set(Some(default), false);
@@ -256,18 +284,28 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
 
     // 获取一个未知的细胞
     pub fn get_unknown(&self) -> WeakCell<D> {
-        self.cells.iter().find(|cell| cell.state.get().is_none())
-            .map(Rc::downgrade).unwrap_or_default()
+        self.cells
+            .iter()
+            .find(|cell| cell.state.get().is_none())
+            .map(Rc::downgrade)
+            .unwrap_or_default()
     }
 
     // 确保搜出来的图样非空，而且最小周期不小于指定的周期
     pub fn nontrivial(&self) -> bool {
-        let nonzero = self.cells.iter().step_by(self.period as usize)
+        let nonzero = self
+            .cells
+            .iter()
+            .step_by(self.period as usize)
             .any(|c| c.state.get() != Some(Dead));
-        nonzero && (self.period == 1 ||
-            (1..self.period).all(|t|
-                self.period % t != 0 ||
-                    self.cells.chunks(self.period as usize)
-                        .any(|c| c[0].state.get() != c[t as usize].state.get())))
+        nonzero
+            && (self.period == 1
+                || (1..self.period).all(|t| {
+                    self.period % t != 0
+                        || self
+                            .cells
+                            .chunks(self.period as usize)
+                            .any(|c| c[0].state.get() != c[t as usize].state.get())
+                }))
     }
 }

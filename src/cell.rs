@@ -2,7 +2,7 @@ use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
-use State::{Dead, Alive};
+use State::{Alive, Dead};
 
 // 细胞状态
 #[derive(Clone, Copy, PartialEq)]
@@ -50,7 +50,15 @@ impl<D: Desc> LifeCell<D> {
         let succ = Default::default();
         let nbhd = Default::default();
         let sym = Default::default();
-        LifeCell {state, desc, free, pred, succ, nbhd, sym}
+        LifeCell {
+            state,
+            desc,
+            free,
+            pred,
+            succ,
+            nbhd,
+            sym,
+        }
     }
 
     // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态

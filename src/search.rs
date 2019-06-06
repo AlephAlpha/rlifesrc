@@ -1,7 +1,7 @@
-use std::rc::Rc;
-use crate::cell::{State, Desc, RcCell, WeakCell};
-use crate::cell::State::{Dead, Alive};
+use crate::cell::State::{Alive, Dead};
+use crate::cell::{Desc, RcCell, State, WeakCell};
 use crate::world::{Rule, World};
+use std::rc::Rc;
 
 // 搜索状态
 pub enum Status {
@@ -30,7 +30,12 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     pub fn new(world: World<D, R>, new_state: Option<State>) -> Search<D, R> {
         let size = (world.width * world.height * world.period) as usize;
         let set_table = Vec::with_capacity(size);
-        Search {world, new_state, set_table, next_set: 0}
+        Search {
+            world,
+            new_state,
+            set_table,
+            next_set: 0,
+        }
     }
 
     // 确保由一个细胞本身和邻域能得到其后一代，由此确定一些未知细胞的状态
@@ -41,7 +46,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
         if let Some(new_state) = self.world.rule.transition(state, desc) {
             if let Some(succ_state) = succ.state.get() {
                 if new_state != succ_state {
-                    return Err(())
+                    return Err(());
                 }
             } else {
                 succ.set(Some(new_state), false);
@@ -55,8 +60,9 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                     self.set_table.push(Rc::downgrade(cell));
                 }
             }
-            self.world.rule.consistify_nbhd(&cell, desc, state,
-                succ_state, &mut self.set_table);
+            self.world
+                .rule
+                .consistify_nbhd(&cell, desc, state, succ_state, &mut self.set_table);
         }
         Ok(())
     }
@@ -81,7 +87,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                 if let Some(sym) = sym.upgrade() {
                     if let Some(old_state) = sym.state.get() {
                         if state != old_state {
-                            return Err(())
+                            return Err(());
                         }
                     } else {
                         sym.set(Some(state), false);
@@ -132,10 +138,8 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     // 最终搜索函数
     pub fn search(&mut self, max_step: Option<usize>) -> Status {
         let mut step_count = 0;
-        if let None = self.world.get_unknown().upgrade() {
-            if self.backup().is_err() {
-                return Status::None;
-            }
+        if self.world.get_unknown().upgrade().is_none() && self.backup().is_err() {
+            return Status::None;
         }
         while self.go(&mut step_count).is_ok() {
             if let Some(cell) = self.world.get_unknown().upgrade() {
@@ -152,10 +156,8 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                 }
             } else if self.world.nontrivial() {
                 return Status::Found;
-            } else {
-                if self.backup().is_err() {
-                    return Status::None;
-                }
+            } else if self.backup().is_err() {
+                return Status::None;
             }
         }
         Status::None
