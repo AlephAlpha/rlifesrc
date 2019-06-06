@@ -4,9 +4,11 @@ use clap::AppSettings::AllowNegativeNumbers;
 use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
+use crate::cell::{Desc, State};
 use crate::search::{Search, Status};
 use crate::rules::parse::{parse_life, parse_isotropic};
-use crate::world::{Desc, Rule, State, World};
+use crate::world::{Rule, World};
+mod cell;
 mod search;
 mod rules;
 mod world;
@@ -157,7 +159,7 @@ fn main() {
     }
 }
 
-fn search<D: Desc, R: Rule<D>>(world: World<D, R>, new_state: Option<State>,
+fn search<D: Desc, R: Rule<Desc = D>>(world: World<D, R>, new_state: Option<State>,
     all: bool, reset: bool, no_tui: bool) {
     let mut search = Search::new(world, new_state);
 
@@ -176,7 +178,7 @@ fn search<D: Desc, R: Rule<D>>(world: World<D, R>, new_state: Option<State>,
     }
 }
 
-fn search_without_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, all: bool) {
+fn search_without_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, all: bool) {
     if all {
         loop {
             match search.search(None) {
@@ -194,7 +196,7 @@ fn search_without_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, all: bool)
 }
 
 #[cfg(feature = "tui")]
-fn search_with_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, reset: bool) {
+fn search_with_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, reset: bool) {
     let period = search.world.period;
     #[cfg(debug_assertions)]
     let view_freq = 500;
@@ -296,7 +298,7 @@ fn search_with_tui<D: Desc, R: Rule<D>>(search: &mut Search<D, R>, reset: bool) 
 }
 
 #[cfg(feature = "tui")]
-fn print_world<D: Desc, R: Rule<D>>(window: &Window, world: &World<D, R>, gen: isize) -> i32 {
+fn print_world<D: Desc, R: Rule<Desc = D>>(window: &Window, world: &World<D, R>, gen: isize) -> i32 {
     window.mvprintw(0, 0, world.display_gen(gen));
     window.refresh()
 }

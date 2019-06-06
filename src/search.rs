@@ -1,6 +1,7 @@
 use std::rc::Rc;
-use crate::world::{State, Desc,  Rule, World, RcCell, WeakCell};
-use crate::world::State::{Dead, Alive};
+use crate::cell::{State, Desc, RcCell, WeakCell};
+use crate::cell::State::{Dead, Alive};
+use crate::world::{Rule, World};
 
 // 搜索状态
 pub enum Status {
@@ -15,7 +16,7 @@ pub enum Status {
 }
 
 // 搜索时除了世界本身，还需要记录别的一些信息。
-pub struct Search<D: Desc, R: Rule<D>> {
+pub struct Search<D: Desc, R: Rule<Desc = D>> {
     pub world: World<D, R>,
     // 搜索时给未知细胞选取的状态，None 表示随机
     new_state: Option<State>,
@@ -25,7 +26,7 @@ pub struct Search<D: Desc, R: Rule<D>> {
     next_set: usize,
 }
 
-impl<D: Desc, R: Rule<D>> Search<D, R> {
+impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     pub fn new(world: World<D, R>, new_state: Option<State>) -> Search<D, R> {
         let size = (world.width * world.height * world.period) as usize;
         let set_table = Vec::with_capacity(size);
@@ -48,7 +49,7 @@ impl<D: Desc, R: Rule<D>> Search<D, R> {
             }
         }
         if let Some(succ_state) = succ.state.get() {
-            if cell.state.get().is_none() {
+            if state.is_none() {
                 if let Some(state) = self.world.rule.implication(desc, succ_state) {
                     cell.set(Some(state), false);
                     self.set_table.push(Rc::downgrade(cell));

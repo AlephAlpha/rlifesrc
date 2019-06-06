@@ -4,15 +4,15 @@
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和原版的 lifesrc 相比缺少很多功能，不过速度可能会稍微快一些。
 
-支持 Life-like 和 Isotropic non-totalistic 的规则，但后者比前者要慢一些。
+支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [Isotropic non-totalistic](http://conwaylife.com/wiki/Isotropic_non-totalistic_Life-like_cellular_automaton) 的规则，但后者比前者要慢一些。
 
 ## 编译
 
 Rlifesrc 的 TUI （文本界面）是用 [pancurses](https://github.com/ihalila/pancurses) 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。
 
-用 `cargo build --release` 来编译即可。用 `cargo run` 运行的时候也记得加上 `--release`，不加的话会特别慢（相差近百倍）。
+用 `cargo build --release` 来编译即可。用 `cargo run` 运行的时候也记得加上 `--release`，不加的话搜索会特别慢（相差近百倍）。
 
-如果完全不需要 TUI，而且懒得安装以上的依赖，或者是想节省编译时间，可以在编译和运行的时候加上 `--no-default-features`。
+如果完全不需要 TUI，而且懒得安装以上的依赖，可以在编译和运行的时候加上 `--no-default-features`。
 
 ## 用法
 
@@ -88,6 +88,8 @@ Paused. Press [space] to resume.
 
 ```
 
-按空格键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一代/下一代。注意此用法和 lifesrc 不同。
+按空格键或回车键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一代/下一代。注意此用法和 lifesrc 不同。
 
 `.`、`O`、`?`分别代表死细胞、活细胞、未知的细胞。搜索结果可以直接复制粘贴到 [Golly](http://golly.sourceforge.net/) 中。
+
+若不进入 TUI，程序将不会显示搜索过程，只会在搜索结束后输出第一个结果（若加上 `--all` 则会输出全部结果），也不会显示所用的时间。

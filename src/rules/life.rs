@@ -1,5 +1,7 @@
 use std::rc::Rc;
-use crate::world::{State, Desc, Rule, LifeCell, RcCell, WeakCell};
+use crate::cell::{State, Desc, LifeCell, RcCell, WeakCell};
+use crate::cell::State::{Dead, Alive};
+use crate::world::Rule;
 
 #[derive(Clone, Copy)]
 // 邻域的细胞统计
@@ -10,21 +12,21 @@ pub struct NbhdDesc(u8);
 impl Desc for NbhdDesc {
     fn new(state: Option<State>) -> Self {
         match state {
-            Some(State::Dead) => NbhdDesc(0x80),
-            Some(State::Alive) => NbhdDesc(0x08),
+            Some(Dead) => NbhdDesc(0x80),
+            Some(Alive) => NbhdDesc(0x08),
             None => NbhdDesc(0x00),
         }
     }
 
     fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
         let old_state_num = match old_state {
-                Some(State::Dead) => 0x10,
-                Some(State::Alive) => 0x01,
+                Some(Dead) => 0x10,
+                Some(Alive) => 0x01,
                 None => 0x00,
             };
         let state_num = match state {
-                Some(State::Dead) => 0x10,
-                Some(State::Alive) => 0x01,
+                Some(Dead) => 0x10,
+                Some(Alive) => 0x01,
                 None => 0x00,
             };
         for neigh in cell.nbhd.borrow().iter() {
@@ -64,19 +66,19 @@ impl Life {
             let nbhd = ((8 - alives) << 4) | alives;
             let alives = alives as u8;
             trans_table[nbhd].dead = if b.contains(&alives) {
-                Some(State::Alive)
+                Some(Alive)
             } else {
-                Some(State::Dead)
+                Some(Dead)
             };
             trans_table[nbhd].alive = if s.contains(&alives) {
-                Some(State::Alive)
+                Some(Alive)
             } else {
-                Some(State::Dead)
+                Some(Dead)
             };
             trans_table[nbhd].none = if b.contains(&alives) && s.contains(&alives) {
-                Some(State::Alive)
+                Some(Alive)
             } else if !b.contains(&alives) && !s.contains(&alives) {
-                Some(State::Dead)
+                Some(Dead)
             } else {
                 None
             };
@@ -106,7 +108,7 @@ impl Life {
         for unknowns in 0..9 {
             for alives in 0..9 - unknowns {
                 let nbhd = ((8 - alives - unknowns) << 4) | alives;
-                for (i, &succ) in [State::Dead, State::Alive].iter().enumerate() {
+                for (i, &succ) in [Dead, Alive].iter().enumerate() {
                     let index = nbhd * 2 + i;
                     let possibly_dead = match trans_table[nbhd].dead {
                         Some(state) => state == succ,
@@ -117,9 +119,9 @@ impl Life {
                         None => true,
                     };
                     if possibly_dead && !possibly_alive {
-                        impl_table[index] = Some(State::Dead);
+                        impl_table[index] = Some(Dead);
                     } else if !possibly_dead && possibly_alive {
-                        impl_table[index] = Some(State::Alive);
+                        impl_table[index] = Some(Alive);
                     }
                 }
             }
@@ -133,7 +135,7 @@ impl Life {
                 let nbhd1 = ((8 - alives - unknowns) << 4) | (alives + 1);
                 let trans0 = trans_table[nbhd0];
                 let trans1 = trans_table[nbhd1];
-                for (i, &succ) in [State::Dead, State::Alive].iter().enumerate() {
+                for (i, &succ) in [Dead, Alive].iter().enumerate() {
                     let index = nbhd * 2 + i;
 
                     let possibly_dead = match trans0.dead {
@@ -145,9 +147,9 @@ impl Life {
                         None => true,
                     };
                     if possibly_dead && !possibly_alive {
-                        impl_nbhd_table[index].dead = Some(State::Dead);
+                        impl_nbhd_table[index].dead = Some(Dead);
                     } else if !possibly_dead && possibly_alive {
-                        impl_nbhd_table[index].dead = Some(State::Alive);
+                        impl_nbhd_table[index].dead = Some(Alive);
                     }
 
                     let possibly_dead = match trans0.alive {
@@ -159,9 +161,9 @@ impl Life {
                         None => true,
                     };
                     if possibly_dead && !possibly_alive {
-                        impl_nbhd_table[index].alive = Some(State::Dead);
+                        impl_nbhd_table[index].alive = Some(Dead);
                     } else if !possibly_dead && possibly_alive {
-                        impl_nbhd_table[index].alive = Some(State::Alive);
+                        impl_nbhd_table[index].alive = Some(Alive);
                     }
 
                     let possibly_dead = match trans0.none {
@@ -173,9 +175,9 @@ impl Life {
                         None => true,
                     };
                     if possibly_dead && !possibly_alive {
-                        impl_nbhd_table[index].none = Some(State::Dead);
+                        impl_nbhd_table[index].none = Some(Dead);
                     } else if !possibly_dead && possibly_alive {
-                        impl_nbhd_table[index].none = Some(State::Alive);
+                        impl_nbhd_table[index].none = Some(Alive);
                     }
                 }
             }
@@ -186,19 +188,21 @@ impl Life {
     fn implication_nbhd(&self, state: Option<State>, desc: NbhdDesc, succ_state: State)
         -> Option<State> {
         let index = desc.0 as usize * 2 + match succ_state {
-            State::Dead => 0,
-            State::Alive => 1,
+            Dead => 0,
+            Alive => 1,
         };
         let implication = self.impl_nbhd_table[index];
         match state {
-            Some(State::Dead) => implication.dead,
-            Some(State::Alive) => implication.alive,
+            Some(Dead) => implication.dead,
+            Some(Alive) => implication.alive,
             None => implication.none,
         }
     }
 }
 
-impl Rule<NbhdDesc> for Life {
+impl Rule for Life {
+    type Desc = NbhdDesc;
+
     fn b0(&self) -> bool {
         self.b0
     }
@@ -206,16 +210,16 @@ impl Rule<NbhdDesc> for Life {
     fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {
         let transition = self.trans_table[desc.0 as usize];
         match state {
-            Some(State::Dead) => transition.dead,
-            Some(State::Alive) => transition.alive,
+            Some(Dead) => transition.dead,
+            Some(Alive) => transition.alive,
             None => transition.none,
         }
     }
 
     fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State> {
         let index = desc.0 as usize * 2 + match succ_state {
-            State::Dead => 0,
-            State::Alive => 1,
+            Dead => 0,
+            Alive => 1,
         };
         self.impl_table[index]
     }
