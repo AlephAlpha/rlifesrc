@@ -1,14 +1,12 @@
-use crate::cell::{Desc, State};
 use crate::rules::parse::{parse_isotropic, parse_life};
 use crate::search::{Search, Status};
-use crate::world::{Rule, World};
+use crate::world::{Desc, Rule, State, World};
 use clap::AppSettings::AllowNegativeNumbers;
 use clap::{App, Arg};
 #[cfg(feature = "tui")]
 use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
-mod cell;
 mod rules;
 mod search;
 mod world;

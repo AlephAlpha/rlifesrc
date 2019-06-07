@@ -1,7 +1,5 @@
-use crate::cell::State::{Alive, Dead};
-use crate::cell::{Desc, RcCell, State, WeakCell};
-use crate::world::{Rule, World};
-use std::rc::Rc;
+use crate::world::State::{Alive, Dead};
+use crate::world::{CellId, Desc, Rule, State, World};
 
 // 搜索状态
 pub enum Status {
@@ -21,7 +19,7 @@ pub struct Search<D: Desc, R: Rule<Desc = D>> {
     // 搜索时给未知细胞选取的状态，None 表示随机
     new_state: Option<State>,
     // 存放在搜索过程中设定了状态的细胞
-    set_table: Vec<WeakCell<D>>,
+    set_table: Vec<CellId>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
 }
@@ -39,8 +37,10 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     }
 
     // 确保由一个细胞本身和邻域能得到其后一代，由此确定一些未知细胞的状态
-    fn consistify(&mut self, cell: &RcCell<D>) -> Result<(), ()> {
-        let succ = cell.succ.borrow().upgrade().unwrap();
+    fn consistify(&mut self, cell_id: CellId) -> Result<(), ()> {
+        let cell = &self.world[cell_id];
+        let succ_id = cell.succ.get();
+        let succ = &self.world[succ_id];
         let state = cell.state.get();
         let desc = cell.desc.get();
         if let Some(new_state) = self.world.rule.transition(state, desc) {
@@ -49,31 +49,38 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                     return Err(());
                 }
             } else {
-                succ.set(Some(new_state), false);
-                self.set_table.push(Rc::downgrade(&succ));
+                self.world.set_cell(succ, Some(new_state), false);
+                self.set_table.push(succ_id.unwrap());
             }
         }
         if let Some(succ_state) = succ.state.get() {
             if state.is_none() {
                 if let Some(state) = self.world.rule.implication(desc, succ_state) {
-                    cell.set(Some(state), false);
-                    self.set_table.push(Rc::downgrade(cell));
+                    self.world.set_cell(cell, Some(state), false);
+                    self.set_table.push(cell_id);
                 }
             }
-            self.world
-                .rule
-                .consistify_nbhd(&cell, desc, state, succ_state, &mut self.set_table);
+            self.world.rule.consistify_nbhd(
+                &cell,
+                &self.world,
+                desc,
+                state,
+                succ_state,
+                &mut self.set_table,
+            );
         }
         Ok(())
     }
 
     // consistify 一个细胞前一代，本身，以及邻域中的所有细胞
-    fn consistify10(&mut self, cell: &RcCell<D>) -> Result<(), ()> {
-        self.consistify(cell)?;
-        let pred = cell.pred.borrow().upgrade().unwrap();
-        self.consistify(&pred)?;
-        for neigh in cell.nbhd.borrow().iter() {
-            self.consistify(&neigh.upgrade().unwrap())?;
+    fn consistify10(&mut self, cell_id: CellId) -> Result<(), ()> {
+        self.consistify(cell_id)?;
+        let cell = &self.world[cell_id];
+        let pred_id = cell.pred.get().unwrap();
+        self.consistify(pred_id)?;
+        let cell = &self.world[cell_id];
+        for &neigh_id in cell.nbhd.get().iter() {
+            self.consistify(neigh_id.unwrap())?;
         }
         Ok(())
     }
@@ -81,21 +88,21 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     // 通过 consistify 和对称性把所有能确定的细胞确定下来
     fn proceed(&mut self) -> Result<(), ()> {
         while self.next_set < self.set_table.len() {
-            let cell = self.set_table[self.next_set].upgrade().unwrap();
+            let cell_id = self.set_table[self.next_set];
+            let cell = &self.world[cell_id];
             let state = cell.state.get().unwrap();
-            for sym in cell.sym.borrow().iter() {
-                if let Some(sym) = sym.upgrade() {
-                    if let Some(old_state) = sym.state.get() {
-                        if state != old_state {
-                            return Err(());
-                        }
-                    } else {
-                        sym.set(Some(state), false);
-                        self.set_table.push(Rc::downgrade(&sym));
+            for &sym_id in cell.sym.borrow().iter() {
+                let sym = &self.world[sym_id];
+                if let Some(old_state) = sym.state.get() {
+                    if state != old_state {
+                        return Err(());
                     }
+                } else {
+                    self.world.set_cell(sym, Some(state), false);
+                    self.set_table.push(sym_id);
                 }
             }
-            self.consistify10(&cell)?;
+            self.consistify10(cell_id)?;
             self.next_set += 1;
         }
         Ok(())
@@ -106,18 +113,19 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
         self.next_set = self.set_table.len();
         while self.next_set > 0 {
             self.next_set -= 1;
-            let cell = self.set_table[self.next_set].upgrade().unwrap();
+            let cell_id = self.set_table[self.next_set];
+            let cell = &self.world[cell_id];
             self.set_table.pop();
             if cell.free.get() {
                 let state = match cell.state.get().unwrap() {
                     Dead => Alive,
                     Alive => Dead,
                 };
-                cell.set(Some(state), false);
-                self.set_table.push(Rc::downgrade(&cell));
+                self.world.set_cell(cell, Some(state), false);
+                self.set_table.push(cell_id);
                 return Ok(());
             } else {
-                cell.set(None, true);
+                self.world.set_cell(cell, None, true);
             }
         }
         Err(())
@@ -138,17 +146,17 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     // 最终搜索函数
     pub fn search(&mut self, max_step: Option<usize>) -> Status {
         let mut step_count = 0;
-        if self.world.get_unknown().upgrade().is_none() && self.backup().is_err() {
+        if self.world.get_unknown().is_none() && self.backup().is_err() {
             return Status::None;
         }
         while self.go(&mut step_count).is_ok() {
-            if let Some(cell) = self.world.get_unknown().upgrade() {
+            if let Some(cell) = self.world.get_unknown() {
                 let state = match self.new_state {
                     Some(state) => state,
                     None => rand::random(),
                 };
-                cell.set(Some(state), true);
-                self.set_table.push(Rc::downgrade(&cell));
+                self.world.set_cell(cell, Some(state), true);
+                self.set_table.push(cell.id);
                 if let Some(max) = max_step {
                     if step_count > max {
                         return Status::Searching;

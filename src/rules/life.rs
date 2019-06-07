@@ -1,7 +1,5 @@
-use crate::cell::State::{Alive, Dead};
-use crate::cell::{Desc, LifeCell, RcCell, State, WeakCell};
-use crate::world::Rule;
-use std::rc::Rc;
+use crate::world::State::{Alive, Dead};
+use crate::world::{CellId, Desc, LifeCell, Rule, State, World};
 
 #[derive(Clone, Copy)]
 // 邻域的细胞统计
@@ -18,7 +16,12 @@ impl Desc for NbhdDesc {
         }
     }
 
-    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+    fn set_nbhd<R: Rule<Desc = Self>>(
+        world: &World<Self, R>,
+        cell: &LifeCell<Self>,
+        old_state: Option<State>,
+        state: Option<State>,
+    ) {
         let old_state_num = match old_state {
             Some(Dead) => 0x10,
             Some(Alive) => 0x01,
@@ -29,8 +32,8 @@ impl Desc for NbhdDesc {
             Some(Alive) => 0x01,
             None => 0x00,
         };
-        for neigh in cell.nbhd.borrow().iter() {
-            let neigh = neigh.upgrade().unwrap();
+        for &neigh_id in cell.nbhd.get().iter() {
+            let neigh = &world[neigh_id.unwrap()];
             let mut desc = neigh.desc.get();
             desc.0 -= old_state_num;
             desc.0 += state_num;
@@ -256,18 +259,20 @@ impl Rule for Life {
 
     fn consistify_nbhd(
         &self,
-        cell: &RcCell<NbhdDesc>,
+        cell: &LifeCell<NbhdDesc>,
+        world: &World<NbhdDesc, Self>,
         desc: NbhdDesc,
         state: Option<State>,
         succ_state: State,
-        set_table: &mut Vec<WeakCell<NbhdDesc>>,
+        set_table: &mut Vec<CellId>,
     ) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
-            for neigh in cell.nbhd.borrow().iter() {
-                if let Some(neigh) = neigh.upgrade() {
+            for &neigh_id in cell.nbhd.get().iter() {
+                if let Some(neigh_id) = neigh_id {
+                    let neigh = &world[neigh_id];
                     if neigh.state.get().is_none() {
-                        neigh.set(Some(state), false);
-                        set_table.push(Rc::downgrade(&neigh));
+                        world.set_cell(neigh, Some(state), false);
+                        set_table.push(neigh_id);
                     }
                 }
             }

@@ -1,10 +1,87 @@
-use crate::cell::State::{Alive, Dead};
-use crate::cell::{Desc, LifeCell, RcCell, State, WeakCell};
-use std::rc::{Rc, Weak};
+use rand::distributions::{Distribution, Standard};
+use rand::Rng;
+use std::cell::{Cell, RefCell};
+use std::ops::Index;
 use std::str::FromStr;
+use State::{Alive, Dead};
+
+// 细胞状态
+#[derive(Clone, Copy, PartialEq)]
+pub enum State {
+    Dead,
+    Alive,
+}
+
+impl Distribution<State> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> State {
+        match rng.gen_range(0, 2) {
+            0 => Dead,
+            _ => Alive,
+        }
+    }
+}
+
+// 所有的细胞保存在一个向量中，细胞的 id 等于其在向量中的位置
+pub type CellId = usize;
+
+// D 表示邻域的状态
+pub struct LifeCell<D> {
+    // 细胞的 id
+    pub id: CellId,
+    // 细胞自身的状态
+    pub state: Cell<Option<State>>,
+    // 细胞邻域的状态
+    pub desc: Cell<D>,
+    // 细胞的状态是否由别的细胞决定
+    pub free: Cell<bool>,
+    // 同一位置上一代的细胞
+    pub pred: Cell<Option<CellId>>,
+    // 同一位置下一代的细胞
+    pub succ: Cell<Option<CellId>>,
+    // 细胞的邻域
+    pub nbhd: Cell<[Option<CellId>; 8]>,
+    // 与此细胞对称（因此状态一致）的细胞
+    pub sym: RefCell<Vec<CellId>>,
+}
+
+impl<D: Desc> LifeCell<D> {
+    pub fn new(id: CellId, state: Option<State>, free: bool) -> Self {
+        let desc = Cell::new(D::new(state));
+        let state = Cell::new(state);
+        let free = Cell::new(free);
+        let pred = Default::default();
+        let succ = Default::default();
+        let nbhd = Default::default();
+        let sym = Default::default();
+        LifeCell {
+            id,
+            state,
+            desc,
+            free,
+            pred,
+            succ,
+            nbhd,
+            sym,
+        }
+    }
+}
+
+// 邻域的状态应该满足一个 trait
+pub trait Desc: Copy {
+    // 通过一个细胞的状态生成一个默认的邻域
+    fn new(state: Option<State>) -> Self;
+
+    // 改变一个细胞的状态时处理其邻域中所有细胞的邻域状态
+    fn set_nbhd<R: Rule<Desc = Self>>(
+        world: &World<Self, R>,
+        cell: &LifeCell<Self>,
+        old_state: Option<State>,
+        state: Option<State>,
+    );
+}
 
 // 把规则写成一个 Trait，方便以后支持更多的规则
-pub trait Rule {
+pub trait Rule: Sized {
     type Desc: Desc;
 
     // 规则是否是 B0
@@ -20,11 +97,12 @@ pub trait Rule {
     // 并把改变了值的细胞放到 set_table 中
     fn consistify_nbhd(
         &self,
-        cell: &RcCell<Self::Desc>,
+        cell: &LifeCell<Self::Desc>,
+        world: &World<Self::Desc, Self>,
         desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        set_table: &mut Vec<WeakCell<Self::Desc>>,
+        set_table: &mut Vec<CellId>,
     );
 }
 
@@ -77,10 +155,10 @@ pub struct World<D: Desc, R: Rule<Desc = D>> {
     column_first: bool,
 
     // 搜索范围内的所有细胞的列表
-    cells: Vec<RcCell<D>>,
+    cells: Vec<LifeCell<D>>,
 
     // 公用的搜索范围外的死细胞
-    dead_cell: RcCell<D>,
+    dead_cell: LifeCell<D>,
 }
 
 impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
@@ -114,14 +192,14 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         let mut cells = Vec::with_capacity(((width + 2) * (height + 2) * period) as usize);
 
         // 先全部填上死细胞；如果是 B0 的规则，则在奇数代填上活细胞
-        for _ in 0..(width + 2) * (height + 2) {
-            for t in 0..period {
-                let state = if b0 && t % 2 == 1 { Alive } else { Dead };
-                cells.push(Rc::new(LifeCell::new(Some(state), false)));
-            }
+        for id in 0..(width + 2) * (height + 2) * period {
+            let t = id % period;
+            let state = if b0 && t % 2 == 1 { Alive } else { Dead };
+            cells.push(LifeCell::new(id as usize, Some(state), false));
         }
 
-        let dead_cell = Rc::new(LifeCell::new(Some(Dead), false));
+        // 用不到 dead_cell 的 id，随便设一个值
+        let dead_cell = LifeCell::new(0, Some(Dead), false);
 
         let life = World {
             width,
@@ -148,10 +226,13 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         for x in -1..=width {
             for y in -1..=height {
                 for t in 0..period {
-                    let cell = life.find_cell((x, y, t)).upgrade().unwrap();
+                    let id = life.find_cell((x, y, t)).unwrap();
+                    let cell = &life.cells[id];
+                    let mut nbhd = cell.nbhd.get();
                     for (i, (nx, ny)) in neighbors.iter().enumerate() {
-                        cell.nbhd.borrow_mut()[i] = life.find_cell((x + nx, y + ny, t));
+                        nbhd[i] = life.find_cell((x + nx, y + ny, t));
                     }
+                    cell.nbhd.set(nbhd)
                 }
             }
         }
@@ -160,39 +241,36 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         for x in -1..=width {
             for y in -1..=height {
                 for t in 0..period {
-                    let cell = life.find_cell((x, y, t)).upgrade().unwrap();
+                    let id = life.find_cell((x, y, t)).unwrap();
+                    let cell = &life.cells[id];
 
                     // 默认的细胞状态
                     let default = if b0 && t % 2 == 1 { Alive } else { Dead };
 
                     // 用 set 设置细胞状态
                     if 0 <= x && x < width && 0 <= y && y < height {
-                        cell.set(None, true);
+                        life.set_cell(cell, None, true);
                     }
 
                     // 设定前一代；若前一代不在范围内则把此细胞设为 default
                     if t != 0 {
-                        *cell.pred.borrow_mut() = life.find_cell((x, y, t - 1));
+                        cell.pred.set(life.find_cell((x, y, t - 1)));
                     } else {
-                        let pred_coord = (x - dx, y - dy, period - 1);
-                        let pred_weak = life.find_cell(pred_coord);
-                        if pred_weak.upgrade().is_some() {
-                            *cell.pred.borrow_mut() = pred_weak;
+                        let pred = life.find_cell((x - dx, y - dy, period - 1));
+                        if pred.is_some() {
+                            cell.pred.set(pred);
                         } else if 0 <= x && x < width && 0 <= y && y < height {
-                            cell.set(Some(default), false);
+                            life.set_cell(cell, Some(default), false);
                         }
                     }
 
-                    // 设定后一代；若后一代不在范围内则把后一代设为 dead_cell
+                    // 设定后一代；若后一代不在范围内则不设
                     if t != period - 1 {
-                        *cell.succ.borrow_mut() = life.find_cell((x, y, t + 1));
+                        cell.succ.set(life.find_cell((x, y, t + 1)));
                     } else {
-                        let succ_coord = (x + dx, y + dy, 0);
-                        let succ_weak = life.find_cell(succ_coord);
-                        if succ_weak.upgrade().is_some() {
-                            *cell.succ.borrow_mut() = succ_weak;
-                        } else {
-                            *cell.succ.borrow_mut() = Rc::downgrade(&life.dead_cell);
+                        let succ = life.find_cell((x + dx, y + dy, 0));
+                        if succ.is_some() {
+                            cell.succ.set(succ);
                         }
                     }
 
@@ -230,11 +308,11 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
                         ],
                     };
                     for coord in sym_coords {
-                        let sym_weak = life.find_cell(coord);
+                        let sym = life.find_cell(coord);
                         if 0 <= coord.0 && coord.0 < width && 0 <= coord.1 && coord.1 < height {
-                            cell.sym.borrow_mut().push(sym_weak);
+                            cell.sym.borrow_mut().push(sym.unwrap());
                         } else if 0 <= x && x < width && 0 <= y && y < height {
-                            cell.set(Some(default), false);
+                            life.set_cell(cell, Some(default), false);
                         }
                     }
                 }
@@ -245,7 +323,7 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
     }
 
     // 通过坐标查找细胞
-    pub fn find_cell(&self, coord: Coord) -> WeakCell<D> {
+    fn find_cell(&self, coord: Coord) -> Option<CellId> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = if self.column_first {
@@ -253,15 +331,18 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             } else {
                 ((y + 1) * (self.width + 2) + x + 1) * self.period + t
             };
-            Rc::downgrade(&self.cells[index as usize])
+            Some(index as usize)
         } else {
-            Weak::new()
+            None
         }
     }
 
-    fn get_cell(&self, coord: Coord) -> (Option<State>, bool) {
-        let cell = self.find_cell(coord).upgrade().unwrap();
-        (cell.state.get(), cell.free.get())
+    // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
+    pub fn set_cell(&self, cell: &LifeCell<D>, state: Option<State>, free: bool) {
+        let old_state = cell.state.get();
+        cell.state.set(state);
+        cell.free.set(free);
+        D::set_nbhd(&self, &cell, old_state, state);
     }
 
     // 显示某一代的整个世界
@@ -270,7 +351,8 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         let t = t % self.period;
         for y in 0..self.height {
             for x in 0..self.width {
-                let s = match self.get_cell((x, y, t)).0 {
+                let state = self[self.find_cell((x, y, t))].state.get();
+                let s = match state {
                     Some(Dead) => '.',
                     Some(Alive) => 'O',
                     None => '?',
@@ -283,12 +365,8 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
     }
 
     // 获取一个未知的细胞
-    pub fn get_unknown(&self) -> WeakCell<D> {
-        self.cells
-            .iter()
-            .find(|cell| cell.state.get().is_none())
-            .map(Rc::downgrade)
-            .unwrap_or_default()
+    pub fn get_unknown(&self) -> Option<&LifeCell<D>> {
+        self.cells.iter().find(|cell| cell.state.get().is_none())
     }
 
     // 确保搜出来的图样非空，而且最小周期不小于指定的周期
@@ -307,5 +385,25 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
                             .chunks(self.period as usize)
                             .any(|c| c[0].state.get() != c[t as usize].state.get())
                 }))
+    }
+}
+
+// 通过 Index 来由 id 获取细胞
+impl<D: Desc, R: Rule<Desc = D>> Index<CellId> for World<D, R> {
+    type Output = LifeCell<D>;
+
+    fn index(&self, id: CellId) -> &Self::Output {
+        &self.cells[id]
+    }
+}
+
+impl<D: Desc, R: Rule<Desc = D>> Index<Option<CellId>> for World<D, R> {
+    type Output = LifeCell<D>;
+
+    fn index(&self, id: Option<CellId>) -> &Self::Output {
+        match id {
+            Some(id) => &self.cells[id],
+            None => &self.dead_cell,
+        }
     }
 }

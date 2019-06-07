@@ -1,7 +1,5 @@
-use crate::cell::State::{Alive, Dead};
-use crate::cell::{Desc, LifeCell, RcCell, State, WeakCell};
-use crate::world::Rule;
-use std::rc::Rc;
+use crate::world::State::{Alive, Dead};
+use crate::world::{CellId, Desc, LifeCell, Rule, State, World};
 
 #[derive(Clone, Copy, Default)]
 // 邻域的八个细胞的状态
@@ -17,7 +15,12 @@ impl Desc for NbhdDesc {
         }
     }
 
-    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+    fn set_nbhd<R: Rule<Desc = Self>>(
+        world: &World<Self, R>,
+        cell: &LifeCell<Self>,
+        old_state: Option<State>,
+        state: Option<State>,
+    ) {
         let change_num = match (state, old_state) {
             (Some(Dead), Some(Alive)) => 0x0101,
             (Some(Alive), Some(Dead)) => 0x0101,
@@ -25,8 +28,8 @@ impl Desc for NbhdDesc {
             (Some(Alive), None) | (None, Some(Alive)) => 0x0001,
             _ => 0x0000,
         };
-        for (i, neigh) in cell.nbhd.borrow().iter().rev().enumerate() {
-            let neigh = neigh.upgrade().unwrap();
+        for (i, &neigh_id) in cell.nbhd.get().iter().rev().enumerate() {
+            let neigh = &world[neigh_id.unwrap()];
             let mut desc = neigh.desc.get();
             desc.0 ^= change_num << i;
             neigh.desc.set(desc);
@@ -264,23 +267,25 @@ impl Rule for Life {
 
     fn consistify_nbhd(
         &self,
-        cell: &RcCell<NbhdDesc>,
+        cell: &LifeCell<NbhdDesc>,
+        world: &World<NbhdDesc, Self>,
         desc: NbhdDesc,
         state: Option<State>,
         succ_state: State,
-        set_table: &mut Vec<WeakCell<NbhdDesc>>,
+        set_table: &mut Vec<CellId>,
     ) {
         let nbhd_states = self.implication_nbhd(state, desc, succ_state).0;
         if nbhd_states != 0 {
-            for (i, neigh) in cell.nbhd.borrow().iter().enumerate() {
+            for (i, &neigh_id) in cell.nbhd.get().iter().enumerate() {
                 let state = match nbhd_states >> i & 0x0101 {
                     0x0001 => Alive,
                     0x0100 => Dead,
                     _ => continue,
                 };
-                if let Some(neigh) = neigh.upgrade() {
-                    neigh.set(Some(state), false);
-                    set_table.push(Rc::downgrade(&neigh));
+                if let Some(neigh_id) = neigh_id {
+                    let neigh = &world[neigh_id];
+                    world.set_cell(neigh, Some(state), false);
+                    set_table.push(neigh_id);
                 }
             }
         }
