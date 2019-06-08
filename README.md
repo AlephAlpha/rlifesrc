@@ -37,7 +37,7 @@ OPTIONS:
             如何为未知的细胞选取状态
             其中 'frtd' 表示 "first random then dead"，
             也就是说，第一行/第一列的细胞随机选取一个状态，其余的细胞先设为死。
-             [默认: frtd]  [可能的值: dead, alive, random, d, a, r, frtd]
+             [默认: dead]  [可能的值: dead, alive, random, d, a, r, frtd]
 
     -o, --order <ORDER>
             搜索顺序

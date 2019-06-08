@@ -116,7 +116,7 @@ fn main() {
                 .short("c")
                 .long("choose")
                 .possible_values(&["dead", "alive", "random", "d", "a", "r", "frtd"])
-                .default_value("frtd")
+                .default_value("dead")
                 .takes_value(true),
         )
         .arg(
