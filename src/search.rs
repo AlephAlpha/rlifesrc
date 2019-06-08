@@ -1,5 +1,6 @@
 use crate::world::State::{Alive, Dead};
 use crate::world::{CellId, Desc, Rule, State, World};
+use NewState::{Choose, FirstRandomThenDead, Random};
 
 // 搜索状态
 pub enum Status {
@@ -13,11 +14,21 @@ pub enum Status {
     Paused,
 }
 
+// 如何给未知细胞选取状态
+pub enum NewState {
+    // 就选 Dead 或 Alive
+    Choose(State),
+    // 随机
+    Random,
+    // 细胞的 id 小于指定的值时随机选取，其余的选 Dead
+    FirstRandomThenDead(CellId),
+}
+
 // 搜索时除了世界本身，还需要记录别的一些信息。
 pub struct Search<D: Desc, R: Rule<Desc = D>> {
     pub world: World<D, R>,
     // 搜索时给未知细胞选取的状态，None 表示随机
-    new_state: Option<State>,
+    new_state: NewState,
     // 存放在搜索过程中设定了状态的细胞
     set_table: Vec<CellId>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
@@ -25,9 +36,20 @@ pub struct Search<D: Desc, R: Rule<Desc = D>> {
 }
 
 impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
-    pub fn new(world: World<D, R>, new_state: Option<State>) -> Search<D, R> {
+    pub fn new(world: World<D, R>, new_state: NewState) -> Search<D, R> {
         let size = (world.width * world.height * world.period) as usize;
         let set_table = Vec::with_capacity(size);
+        let new_state = match new_state {
+            FirstRandomThenDead(_) => {
+                let id = if world.column_first {
+                    2 * (world.height + 2) * world.period
+                } else {
+                    2 * (world.width + 2) * world.period
+                };
+                FirstRandomThenDead(id as usize)
+            }
+            new_state => new_state,
+        };
         Search {
             world,
             new_state,
@@ -152,8 +174,15 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
         while self.go(&mut step_count).is_ok() {
             if let Some(cell) = self.world.get_unknown() {
                 let state = match self.new_state {
-                    Some(state) => state,
-                    None => rand::random(),
+                    Choose(state) => state,
+                    Random => rand::random(),
+                    FirstRandomThenDead(id) => {
+                        if cell.id < id {
+                            rand::random()
+                        } else {
+                            Dead
+                        }
+                    }
                 };
                 self.world.set_cell(cell, Some(state), true);
                 self.set_table.push(cell.id);

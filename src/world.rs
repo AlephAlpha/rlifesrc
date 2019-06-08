@@ -1,6 +1,7 @@
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::cell::{Cell, RefCell};
+use std::fmt::{Display, Error, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
 use State::{Alive, Dead};
@@ -152,7 +153,7 @@ pub struct World<D: Desc, R: Rule<Desc = D>> {
 
     // 搜索顺序是先行后列还是先列后行
     // 通过比较行数和列数的大小来自动决定
-    column_first: bool,
+    pub column_first: bool,
 
     // 搜索范围内的所有细胞的列表
     cells: Vec<LifeCell<D>>,
@@ -405,5 +406,23 @@ impl<D: Desc, R: Rule<Desc = D>> Index<Option<CellId>> for World<D, R> {
             Some(id) => &self.cells[id],
             None => &self.dead_cell,
         }
+    }
+}
+
+impl<D: Desc, R: Rule<Desc = D>> Display for World<D, R> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let state = self[self.find_cell((x, y, 0))].state.get();
+                let s = match state {
+                    Some(Dead) => '.',
+                    Some(Alive) => 'O',
+                    None => '?',
+                };
+                write!(f, "{}", s)?;
+            }
+            writeln!(f, "")?;
+        }
+        Ok(())
     }
 }

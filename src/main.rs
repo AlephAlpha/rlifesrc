@@ -1,6 +1,8 @@
 use crate::rules::parse::{parse_isotropic, parse_life};
-use crate::search::{Search, Status};
-use crate::world::{Desc, Rule, State, World};
+use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
+use crate::search::{NewState, Search, Status};
+use crate::world::State::{Alive, Dead};
+use crate::world::{Desc, Rule, World};
 use clap::AppSettings::AllowNegativeNumbers;
 use clap::{App, Arg};
 #[cfg(feature = "tui")]
@@ -105,10 +107,16 @@ fn main() {
         .arg(
             Arg::with_name("CHOOSE")
                 .help("How to choose a state for unknown cells")
+                .long_help(
+                    "How to choose a state for unknown cells\n\
+                     'frtd' means \"first random then dead\", \n\
+                     i.e., choose a random state for cells in the first row/column, \n\
+                     and dead for other cells.\n",
+                )
                 .short("c")
                 .long("choose")
-                .possible_values(&["dead", "alive", "random", "d", "a", "r"])
-                .default_value("dead")
+                .possible_values(&["dead", "alive", "random", "d", "a", "r", "frtd"])
+                .default_value("frtd")
                 .takes_value(true),
         )
         .arg(
@@ -116,7 +124,7 @@ fn main() {
                 .help("Search order")
                 .long_help(
                     "Search order\n\
-                     Row first or column first.",
+                     Row first or column first.\n",
                 )
                 .short("o")
                 .long("order")
@@ -182,9 +190,10 @@ fn main() {
         _ => None,
     };
     let new_state = match matches.value_of("CHOOSE").unwrap() {
-        "dead" | "d" => Some(State::Dead),
-        "alive" | "a" => Some(State::Alive),
-        _ => None,
+        "dead" | "d" => Choose(Dead),
+        "alive" | "a" => Choose(Alive),
+        "random" | "r" => Random,
+        _ => FirstRandomThenDead(0),
     };
 
     let rule_string = &matches.value_of("RULE").unwrap();
@@ -203,7 +212,7 @@ fn main() {
 
 fn search<D: Desc, R: Rule<Desc = D>>(
     world: World<D, R>,
-    new_state: Option<State>,
+    new_state: NewState,
     all: bool,
     reset: bool,
     no_tui: bool,
@@ -229,13 +238,13 @@ fn search_without_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, all
     if all {
         loop {
             match search.search(None) {
-                Status::Found => println!("{}", search.world.display_gen(0)),
+                Status::Found => println!("{}", search.world),
                 Status::None => break,
                 _ => (),
             }
         }
     } else if let Status::Found = search.search(None) {
-        println!("{}", search.world.display_gen(0))
+        println!("{}", search.world)
     }
 }
 
