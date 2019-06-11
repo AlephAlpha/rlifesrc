@@ -1,17 +1,19 @@
-use crate::rules::parse::{parse_isotropic, parse_life};
-use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
-use crate::search::{NewState, Search, Status};
-use crate::world::State::{Alive, Dead};
-use crate::world::{Desc, Rule, World};
+mod rules;
+mod search;
+mod world;
+
 use clap::AppSettings::AllowNegativeNumbers;
 use clap::{App, Arg};
+use rules::parse::{parse_isotropic, parse_life};
+use search::NewState::{Choose, FirstRandomThenDead, Random};
+use search::{NewState, Search, Status};
+use world::State::{Alive, Dead};
+use world::{Desc, Rule, World};
+
 #[cfg(feature = "tui")]
 use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
 #[cfg(feature = "tui")]
 use stopwatch::Stopwatch;
-mod rules;
-mod search;
-mod world;
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')

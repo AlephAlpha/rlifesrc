@@ -59,7 +59,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     }
 
     // 确保由一个细胞本身和邻域能得到其后一代，由此确定一些未知细胞的状态
-    fn consistify(&mut self, cell_id: CellId) -> Result<(), ()> {
+    fn consistify(&mut self, cell_id: CellId) -> bool {
         let cell = &self.world[cell_id];
         let succ_id = cell.succ.get();
         let succ = &self.world[succ_id];
@@ -68,7 +68,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
         if let Some(new_state) = self.world.rule.transition(state, desc) {
             if let Some(succ_state) = succ.state.get() {
                 if new_state != succ_state {
-                    return Err(());
+                    return false;
                 }
             } else {
                 self.world.set_cell(succ, Some(new_state), false);
@@ -91,24 +91,26 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                 &mut self.set_table,
             );
         }
-        Ok(())
+        true
     }
 
     // consistify 一个细胞前一代，本身，以及邻域中的所有细胞
-    fn consistify10(&mut self, cell_id: CellId) -> Result<(), ()> {
-        self.consistify(cell_id)?;
-        let cell = &self.world[cell_id];
-        let pred_id = cell.pred.get().unwrap();
-        self.consistify(pred_id)?;
-        let cell = &self.world[cell_id];
-        for &neigh_id in cell.nbhd.get().iter() {
-            self.consistify(neigh_id.unwrap())?;
+    fn consistify10(&mut self, cell_id: CellId) -> bool {
+        self.consistify(cell_id) && {
+            let cell = &self.world[cell_id];
+            let pred_id = cell.pred.get().unwrap();
+            self.consistify(pred_id) && {
+                let cell = &self.world[cell_id];
+                cell.nbhd
+                    .get()
+                    .iter()
+                    .all(|&neigh_id| self.consistify(neigh_id.unwrap()))
+            }
         }
-        Ok(())
     }
 
     // 通过 consistify 和对称性把所有能确定的细胞确定下来
-    fn proceed(&mut self) -> Result<(), ()> {
+    fn proceed(&mut self) -> bool {
         while self.next_set < self.set_table.len() {
             let cell_id = self.set_table[self.next_set];
             let cell = &self.world[cell_id];
@@ -117,21 +119,23 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                 let sym = &self.world[sym_id];
                 if let Some(old_state) = sym.state.get() {
                     if state != old_state {
-                        return Err(());
+                        return false;
                     }
                 } else {
                     self.world.set_cell(sym, Some(state), false);
                     self.set_table.push(sym_id);
                 }
             }
-            self.consistify10(cell_id)?;
+            if !self.consistify10(cell_id) {
+                return false;
+            }
             self.next_set += 1;
         }
-        Ok(())
+        true
     }
 
     // 恢复到上一次设定自由的未知细胞的值之前，并切换细胞的状态
-    fn backup(&mut self) -> Result<(), ()> {
+    fn backup(&mut self) -> bool {
         self.next_set = self.set_table.len();
         while self.next_set > 0 {
             self.next_set -= 1;
@@ -145,22 +149,22 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                 };
                 self.world.set_cell(cell, Some(state), false);
                 self.set_table.push(cell_id);
-                return Ok(());
+                return true;
             } else {
                 self.world.set_cell(cell, None, true);
             }
         }
-        Err(())
+        false
     }
 
     // 走；不对就退回来，换一下细胞的状态，再走，如此下去
-    fn go(&mut self, step: &mut usize) -> Result<(), ()> {
+    fn go(&mut self, step: &mut usize) -> bool {
         loop {
             *step += 1;
-            if self.proceed().is_ok() {
-                return Ok(());
-            } else {
-                self.backup()?;
+            if self.proceed() {
+                return true;
+            } else if !self.backup() {
+                return false;
             }
         }
     }
@@ -168,10 +172,10 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     // 最终搜索函数
     pub fn search(&mut self, max_step: Option<usize>) -> Status {
         let mut step_count = 0;
-        if self.world.get_unknown().is_none() && self.backup().is_err() {
+        if self.world.get_unknown().is_none() && !self.backup() {
             return Status::None;
         }
-        while self.go(&mut step_count).is_ok() {
+        while self.go(&mut step_count) {
             if let Some(cell) = self.world.get_unknown() {
                 let state = match self.new_state {
                     Choose(state) => state,
@@ -193,7 +197,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
                 }
             } else if self.world.nontrivial() {
                 return Status::Found;
-            } else if self.backup().is_err() {
+            } else if !self.backup() {
                 return Status::None;
             }
         }

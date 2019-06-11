@@ -421,7 +421,7 @@ impl<D: Desc, R: Rule<Desc = D>> Display for World<D, R> {
                 };
                 write!(f, "{}", s)?;
             }
-            writeln!(f, "")?;
+            writeln!(f)?;
         }
         Ok(())
     }
