@@ -205,3 +205,23 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
         Status::None
     }
 }
+
+// 把 Search 写成一个 Trait，方便后面用 trait object 来切换不同类型的规则
+// 应该有更好的办法。但我能想到的就两种：
+// 一是直接在 World 和 LifeCell 里边用 trait object，但可能会影响速度
+// 二是把所有可能的规则对应的 Search 写成一个 Enum，但感觉好蠢
+pub trait TraitSearch {
+    fn search(&mut self, max_step: Option<usize>) -> Status;
+
+    fn display_gen(&self, t: isize) -> String;
+}
+
+impl<D: Desc, R: Rule<Desc = D>> TraitSearch for Search<D, R> {
+    fn search(&mut self, max_step: Option<usize>) -> Status {
+        self.search(max_step)
+    }
+
+    fn display_gen(&self, t: isize) -> String {
+        self.world.display_gen(t)
+    }
+}

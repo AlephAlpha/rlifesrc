@@ -1,25 +1,26 @@
 use super::isotropic;
-// use super::life;
+use super::life;
 use combine::{choice, many, many1, one_of, optional, satisfy, token, value, Parser};
 
-// pub fn parse_life(string: &str) -> Result<life::Life, String> {
-//     let numbers =
-//         many(satisfy(|c: char| c.is_digit(9)).and_then(|c: char| c.to_string().parse::<u8>()));
+// Life-like 的规则
+pub fn parse_life(string: &str) -> Result<life::Life, String> {
+    let numbers =
+        many(satisfy(|c: char| c.is_digit(9)).and_then(|c: char| c.to_string().parse::<u8>()));
 
-//     let mut life = (
-//         one_of("Bb".chars()),
-//         numbers.clone(),
-//         optional(token('/')),
-//         one_of("Ss".chars()),
-//         numbers,
-//     )
-//         .map(|(_, b, _, _, s)| life::Life::new(b, s));
+    let mut life = (
+        one_of("Bb".chars()),
+        numbers.clone(),
+        optional(token('/')),
+        one_of("Ss".chars()),
+        numbers,
+    )
+        .map(|(_, b, _, _, s)| life::Life::new(b, s));
 
-//     match life.easy_parse(string) {
-//         Ok((life, "")) => Ok(life),
-//         _ => Err(String::from("not a Life-like rule")),
-//     }
-// }
+    match life.easy_parse(string) {
+        Ok((life, "")) => Ok(life),
+        _ => Err(String::from("not a Life-like rule")),
+    }
+}
 
 // 用一个宏来处理 non-totalistic 的规则
 macro_rules! chars_to_numbers {

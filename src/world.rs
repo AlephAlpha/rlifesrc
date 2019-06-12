@@ -164,7 +164,7 @@ impl Display for Symmetry {
 // 横座标，纵座标，时间
 type Coord = (isize, isize, isize);
 
-// 世界，暂时只适用于 Life-Like 的规则
+// 世界
 pub struct World<D: Desc, R: Rule<Desc = D>> {
     pub width: isize,
     pub height: isize,

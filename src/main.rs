@@ -2,13 +2,12 @@ mod rules;
 mod search;
 mod world;
 
-use rules::isotropic::{Life, NbhdDesc};
-use rules::parse::parse_isotropic;
+use rules::parse::{parse_isotropic, parse_life};
 use search::NewState::{Choose, FirstRandomThenDead, Random};
-use search::{NewState, Search, Status};
+use search::{NewState, Search, Status, TraitSearch};
 use std::time::Duration;
 use world::State::{Alive, Dead};
-use world::{Desc, Rule, Symmetry, World};
+use world::{Symmetry, World};
 use yew::components::Select;
 use yew::html;
 use yew::html::ChangeData;
@@ -19,7 +18,8 @@ struct Model {
     props: Props,
     view_freq: usize,
     status: Status,
-    search: Search<NbhdDesc, Life>,
+    generation: isize,
+    search: Box<dyn TraitSearch>,
     job: Job,
 }
 
@@ -27,6 +27,7 @@ enum Msg {
     Step,
     Start,
     Pause,
+    SetGeneration(isize),
     SetWidth(isize),
     SetHeight(isize),
     SetPeriod(isize),
@@ -106,7 +107,7 @@ impl Component for Model {
     type Properties = Props;
 
     fn create(props: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let rule = parse_isotropic(&props.rule_string).unwrap();
+        let rule = parse_life(&props.rule_string).unwrap();
         let world = World::new(
             (props.width, props.height, props.period),
             props.dx,
@@ -115,16 +116,18 @@ impl Component for Model {
             rule,
             props.column_first,
         );
-        let search = Search::new(world, props.new_state);
+        let search = Box::new(Search::new(world, props.new_state));
 
         let view_freq = 10000;
         let status = Status::Paused;
+        let generation = 0;
         let job = Job::new(&mut link);
 
         Model {
             props,
             view_freq,
             status,
+            generation,
             search,
             job,
         }
@@ -146,6 +149,9 @@ impl Component for Model {
             Msg::Pause => {
                 self.job.stop();
                 self.status = Status::Paused;
+            }
+            Msg::SetGeneration(generation) => {
+                self.generation = generation;
             }
             Msg::SetWidth(width) => {
                 self.props = Props {
@@ -210,9 +216,9 @@ impl Component for Model {
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if let Ok(rule) = parse_isotropic(&props.rule_string) {
-            self.job.stop();
-            self.status = Status::Paused;
+        self.job.stop();
+        self.status = Status::Paused;
+        if let Ok(rule) = parse_life(&props.rule_string) {
             self.props = props.clone();
             let world = World::new(
                 (props.width, props.height, props.period),
@@ -222,7 +228,19 @@ impl Component for Model {
                 rule,
                 props.column_first,
             );
-            self.search = Search::new(world, props.new_state);
+            self.search = Box::new(Search::new(world, props.new_state));
+            true
+        } else if let Ok(rule) = parse_isotropic(&props.rule_string) {
+            self.props = props.clone();
+            let world = World::new(
+                (props.width, props.height, props.period),
+                props.dx,
+                props.dy,
+                props.symmetry,
+                rule,
+                props.column_first,
+            );
+            self.search = Box::new(Search::new(world, props.new_state));
             true
         } else {
             let mut dialog = DialogService::new();
@@ -260,7 +278,24 @@ impl Renderable<Model> for Model {
                 </p>
             },
         };
-
+        let set_generation = html! {
+            <p>
+                { "Showing generation " }
+                <input
+                    type = "number",
+                    value = self.generation,
+                    min = "0",
+                    max = self.props.period - 1,
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            Msg::SetGeneration(v.parse().unwrap())
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            </p>
+        };
         let set_width = html! {
             <p>
                 { "Width: " }
@@ -433,8 +468,9 @@ impl Renderable<Model> for Model {
 
         html! {
             <div>
-                <pre> { format!("{}", self.search.world) } </pre>
+                <pre> { self.search.display_gen(self.generation) } </pre>
                 { status }
+                { set_generation }
                 { set_rule }
                 { set_width }
                 { set_height }

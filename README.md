@@ -2,98 +2,28 @@
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch)。
 
-由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和原版的 lifesrc 相比缺少很多功能，不过速度可能会稍微快一些。
+由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 javascript 的情况下弄成一个网页，写得非常糟糕，和原版的 lifesrc 相比缺少很多功能。
 
-支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [Isotropic non-totalistic](http://conwaylife.com/wiki/Isotropic_non-totalistic_Life-like_cellular_automaton) 的规则，但后者比前者要慢一些。
+支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [Isotropic non-totalistic](http://conwaylife.com/wiki/Isotropic_non-totalistic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。
 
-## 编译
-
-Rlifesrc 的 TUI （文本界面）是用 [pancurses](https://github.com/ihalila/pancurses) 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。
-
-用 `cargo build --release` 来编译即可。用 `cargo run` 运行的时候也记得加上 `--release`，不加的话搜索会特别慢（相差近百倍）。
-
-如果完全不需要 TUI，而且懒得安装以上的依赖，可以在编译和运行的时候加上 `--no-default-features`。
+这是网页版，速度比原版要慢不少。要用原版，请见 master 分支。
 
 ## 用法
 
-```text
-USAGE:
-    cargo run --release [FLAGS] [OPTIONS] <X> <Y> [ARGS]
+按照说明调整图样的宽度、高度、周期、平移等信息，然后点击 “Set World” 来确定这些信息。然后点 “Start” 开始搜索。搜索时不要切换到别的标签页。
 
-FLAGS:
-    -a, --all
-            搜索所有的满足条件的图样
-            仅适用于不进入 TUI 的情况
+对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](http://conwaylife.com/wiki/Symmetry)。
 
-    -n, --no-tui
-            不进入 TUI，直接开始搜索
+“Search Order” 里的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。
 
-        --reset-time
-            开始新的搜索时重置计时
-            仅适用于有 TUI 的情况
+“New state for unknown cells” 指的是如何为未知的细胞选取状态。其中 “Smart” 指的是：如果这个未知细胞在第一行/第一列，则随机选取；如果不在第一行/第一列，则就先设为死；具体是第一行还是第一列由 “Search Order” 决定。
 
-OPTIONS:
-    -c, --choose <CHOOSE>
-            如何为未知的细胞选取状态
-            其中 'frtd' 表示 "first random then dead"，
-            也就是说，第一行/第一列的细胞随机选取一个状态，其余的细胞先设为死。
-             [默认: dead]  [可能的值: dead, alive, random, d, a, r, frtd]
+## 编译
 
-    -o, --order <ORDER>
-            搜索顺序
-            先搜行还是先搜列。
-             [默认: automatic]  [可能的值: row, column, automatic, r, c, a]
+为了把 Rust 编译成 WebAssembly，需要安装 [cargo-web](https://github.com/DenisKolodin/yew)。
 
-    -r, --rule <RULE>
-            元胞自动机的规则
-            支持 Life-like 和 Isotropic non-totalistic 的规则
-             [默认: B3/S23]
+用 `cargo web build --release` 来编译即可。然后用 `cargo web build --release`来运行。使用时按其说明在浏览器打开网页（一般是 127.0.0.1:8000）即可。
 
-    -s, --symmetry <SYMMETRY>
-            图样的对称性
-            其中一些对称性可能需要加上引号。
-            这些对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样。
-            详见 http://conwaylife.com/wiki/Symmetry
-             [默认: C1]  [可能的值: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
+也可以用 `cargo web deploy --release` 来编译成静态网页，无需服务器即可使用。
 
-ARGS:
-    <X>
-            图样的宽度
-
-    <Y>
-            图样的高度
-
-    <P>
-            图样的周期 [默认: 1]
-
-    <DX>
-            水平方向的平移 [默认: 0]
-
-    <DY>
-            竖直方向的平移 [默认: 0]
-```
-
-比如说，用 `cargo run --release 16 5 3 0 1` 可以找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)。
-
-## TUI
-
-若没有 `--no-tui`，输入命令后会进入一个简陋的 TUI，大概是这个样子：
-
-```text
-????????????????
-????????????????
-????????????????
-????????????????
-????????????????
-
-
-Showing generation 0. Time taken: 0ns.
-Paused. Press [space] to resume.
-
-```
-
-按空格键或回车键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一代/下一代。注意此用法和 lifesrc 不同。
-
-`.`、`O`、`?`分别代表死细胞、活细胞、未知的细胞。搜索结果可以直接复制粘贴到 [Golly](http://golly.sourceforge.net/) 中。
-
-若不进入 TUI，程序将不会显示搜索过程，只会在搜索结束后输出第一个结果（若加上 `--all` 则会输出全部结果），也不会显示所用的时间。
+不加 `--release` 的话搜索会特别慢（相差近百倍）。
