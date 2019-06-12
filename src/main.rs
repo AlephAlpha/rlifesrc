@@ -2,372 +2,456 @@ mod rules;
 mod search;
 mod world;
 
-use clap::AppSettings::AllowNegativeNumbers;
-use clap::{App, Arg};
-use rules::parse::{parse_isotropic, parse_life};
+use rules::isotropic::{Life, NbhdDesc};
+use rules::parse::parse_isotropic;
 use search::NewState::{Choose, FirstRandomThenDead, Random};
 use search::{NewState, Search, Status};
+use std::time::Duration;
 use world::State::{Alive, Dead};
-use world::{Desc, Rule, World};
+use world::{Desc, Rule, Symmetry, World};
+use yew::components::Select;
+use yew::html;
+use yew::html::ChangeData;
+use yew::prelude::*;
+use yew::services::{DialogService, IntervalService, Task};
 
-#[cfg(feature = "tui")]
-use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
-#[cfg(feature = "tui")]
-use stopwatch::Stopwatch;
+struct Model {
+    props: Props,
+    view_freq: usize,
+    status: Status,
+    search: Search<NbhdDesc, Life>,
+    job: Job,
+}
 
-fn is_positive(s: &str) -> bool {
-    s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
+enum Msg {
+    Step,
+    Start,
+    Pause,
+    SetWidth(isize),
+    SetHeight(isize),
+    SetPeriod(isize),
+    SetDx(isize),
+    SetDy(isize),
+    SetRule(String),
+    SetSymmetry(Symmetry),
+    SetOrder(Option<bool>),
+    SetNewState(NewState),
+    Reset,
+    None,
+}
+
+#[derive(Clone, PartialEq)]
+struct Props {
+    width: isize,
+    height: isize,
+    period: isize,
+    dx: isize,
+    dy: isize,
+    symmetry: Symmetry,
+    column_first: Option<bool>,
+    new_state: NewState,
+    rule_string: String,
+}
+
+struct Job {
+    interval: IntervalService,
+    callback: Callback<()>,
+    task: Option<Box<Task>>,
+}
+
+impl Job {
+    fn new(link: &mut ComponentLink<Model>) -> Self {
+        let interval = IntervalService::new();
+        let callback = link.send_back(|_| Msg::Step);
+        let task = None;
+        Job {
+            interval,
+            callback,
+            task,
+        }
+    }
+
+    fn start(&mut self) {
+        let handle = self
+            .interval
+            .spawn(Duration::from_millis(1000 / 60), self.callback.clone());
+        self.task = Some(Box::new(handle));
+    }
+
+    fn stop(&mut self) {
+        if let Some(mut task) = self.task.take() {
+            task.cancel();
+        }
+    }
+}
+
+impl Default for Props {
+    fn default() -> Self {
+        Props {
+            width: 7,
+            height: 7,
+            period: 3,
+            dx: 0,
+            dy: 0,
+            symmetry: Symmetry::C1,
+            column_first: None,
+            new_state: Choose(Dead),
+            rule_string: String::from("B3/S23"),
+        }
+    }
+}
+
+impl Component for Model {
+    type Message = Msg;
+    type Properties = Props;
+
+    fn create(props: Self::Properties, mut link: ComponentLink<Self>) -> Self {
+        let rule = parse_isotropic(&props.rule_string).unwrap();
+        let world = World::new(
+            (props.width, props.height, props.period),
+            props.dx,
+            props.dy,
+            props.symmetry,
+            rule,
+            props.column_first,
+        );
+        let search = Search::new(world, props.new_state);
+
+        let view_freq = 10000;
+        let status = Status::Paused;
+        let job = Job::new(&mut link);
+
+        Model {
+            props,
+            view_freq,
+            status,
+            search,
+            job,
+        }
+    }
+
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            Msg::Step => {
+                if let Status::Searching = self.status {
+                    self.status = self.search.search(Some(self.view_freq));
+                } else {
+                    self.job.stop();
+                }
+            }
+            Msg::Start => {
+                self.job.start();
+                self.status = Status::Searching;
+            }
+            Msg::Pause => {
+                self.job.stop();
+                self.status = Status::Paused;
+            }
+            Msg::SetWidth(width) => {
+                self.props = Props {
+                    width,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetHeight(height) => {
+                self.props = Props {
+                    height,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetPeriod(period) => {
+                self.props = Props {
+                    period,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetDx(dx) => {
+                self.props = Props {
+                    dx,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetDy(dy) => {
+                self.props = Props {
+                    dy,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetRule(rule_string) => {
+                self.props = Props {
+                    rule_string,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetSymmetry(symmetry) => {
+                self.props = Props {
+                    symmetry,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetOrder(column_first) => {
+                self.props = Props {
+                    column_first,
+                    ..self.props.clone()
+                };
+            }
+            Msg::SetNewState(new_state) => {
+                self.props = Props {
+                    new_state,
+                    ..self.props.clone()
+                };
+            }
+            Msg::Reset => {
+                self.change(self.props.clone());
+            }
+            Msg::None => return false,
+        }
+        true
+    }
+
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        if let Ok(rule) = parse_isotropic(&props.rule_string) {
+            self.job.stop();
+            self.status = Status::Paused;
+            self.props = props.clone();
+            let world = World::new(
+                (props.width, props.height, props.period),
+                props.dx,
+                props.dy,
+                props.symmetry,
+                rule,
+                props.column_first,
+            );
+            self.search = Search::new(world, props.new_state);
+            true
+        } else {
+            let mut dialog = DialogService::new();
+            dialog.alert("Invalid rule!");
+            false
+        }
+    }
+}
+
+impl Renderable<Model> for Model {
+    fn view(&self) -> Html<Self> {
+        let status = match self.status {
+            Status::Found => html! {
+                <p>
+                    { "Found a result. " }
+                    <button onclick = |_| Msg::Start,> { "Next" } </button>
+                </p>
+            },
+            Status::None => html! {
+                <p>
+                    { "No more result. " }
+                    <button onclick = |_| Msg::Start,> { "Restart" } </button>
+                </p>
+            },
+            Status::Searching => html! {
+                <p>
+                    { "Searching... " }
+                    <button onclick = |_| Msg::Pause,> { "Pause" } </button>
+                </p>
+            },
+            Status::Paused => html! {
+                <p>
+                    { "Paused. " }
+                    <button onclick = |_| Msg::Start,> { "Start" } </button>
+                </p>
+            },
+        };
+
+        let set_width = html! {
+            <p>
+                { "Width: " }
+                <input
+                    type = "number",
+                    value = self.props.width,
+                    min = "1",
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            Msg::SetWidth(v.parse().unwrap())
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            </p>
+        };
+        let set_height = html! {
+            <p>
+                { "Height: " }
+                <input
+                    type = "number",
+                    value = self.props.height,
+                    min = "1",
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            Msg::SetHeight(v.parse().unwrap())
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            </p>
+        };
+        let set_period = html! {
+            <p>
+                { "Period: " }
+                <input
+                    type = "number",
+                    value = self.props.period,
+                    min = "1",
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            Msg::SetPeriod(v.parse().unwrap())
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            </p>
+        };
+        let set_dx = html! {
+            <p>
+                { "dx: " }
+                <input
+                    type = "number",
+                    value = self.props.dx,
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            Msg::SetDx(v.parse().unwrap())
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            </p>
+        };
+        let set_dy = html! {
+            <p>
+                { "dy: " }
+                <input
+                    type = "number",
+                    value = self.props.dy,
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            Msg::SetDy(v.parse().unwrap())
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            </p>
+        };
+        let set_rule = html! {
+            <p>
+                { "Rule: " }
+                <input
+                    type = "text",
+                    value = self.props.rule_string.clone(),
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            Msg::SetRule(v)
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            </p>
+        };
+        let symmetries = vec![
+            Symmetry::C1,
+            Symmetry::C2,
+            Symmetry::C4,
+            Symmetry::D2Row,
+            Symmetry::D2Column,
+            Symmetry::D2Diag,
+            Symmetry::D2Antidiag,
+            Symmetry::D4Ortho,
+            Symmetry::D4Diag,
+            Symmetry::D8,
+        ];
+        let set_symmetry = html! {
+            <p>
+                { "Symmetry: " }
+                <Select<Symmetry>:
+                    selected = Some(self.props.symmetry),
+                    options = symmetries,
+                    onchange = Msg::SetSymmetry,
+                />
+            </p>
+        };
+        let set_order = html! {
+            <p>
+                { "Search Order: " }
+                <select
+                    onchange = |e| {
+                        if let ChangeData::Select(s) = e {
+                            match s.raw_value().as_ref() {
+                                "a" => Msg::SetOrder(None),
+                                "c" => Msg::SetOrder(Some(true)),
+                                "r" => Msg::SetOrder(Some(false)),
+                                _ => Msg::None,
+                            }
+                        } else {
+                            Msg::None
+                        }
+                    },
+                >
+                    <option value = "a",> { "Automatic" } </option>
+                    <option value = "c",> { "Column first" } </option>
+                    <option value = "r",> { "Row first" } </option>
+                </select>
+            </p>
+        };
+        let set_new_state = html! {
+            <p>
+                { "New state for unknown cells: " }
+                <select
+                    onchange = |e| {
+                        if let ChangeData::Select(s) = e {
+                            match s.raw_value().as_ref() {
+                                "d" => Msg::SetNewState(Choose(Dead)),
+                                "a" => Msg::SetNewState(Choose(Alive)),
+                                "r" => Msg::SetNewState(Random),
+                                "frtd" => Msg::SetNewState(FirstRandomThenDead(0)),
+                                _ => Msg::None,
+                            }
+                        } else {
+                            Msg::None
+                        }
+                    },
+                >
+                    <option value = "d",> { "Dead" } </option>
+                    <option value = "a",> { "Alive" } </option>
+                    <option value = "r",> { "Random" } </option>
+                    <option value = "frtd",> { "Smart (?)" } </option>
+                </select>
+            </p>
+        };
+
+        html! {
+            <div>
+                <pre> { format!("{}", self.search.world) } </pre>
+                { status }
+                { set_rule }
+                { set_width }
+                { set_height }
+                { set_period }
+                { set_dx }
+                { set_dy }
+                { set_symmetry }
+                { set_order }
+                { set_new_state }
+                <button onclick = |_| Msg::Reset,> { "Set World" } </button>
+            </div>
+        }
+    }
 }
 
 fn main() {
-    let mut app = App::new("rlifesrc")
-        .version("0.1.0")
-        .setting(AllowNegativeNumbers)
-        .arg(
-            Arg::with_name("X")
-                .help("Width of the pattern")
-                .required(true)
-                .index(1)
-                .validator(|x| {
-                    if is_positive(&x) {
-                        Ok(())
-                    } else {
-                        Err(String::from("width must be a positive integer"))
-                    }
-                }),
-        )
-        .arg(
-            Arg::with_name("Y")
-                .help("Height of the pattern")
-                .required(true)
-                .index(2)
-                .validator(|y| {
-                    if is_positive(&y) {
-                        Ok(())
-                    } else {
-                        Err(String::from("height must be a positive integer"))
-                    }
-                }),
-        )
-        .arg(
-            Arg::with_name("P")
-                .help("Period of the pattern")
-                .default_value("1")
-                .index(3)
-                .validator(|p| {
-                    if is_positive(&p) {
-                        Ok(())
-                    } else {
-                        Err(String::from("period must be a positive integer"))
-                    }
-                }),
-        )
-        .arg(
-            Arg::with_name("DX")
-                .help("Horizontal translation")
-                .default_value("0")
-                .index(4)
-                .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
-        )
-        .arg(
-            Arg::with_name("DY")
-                .help("Vertical translation")
-                .default_value("0")
-                .index(5)
-                .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
-        )
-        .arg(
-            Arg::with_name("SYMMETRY")
-                .help("Symmetry of the pattern")
-                .long_help(
-                    "Symmetry of the pattern\n\
-                     You may need to add quotation marks for some of the symmetries.\n\
-                     The usages of these symmetries are the same as Oscar Cunningham's \
-                     Logic Life Search.\nSee http://conwaylife.com/wiki/Symmetry.\n",
-                )
-                .short("s")
-                .long("symmetry")
-                .possible_values(&[
-                    "C1", "C2", "C4", "D2|", "D2-", "D2\\", "D2/", "D4+", "D4X", "D8",
-                ])
-                .default_value("C1")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("RULE")
-                .help("Rule of the cellular automaton")
-                .long_help(
-                    "Rule of the cellular automaton\n\
-                     Supports Life-like and isotropic non-totalistic rules.\n",
-                )
-                .short("r")
-                .long("rule")
-                .default_value("B3/S23")
-                .takes_value(true)
-                .validator(|d| parse_isotropic(&d).map(|_| ())),
-        )
-        .arg(
-            Arg::with_name("CHOOSE")
-                .help("How to choose a state for unknown cells")
-                .long_help(
-                    "How to choose a state for unknown cells\n\
-                     'frtd' means \"first random then dead\", \n\
-                     i.e., choose a random state for cells in the first row/column, \n\
-                     and dead for other cells.\n",
-                )
-                .short("c")
-                .long("choose")
-                .possible_values(&["dead", "alive", "random", "d", "a", "r", "frtd"])
-                .default_value("dead")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("ORDER")
-                .help("Search order")
-                .long_help(
-                    "Search order\n\
-                     Row first or column first.\n",
-                )
-                .short("o")
-                .long("order")
-                .possible_values(&["row", "column", "automatic", "r", "c", "a"])
-                .default_value("automatic")
-                .takes_value(true),
-        );
-
-    #[cfg(not(feature = "tui"))]
-    {
-        app = app.arg(
-            Arg::with_name("ALL")
-                .help("Searches for all possible pattern")
-                .short("a")
-                .long("all"),
-        );
-    }
-
-    #[cfg(feature = "tui")]
-    {
-        app = app
-            .arg(
-                Arg::with_name("ALL")
-                    .help("Searches for all possible pattern")
-                    .long_help(
-                        "Searches for all possible pattern\n\
-                         Only useful when --no-tui is set.",
-                    )
-                    .short("a")
-                    .long("all"),
-            )
-            .arg(
-                Arg::with_name("RESET")
-                    .help("Resets the time when starting a new search")
-                    .long("reset-time")
-                    .conflicts_with("NOTUI"),
-            )
-            .arg(
-                Arg::with_name("NOTUI")
-                    .help("Starts searching immediately, without entering the TUI")
-                    .short("n")
-                    .long("no-tui"),
-            );
-    }
-
-    let matches = app.get_matches();
-
-    let width = matches.value_of("X").unwrap().parse().unwrap();
-    let height = matches.value_of("Y").unwrap().parse().unwrap();
-    let period = matches.value_of("P").unwrap().parse().unwrap();
-    let dimensions = (width, height, period);
-
-    let dx = matches.value_of("DX").unwrap().parse().unwrap();
-    let dy = matches.value_of("DY").unwrap().parse().unwrap();
-
-    let symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
-    let all = matches.is_present("ALL");
-    let reset = matches.is_present("RESET");
-    let no_tui = matches.is_present("NOTUI");
-    let column_first = match matches.value_of("ORDER").unwrap() {
-        "row" | "r" => Some(false),
-        "column" | "c" => Some(true),
-        _ => None,
-    };
-    let new_state = match matches.value_of("CHOOSE").unwrap() {
-        "dead" | "d" => Choose(Dead),
-        "alive" | "a" => Choose(Alive),
-        "random" | "r" => Random,
-        _ => FirstRandomThenDead(0),
-    };
-
-    let rule_string = &matches.value_of("RULE").unwrap();
-    match parse_life(rule_string) {
-        Ok(rule) => {
-            let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
-            search(world, new_state, all, reset, no_tui);
-        }
-        _ => {
-            let rule = parse_isotropic(rule_string).unwrap();
-            let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
-            search(world, new_state, all, reset, no_tui);
-        }
-    }
-}
-
-fn search<D: Desc, R: Rule<Desc = D>>(
-    world: World<D, R>,
-    new_state: NewState,
-    all: bool,
-    reset: bool,
-    no_tui: bool,
-) {
-    let mut search = Search::new(world, new_state);
-
-    #[cfg(not(feature = "tui"))]
-    {
-        search_without_tui(&mut search, all)
-    }
-
-    #[cfg(feature = "tui")]
-    {
-        if no_tui {
-            search_without_tui(&mut search, all)
-        } else {
-            search_with_tui(&mut search, reset)
-        }
-    }
-}
-
-fn search_without_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, all: bool) {
-    if all {
-        loop {
-            match search.search(None) {
-                Status::Found => println!("{}", search.world),
-                Status::None => break,
-                _ => (),
-            }
-        }
-    } else if let Status::Found = search.search(None) {
-        println!("{}", search.world)
-    }
-}
-
-#[cfg(feature = "tui")]
-fn search_with_tui<D: Desc, R: Rule<Desc = D>>(search: &mut Search<D, R>, reset: bool) {
-    let period = search.world.period;
-    #[cfg(debug_assertions)]
-    let view_freq = 500;
-    #[cfg(not(debug_assertions))]
-    let view_freq = 25000;
-    let window = initscr();
-    let (win_y, win_x) = window.get_max_yx();
-    let mut world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
-    let mut status_bar = window.subwin(2, win_x, win_y - 2, 0).unwrap();
-    let mut gen = 0;
-    let mut status = Status::Paused;
-    let mut stopwatch = Stopwatch::new();
-    curs_set(0);
-    noecho();
-    window.keypad(true);
-    window.nodelay(false);
-    print_world(&world_win, &search.world, gen);
-    print_status(&status_bar, &status, gen, &stopwatch);
-
-    loop {
-        match window.getch() {
-            Some(Input::Character('q')) => match status {
-                Status::Searching | Status::Paused => {
-                    status = Status::Paused;
-                    stopwatch.stop();
-                    window.nodelay(false);
-                    print_world(&world_win, &search.world, gen);
-                    status_bar.mvprintw(1, 0, "Are you sure to quit? [Y/n]");
-                    status_bar.clrtoeol();
-                    status_bar.refresh();
-                    match window.getch() {
-                        Some(Input::Character('Y')) => break,
-                        Some(Input::Character('y')) => break,
-                        Some(Input::Character('\n')) => break,
-                        _ => print_status(&status_bar, &status, gen, &stopwatch),
-                    }
-                }
-                _ => break,
-            },
-            Some(Input::KeyRight) | Some(Input::KeyNPage) => {
-                gen = (gen + 1) % period;
-                print_world(&world_win, &search.world, gen);
-                print_status(&status_bar, &status, gen, &stopwatch)
-            }
-            Some(Input::KeyLeft) | Some(Input::KeyPPage) => {
-                gen = (gen + period - 1) % period;
-                print_world(&world_win, &search.world, gen);
-                print_status(&status_bar, &status, gen, &stopwatch)
-            }
-            Some(Input::Character(' ')) | Some(Input::Character('\n')) => match status {
-                Status::Searching => {
-                    status = Status::Paused;
-                    stopwatch.stop();
-                    window.nodelay(false);
-                    print_world(&world_win, &search.world, gen);
-                    print_status(&status_bar, &status, gen, &stopwatch)
-                }
-                _ => {
-                    status = Status::Searching;
-                    print_status(&status_bar, &status, gen, &stopwatch);
-                    stopwatch.start();
-                    window.nodelay(true)
-                }
-            },
-            Some(Input::KeyResize) => {
-                resize_term(0, 0);
-                let (win_y, win_x) = window.get_max_yx();
-                world_win = window.subwin(win_y - 2, win_x, 0, 0).unwrap();
-                status_bar = window.subwin(2, win_x, win_y - 2, 0).unwrap();
-                world_win.erase();
-                print_world(&world_win, &search.world, gen);
-                print_status(&status_bar, &status, gen, &stopwatch)
-            }
-            None => match search.search(Some(view_freq)) {
-                Status::Searching => print_world(&world_win, &search.world, gen),
-                s => {
-                    status = s;
-                    stopwatch.stop();
-                    window.nodelay(false);
-                    print_status(&status_bar, &status, gen, &stopwatch);
-                    if reset {
-                        stopwatch.reset();
-                    }
-                    print_world(&world_win, &search.world, gen)
-                }
-            },
-            _ => 1,
-        };
-    }
-    endwin();
-}
-
-#[cfg(feature = "tui")]
-fn print_world<D: Desc, R: Rule<Desc = D>>(
-    window: &Window,
-    world: &World<D, R>,
-    gen: isize,
-) -> i32 {
-    window.mvprintw(0, 0, world.display_gen(gen));
-    window.refresh()
-}
-
-#[cfg(feature = "tui")]
-fn print_status(window: &Window, status: &Status, gen: isize, stopwatch: &Stopwatch) -> i32 {
-    window.erase();
-    window.mvprintw(0, 0, format!("Showing generation {}. ", gen));
-    match status {
-        Status::Searching => 1,
-        _ => window.printw(format!("Time taken: {:?}. ", stopwatch.elapsed())),
-    };
-    let status = match status {
-        Status::Found => "Found a result. Press [space] to search for the next.",
-        Status::None => "No more result. Press [q] to quit.",
-        Status::Searching => "Searching... Press [space] to pause.",
-        Status::Paused => "Paused. Press [space] to resume.",
-    };
-    window.mvprintw(1, 0, status);
-    window.refresh()
+    yew::initialize();
+    App::<Model>::new().mount_to_body();
+    yew::run_loop();
 }

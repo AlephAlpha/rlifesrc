@@ -108,6 +108,7 @@ pub trait Rule: Sized {
 }
 
 // 对称性
+#[derive(Clone, Copy, PartialEq)]
 pub enum Symmetry {
     C1,
     C2,
@@ -138,6 +139,25 @@ impl FromStr for Symmetry {
             "D8" => Ok(Symmetry::D8),
             _ => Err(String::from("invalid symmetry")),
         }
+    }
+}
+
+impl Display for Symmetry {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        let s = match self {
+            Symmetry::C1 => "C1",
+            Symmetry::C2 => "C2",
+            Symmetry::C4 => "C4",
+            Symmetry::D2Row => "D2|",
+            Symmetry::D2Column => "D2-",
+            Symmetry::D2Diag => "D2\\",
+            Symmetry::D2Antidiag => "D2/",
+            Symmetry::D4Ortho => "D4+",
+            Symmetry::D4Diag => "D4X",
+            Symmetry::D8 => "D8",
+        };
+        write!(f, "{}", s)?;
+        Ok(())
     }
 }
 

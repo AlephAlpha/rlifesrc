@@ -15,6 +15,7 @@ pub enum Status {
 }
 
 // 如何给未知细胞选取状态
+#[derive(Clone, Copy, PartialEq)]
 pub enum NewState {
     // 就选 Dead 或 Alive
     Choose(State),
