@@ -1,35 +1,60 @@
-#rlifesrc {
+body {
+    background-color: #eee;
     font-family: sans-serif;
+}
+
+div {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+#rlifesrc {
+    background-color: #fff;
+    border-radius: 1em;
+    margin: 1em auto;
+    max-width: 800px;
+    padding: 20px;
+}
+
+#subheading {
+    color: #666;
+    font-weight: normal;
+    font-size: 0.5em;
+    margin-left: 1em;
 }
 
 pre {
     background-color: #eee;
     font-family: monospace;
     font-size: 16px;
-    margin-top: 8px;
+    margin: 5px;
     max-height: 300px;
     overflow: auto;
+    padding: 5px;
 }
 
-#buttons, #set_world {
-    margin-top: 10px;
+#settings {
     width: 300px;
 }
 
-.control {
-    margin-top: 8px;
+button {
+    margin-right: 10px;
 }
 
-.label {
+.label, #generation {
     display: inline-block;
     margin-right: 0.5em;
     text-align: right;
-    width: 90px;
+    width: 80px;
 }
 
 input, select {
     box-sizing: border-box;
     width: 200px;
+}
+
+#generation {
+    width: auto;
 }
 
 #set_generation {
