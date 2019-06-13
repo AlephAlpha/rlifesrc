@@ -1,4 +1,4 @@
-# rlifesrc
+# [rlifesrc](https://alephalpha.github.io/rlifesrc/)
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch)。
 
@@ -6,7 +6,7 @@
 
 支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [Isotropic non-totalistic](http://conwaylife.com/wiki/Isotropic_non-totalistic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。
 
-这是网页版，速度比原版要慢不少。要用原版，请见 master 分支。
+这是网页版，速度比原版要慢不少。要用原版，请见 [master 分支](https://github.com/AlephAlpha/rlifesrc/tree/master)。
 
 ## 用法
 
@@ -16,7 +16,9 @@
 
 “Search Order” 里的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。
 
-“New state for unknown cells” 指的是如何为未知的细胞选取状态。其中 “Smart” 指的是：如果这个未知细胞在第一行/第一列，则随机选取；如果不在第一行/第一列，则就先设为死；具体是第一行还是第一列由 “Search Order” 决定。
+“New state for unknown cells” 指的是如何为未知的细胞选取状态。其中 “Smart” 指的是：如果这个未知细胞在第一行/第一列，则随机选取；如果不在第一行/第一列，则就先设为死；具体是第一行还是第一列由 “Search Order” 决定。其实一点也不智能，不过我想不出别的名字了。这个模式适合搜索比较窄但可能很长的图样，但未必比 “Random” 快。
+
+搜到结果后点击 “Next” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Set World” 来重置世界。
 
 ## 编译
 

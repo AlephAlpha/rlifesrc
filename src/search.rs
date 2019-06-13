@@ -3,6 +3,7 @@ use crate::world::{CellId, Desc, Rule, State, World};
 use NewState::{Choose, FirstRandomThenDead, Random};
 
 // 搜索状态
+#[derive(Clone, Copy, PartialEq)]
 pub enum Status {
     // 已找到
     Found,
@@ -214,6 +215,8 @@ pub trait TraitSearch {
     fn search(&mut self, max_step: Option<usize>) -> Status;
 
     fn display_gen(&self, t: isize) -> String;
+
+    fn period(&self) -> isize;
 }
 
 impl<D: Desc, R: Rule<Desc = D>> TraitSearch for Search<D, R> {
@@ -223,5 +226,9 @@ impl<D: Desc, R: Rule<Desc = D>> TraitSearch for Search<D, R> {
 
     fn display_gen(&self, t: isize) -> String {
         self.world.display_gen(t)
+    }
+
+    fn period(&self) -> isize {
+        self.world.period
     }
 }

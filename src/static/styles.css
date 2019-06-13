@@ -1,0 +1,37 @@
+#rlifesrc {
+    font-family: sans-serif;
+}
+
+pre {
+    background-color: #eee;
+    font-family: monospace;
+    font-size: 16px;
+    margin-top: 8px;
+    max-height: 300px;
+    overflow: auto;
+}
+
+#buttons, #set_world {
+    margin-top: 10px;
+    width: 300px;
+}
+
+.control {
+    margin-top: 8px;
+}
+
+.label {
+    display: inline-block;
+    margin-right: 0.5em;
+    text-align: right;
+    width: 90px;
+}
+
+input, select {
+    box-sizing: border-box;
+    width: 200px;
+}
+
+#set_generation {
+    width: 100px;
+}

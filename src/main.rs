@@ -253,52 +253,32 @@ impl Component for Model {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         let status = match self.status {
-            Status::Found => html! {
-                <p>
-                    { "Found a result. " }
-                    <button onclick = |_| Msg::Start,> { "Next" } </button>
-                </p>
-            },
-            Status::None => html! {
-                <p>
-                    { "No more result. " }
-                    <button onclick = |_| Msg::Start,> { "Restart" } </button>
-                </p>
-            },
-            Status::Searching => html! {
-                <p>
-                    { "Searching... " }
-                    <button onclick = |_| Msg::Pause,> { "Pause" } </button>
-                </p>
-            },
-            Status::Paused => html! {
-                <p>
-                    { "Paused. " }
-                    <button onclick = |_| Msg::Start,> { "Start" } </button>
-                </p>
-            },
+            Status::Found => "Found a result.",
+            Status::None => "No more result.",
+            Status::Searching => "Searching...",
+            Status::Paused => "Paused.",
         };
         let set_generation = html! {
-            <p>
-                { "Showing generation " }
-                <input
-                    type = "number",
-                    value = self.generation,
-                    min = "0",
-                    max = self.props.period - 1,
-                    onchange = |e| {
-                        if let ChangeData::Value(v) = e {
-                            Msg::SetGeneration(v.parse().unwrap())
-                        } else {
-                            Msg::None
-                        }
-                    },
-                />
-            </p>
+            <div>
+                <label>
+                    <span id = "generation",>
+                    { &format!("Showing generation {}: ", self.generation) }
+                    </span>
+                    <input
+                        id = "set_generation",
+                        type = "range",
+                        value = self.generation,
+                        min = "0",
+                        max = self.search.period() - 1,
+                        oninput = |e| Msg::SetGeneration(e.value.parse().unwrap()),
+                    />
+                </label>
+            </div>
         };
-        let set_width = html! {
-            <p>
-                { "Width: " }
+        let set_width = view_control(
+            "Width: ",
+            "Width of the pattern",
+            html! {
                 <input
                     type = "number",
                     value = self.props.width,
@@ -311,11 +291,12 @@ impl Renderable<Model> for Model {
                         }
                     },
                 />
-            </p>
-        };
-        let set_height = html! {
-            <p>
-                { "Height: " }
+            },
+        );
+        let set_height = view_control(
+            "Height: ",
+            "Height of the pattern",
+            html! {
                 <input
                     type = "number",
                     value = self.props.height,
@@ -328,11 +309,12 @@ impl Renderable<Model> for Model {
                         }
                     },
                 />
-            </p>
-        };
-        let set_period = html! {
-            <p>
-                { "Period: " }
+            },
+        );
+        let set_period = view_control(
+            "Period: ",
+            "Period of the pattern",
+            html! {
                 <input
                     type = "number",
                     value = self.props.period,
@@ -345,11 +327,12 @@ impl Renderable<Model> for Model {
                         }
                     },
                 />
-            </p>
-        };
-        let set_dx = html! {
-            <p>
-                { "dx: " }
+            },
+        );
+        let set_dx = view_control(
+            "dx: ",
+            "Horizontal translation",
+            html! {
                 <input
                     type = "number",
                     value = self.props.dx,
@@ -361,11 +344,12 @@ impl Renderable<Model> for Model {
                         }
                     },
                 />
-            </p>
-        };
-        let set_dy = html! {
-            <p>
-                { "dy: " }
+            },
+        );
+        let set_dy = view_control(
+            "dy: ",
+            "Vertical translation",
+            html! {
                 <input
                     type = "number",
                     value = self.props.dy,
@@ -377,11 +361,13 @@ impl Renderable<Model> for Model {
                         }
                     },
                 />
-            </p>
-        };
-        let set_rule = html! {
-            <p>
-                { "Rule: " }
+            },
+        );
+        let set_rule = view_control(
+            "Rule: ",
+            "Rule of the cellular automaton\n\
+             Supports Life-like and isotropic non-totalistic rules.",
+            html! {
                 <input
                     type = "text",
                     value = self.props.rule_string.clone(),
@@ -393,8 +379,8 @@ impl Renderable<Model> for Model {
                         }
                     },
                 />
-            </p>
-        };
+            },
+        );
         let symmetries = vec![
             Symmetry::C1,
             Symmetry::C2,
@@ -407,19 +393,22 @@ impl Renderable<Model> for Model {
             Symmetry::D4Diag,
             Symmetry::D8,
         ];
-        let set_symmetry = html! {
-            <p>
-                { "Symmetry: " }
+        let set_symmetry = view_control(
+            "Symmetry: ",
+            "Symmetry of the pattern",
+            html! {
                 <Select<Symmetry>:
                     selected = Some(self.props.symmetry),
                     options = symmetries,
                     onchange = Msg::SetSymmetry,
                 />
-            </p>
-        };
-        let set_order = html! {
-            <p>
-                { "Search Order: " }
+            },
+        );
+        let set_order = view_control(
+            "Order: ",
+            "Search order\n\
+             Row first or column first",
+            html! {
                 <select
                     onchange = |e| {
                         if let ChangeData::Select(s) = e {
@@ -438,11 +427,14 @@ impl Renderable<Model> for Model {
                     <option value = "c",> { "Column first" } </option>
                     <option value = "r",> { "Row first" } </option>
                 </select>
-            </p>
-        };
-        let set_new_state = html! {
-            <p>
-                { "New state for unknown cells: " }
+            },
+        );
+        let set_new_state = view_control(
+            "New state: ",
+            "How to choose a state for unknown cells\n\
+             \"Smart\" means choosing a random state for cells in the first row/column, \
+             and dead for other cells.\n",
+            html! {
                 <select
                     onchange = |e| {
                         if let ChangeData::Select(s) = e {
@@ -461,28 +453,59 @@ impl Renderable<Model> for Model {
                     <option value = "d",> { "Dead" } </option>
                     <option value = "a",> { "Alive" } </option>
                     <option value = "r",> { "Random" } </option>
-                    <option value = "frtd",> { "Smart (?)" } </option>
+                    <option value = "frtd",> { "Smart" } </option>
                 </select>
-            </p>
-        };
+            },
+        );
 
         html! {
-            <div>
-                <pre> { self.search.display_gen(self.generation) } </pre>
+            <div id = "rlifesrc",>
+                <pre id = "world",>
+                    { self.search.display_gen(self.generation) }
+                </pre>
                 { status }
                 { set_generation }
-                { set_rule }
-                { set_width }
-                { set_height }
-                { set_period }
-                { set_dx }
-                { set_dy }
-                { set_symmetry }
-                { set_order }
-                { set_new_state }
-                <button onclick = |_| Msg::Reset,> { "Set World" } </button>
+                <div id = "buttons",>
+                    <button
+                        onclick = |_| Msg::Start,
+                        disabled = self.status == Status::Searching,
+                    >
+                        { "Start" }
+                    </button>
+                    <button
+                        onclick = |_| Msg::Pause,
+                        disabled = self.status != Status::Searching,
+                    >
+                        { "Pause" }
+                    </button>
+                    <button onclick = |_| Msg::Reset,> { "Set World" } </button>
+                </div>
+                <div id = "set_world",>
+                    { set_rule }
+                    { set_width }
+                    { set_height }
+                    { set_period }
+                    { set_dx }
+                    { set_dy }
+                    { set_symmetry }
+                    { set_order }
+                    { set_new_state }
+                </div>
             </div>
         }
+    }
+}
+
+fn view_control(label: &str, description: &str, control: Html<Model>) -> Html<Model> {
+    html! {
+        <div title = description,  class = "control",>
+            <label>
+                <span class = "label",>
+                    { label }
+                </span>
+                { control }
+            </label>
+        </div>
     }
 }
 
