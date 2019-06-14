@@ -6,6 +6,8 @@
 
 支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [Isotropic non-totalistic](http://conwaylife.com/wiki/Isotropic_non-totalistic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。
 
+[点此试用网页版。](https://alephalpha.github.io/rlifesrc/)
+
 * [编译](#编译)
   * [编译网页版](#编译网页版)
 * [用法](#用法)
@@ -62,8 +64,6 @@ cargo web deploy --release
 ## 用法
 
 这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。支持 Life-like 和 Isotropic non-totalistic 的规则。
-
-[网页版可以直接在此使用。](https://alephalpha.github.io/rlifesrc/)
 
 本地运行的版本需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc`。也可以用 `cargo run --release` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
 
