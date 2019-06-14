@@ -1,8 +1,8 @@
-use crate::rules::parse::{parse_isotropic, parse_life};
+use crate::search::rules::{parse_isotropic, parse_life};
+use crate::search::world::State::{Alive, Dead};
+use crate::search::world::{Symmetry, World};
 use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
 use crate::search::{NewState, Search, Status, TraitSearch};
-use crate::world::State::{Alive, Dead};
-use crate::world::{Symmetry, World};
 use std::time::Duration;
 use yew::components::Select;
 use yew::html;
@@ -217,10 +217,11 @@ impl Component for Model {
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
         self.job.stop();
         self.status = Status::Paused;
+        let dimensions = (props.width, props.height, props.period);
         if let Ok(rule) = parse_life(&props.rule_string) {
             self.props = props.clone();
             let world = World::new(
-                (props.width, props.height, props.period),
+                dimensions,
                 props.dx,
                 props.dy,
                 props.symmetry,
@@ -232,7 +233,7 @@ impl Component for Model {
         } else if let Ok(rule) = parse_isotropic(&props.rule_string) {
             self.props = props.clone();
             let world = World::new(
-                (props.width, props.height, props.period),
+                dimensions,
                 props.dx,
                 props.dy,
                 props.symmetry,
@@ -494,7 +495,7 @@ impl Renderable<Model> for Model {
         html! {
             <div id = "rlifesrc",>
                 <h1>
-                    <a href = "https://github.com/AlephAlpha/rlifesrc/tree/web",>
+                    <a href = "https://github.com/AlephAlpha/rlifesrc/",>
                         { "rlifesrc" }
                     </a>
                     <span id = "subheading",>

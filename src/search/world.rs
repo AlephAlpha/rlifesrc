@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::fmt::{Display, Error, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
-use State::{Alive, Dead};
+pub use State::{Alive, Dead};
 
 // 细胞状态
 #[derive(Clone, Copy, PartialEq)]

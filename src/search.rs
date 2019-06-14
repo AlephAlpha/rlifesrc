@@ -1,5 +1,7 @@
-use crate::world::State::{Alive, Dead};
-use crate::world::{CellId, Desc, Rule, State, World};
+pub mod rules;
+pub mod world;
+
+use world::*;
 use NewState::{Choose, FirstRandomThenDead, Random};
 
 // 搜索状态

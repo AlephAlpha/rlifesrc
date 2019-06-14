@@ -1,5 +1,4 @@
-use crate::world::State::{Alive, Dead};
-use crate::world::{CellId, Desc, LifeCell, Rule, State, World};
+use super::super::world::*;
 
 #[derive(Clone, Copy, Default)]
 // 邻域的八个细胞的状态

@@ -6,5 +6,13 @@ edition = "2018"
 
 [dependencies]
 combine = "3.8.1"
+
+[target.'cfg(any(target_arch = "wasm32", target_arch = "asmjs"))'.dependencies]
 rand = { version = "0.6.5", features = ["stdweb"] }
 yew = "0.6.0"
+
+[target.'cfg(not(any(target_arch = "wasm32", target_arch = "asmjs")))'.dependencies]
+clap = "2.33.0"
+rand = "0.6.5"
+pancurses = "0.16.1"
+stopwatch = "0.0.7"
