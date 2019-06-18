@@ -1,12 +1,7 @@
-mod search;
-
 #[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
-mod web;
-
+use rlifesrc::web;
 #[cfg(not(any(target_arch = "wasm32", target_arch = "asmjs")))]
-mod cli;
-#[cfg(not(any(target_arch = "wasm32", target_arch = "asmjs")))]
-mod tui;
+use rlifesrc::cli;
 
 #[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
 fn main() {

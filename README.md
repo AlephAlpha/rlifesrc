@@ -28,7 +28,7 @@
 ```bash
 git clone https://github.com/AlephAlpha/rlifesrc.git
 cd rlifesrc
-cargo build --release
+RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
 
 编译需要一定时间，请耐心等待
@@ -65,7 +65,7 @@ cargo web deploy --release
 
 这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。支持 Life-like 和 Isotropic non-totalistic 的规则。
 
-本地运行的版本需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc`。也可以用 `cargo run --release` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
+本地运行的版本需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc`。也可以用 `cargo run --release --bin rlifesrc` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
 
 ```plaintext
 USAGE:
@@ -206,8 +206,6 @@ Paused. Press [space] to resume.
 由于网页版是编译成 WebAssembly 而不是机器码，速度要慢很多，但随时随地只要有浏览器就能运行。
 
 进入页面后按照说明调整图样的宽度、高度、周期、平移等信息，然后点击 “Set World” 来确定这些信息。然后点 “Start” 开始搜索。
-
-搜索时不要切换到别的标签页。这点可能以后会修正。
 
 搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Set World” 来重置世界。
 

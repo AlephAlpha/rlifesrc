@@ -4,8 +4,15 @@ pub mod world;
 use world::*;
 use NewState::{Choose, FirstRandomThenDead, Random};
 
+#[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
+use serde::{Deserialize, Serialize};
+
 // 搜索状态
 #[derive(Clone, Copy, PartialEq)]
+#[cfg_attr(
+    any(target_arch = "wasm32", target_arch = "asmjs"),
+    derive(Serialize, Deserialize)
+)]
 pub enum Status {
     // 已找到
     Found,
@@ -19,6 +26,10 @@ pub enum Status {
 
 // 如何给未知细胞选取状态
 #[derive(Clone, Copy, PartialEq)]
+#[cfg_attr(
+    any(target_arch = "wasm32", target_arch = "asmjs"),
+    derive(Serialize, Deserialize)
+)]
 pub enum NewState {
     // 就选 Dead 或 Alive
     Choose(State),

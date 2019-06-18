@@ -1,32 +1,33 @@
-use crate::search::rules::{parse_isotropic, parse_life};
 use crate::search::world::State::{Alive, Dead};
-use crate::search::world::{Symmetry, World};
+use crate::search::world::Symmetry;
 use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
-use crate::search::{NewState, Search, Status, TraitSearch};
+use crate::search::{NewState, Status};
+use crate::worker::{Props, Request, Response, Worker, WorldStatus};
 use std::time::Duration;
 use yew::components::Select;
 use yew::html;
 use yew::html::ChangeData;
-use yew::prelude::*;
 use yew::services::{DialogService, IntervalService, Task};
+use yew::*;
 
 // 这部份的很多写法是照抄 yew 自带的范例
 // https://github.com/DenisKolodin/yew
 
 pub struct Model {
     props: Props,
-    view_freq: usize,
     status: Status,
     generation: isize,
-    search: Box<dyn TraitSearch>,
+    world: Option<String>,
+    period: Option<isize>,
+    worker: Box<Bridge<Worker>>,
     job: Job,
 }
 
 pub enum Msg {
-    Step,
+    Tick,
     Start,
     Pause,
-    SetGeneration(isize),
+    SetGen(isize),
     SetWidth(isize),
     SetHeight(isize),
     SetPeriod(isize),
@@ -37,20 +38,8 @@ pub enum Msg {
     SetOrder(Option<bool>),
     SetNewState(NewState),
     Reset,
+    DataReceived(Response),
     None,
-}
-
-#[derive(Clone, PartialEq)]
-pub struct Props {
-    width: isize,
-    height: isize,
-    period: isize,
-    dx: isize,
-    dy: isize,
-    symmetry: Symmetry,
-    column_first: Option<bool>,
-    new_state: NewState,
-    rule_string: String,
 }
 
 struct Job {
@@ -62,7 +51,7 @@ struct Job {
 impl Job {
     fn new(link: &mut ComponentLink<Model>) -> Self {
         let interval = IntervalService::new();
-        let callback = link.send_back(|_| Msg::Step);
+        let callback = link.send_back(|_| Msg::Tick);
         let task = None;
         Job {
             interval,
@@ -85,168 +74,97 @@ impl Job {
     }
 }
 
-impl Default for Props {
-    fn default() -> Self {
-        Props {
-            width: 7,
-            height: 7,
-            period: 3,
-            dx: 0,
-            dy: 0,
-            symmetry: Symmetry::C1,
-            column_first: None,
-            new_state: Choose(Dead),
-            rule_string: String::from("B3/S23"),
-        }
-    }
-}
-
 impl Component for Model {
     type Message = Msg;
     type Properties = Props;
 
     fn create(props: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let rule = parse_life(&props.rule_string).unwrap();
-        let world = World::new(
-            (props.width, props.height, props.period),
-            props.dx,
-            props.dy,
-            props.symmetry,
-            rule,
-            props.column_first,
-        );
-        let search = Box::new(Search::new(world, props.new_state));
-
-        let view_freq = 10000;
         let status = Status::Paused;
-        let generation = 0;
         let job = Job::new(&mut link);
+        let callback = link.send_back(Msg::DataReceived);
+        let worker = Worker::bridge(callback);
 
         Model {
             props,
-            view_freq,
             status,
-            generation,
-            search,
+            generation: 0,
+            world: None,
+            period: None,
+            worker,
             job,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Step => {
-                if let Status::Searching = self.status {
-                    self.status = self.search.search(Some(self.view_freq));
-                } else {
-                    self.job.stop();
-                }
+            Msg::Tick => {
+                self.worker.send(Request::DisplayGen(self.generation));
+                return false;
             }
             Msg::Start => {
-                self.job.start();
                 self.status = Status::Searching;
+                self.worker.send(Request::Start);
+                self.job.start();
             }
             Msg::Pause => {
-                self.job.stop();
+                self.worker.send(Request::Pause);
                 self.status = Status::Paused;
+                self.job.stop();
             }
-            Msg::SetGeneration(generation) => {
-                self.generation = generation;
+            Msg::SetGen(gen) => {
+                self.generation = gen;
+                self.worker.send(Request::DisplayGen(self.generation));
             }
             Msg::SetWidth(width) => {
-                self.props = Props {
-                    width,
-                    ..self.props.clone()
-                };
+                self.props.width = width;
             }
             Msg::SetHeight(height) => {
-                self.props = Props {
-                    height,
-                    ..self.props.clone()
-                };
+                self.props.height = height;
             }
             Msg::SetPeriod(period) => {
-                self.props = Props {
-                    period,
-                    ..self.props.clone()
-                };
+                self.props.period = period;
             }
             Msg::SetDx(dx) => {
-                self.props = Props {
-                    dx,
-                    ..self.props.clone()
-                };
+                self.props.dx = dx;
             }
             Msg::SetDy(dy) => {
-                self.props = Props {
-                    dy,
-                    ..self.props.clone()
-                };
+                self.props.dy = dy;
             }
             Msg::SetRule(rule_string) => {
-                self.props = Props {
-                    rule_string,
-                    ..self.props.clone()
-                };
+                self.props.rule_string = rule_string;
             }
             Msg::SetSymmetry(symmetry) => {
-                self.props = Props {
-                    symmetry,
-                    ..self.props.clone()
-                };
+                self.props.symmetry = symmetry;
             }
             Msg::SetOrder(column_first) => {
-                self.props = Props {
-                    column_first,
-                    ..self.props.clone()
-                };
+                self.props.column_first = column_first;
             }
             Msg::SetNewState(new_state) => {
-                self.props = Props {
-                    new_state,
-                    ..self.props.clone()
-                };
+                self.props.new_state = new_state;
             }
             Msg::Reset => {
-                self.change(self.props.clone());
+                self.generation = 0;
+                self.worker.send(Request::SetWorld(self.props.clone()));
             }
+            Msg::DataReceived(response) => match response {
+                Response::WorldStatus(WorldStatus {
+                    world,
+                    period,
+                    status,
+                }) => {
+                    self.world = Some(world);
+                    self.period = Some(period);
+                    self.status = status;
+                }
+                Response::InvalidRule => {
+                    let mut dialog = DialogService::new();
+                    dialog.alert("Invalid rule!");
+                    return false;
+                }
+            },
             Msg::None => return false,
         }
         true
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.job.stop();
-        self.status = Status::Paused;
-        let dimensions = (props.width, props.height, props.period);
-        if let Ok(rule) = parse_life(&props.rule_string) {
-            self.props = props.clone();
-            let world = World::new(
-                dimensions,
-                props.dx,
-                props.dy,
-                props.symmetry,
-                rule,
-                props.column_first,
-            );
-            self.search = Box::new(Search::new(world, props.new_state));
-            true
-        } else if let Ok(rule) = parse_isotropic(&props.rule_string) {
-            self.props = props.clone();
-            let world = World::new(
-                dimensions,
-                props.dx,
-                props.dy,
-                props.symmetry,
-                rule,
-                props.column_first,
-            );
-            self.search = Box::new(Search::new(world, props.new_state));
-            true
-        } else {
-            let mut dialog = DialogService::new();
-            dialog.alert("Invalid rule!");
-            false
-        }
     }
 }
 
@@ -269,8 +187,8 @@ impl Renderable<Model> for Model {
                         type = "range",
                         value = self.generation,
                         min = "0",
-                        max = self.search.period() - 1,
-                        oninput = |e| Msg::SetGeneration(e.value.parse().unwrap()),
+                        max = self.period.unwrap_or(1) - 1,
+                        oninput = |e| Msg::SetGen(e.value.parse().unwrap()),
                     />
                 </label>
             </div>
@@ -503,7 +421,7 @@ impl Renderable<Model> for Model {
                     </span>
                 </h1>
                 <pre>
-                    { self.search.display_gen(self.generation) }
+                    { self.world.clone().unwrap_or_default() }
                 </pre>
                 <div>
                     { status }

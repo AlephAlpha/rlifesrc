@@ -6,8 +6,15 @@ use std::ops::Index;
 use std::str::FromStr;
 pub use State::{Alive, Dead};
 
+#[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
+use serde::{Deserialize, Serialize};
+
 // 细胞状态
 #[derive(Clone, Copy, PartialEq)]
+#[cfg_attr(
+    any(target_arch = "wasm32", target_arch = "asmjs"),
+    derive(Serialize, Deserialize)
+)]
 pub enum State {
     Dead,
     Alive,
@@ -109,6 +116,10 @@ pub trait Rule: Sized {
 
 // 对称性
 #[derive(Clone, Copy, PartialEq)]
+#[cfg_attr(
+    any(target_arch = "wasm32", target_arch = "asmjs"),
+    derive(Serialize, Deserialize)
+)]
 pub enum Symmetry {
     C1,
     C2,
@@ -426,23 +437,5 @@ impl<D: Desc, R: Rule<Desc = D>> Index<Option<CellId>> for World<D, R> {
             Some(id) => &self.cells[id],
             None => &self.dead_cell,
         }
-    }
-}
-
-impl<D: Desc, R: Rule<Desc = D>> Display for World<D, R> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let state = self[self.find_cell((x, y, 0))].state.get();
-                let s = match state {
-                    Some(Dead) => '.',
-                    Some(Alive) => 'O',
-                    None => '?',
-                };
-                write!(f, "{}", s)?;
-            }
-            writeln!(f)?;
-        }
-        Ok(())
     }
 }
