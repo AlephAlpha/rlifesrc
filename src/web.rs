@@ -2,7 +2,7 @@ use crate::search::world::State::{Alive, Dead};
 use crate::search::world::Symmetry;
 use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
 use crate::search::{NewState, Status};
-use crate::worker::{Props, Request, Response, Worker, WorldStatus};
+use crate::worker::{Props, Request, Response, Worker};
 use std::time::Duration;
 use yew::components::Select;
 use yew::html;
@@ -103,14 +103,10 @@ impl Component for Model {
                 return false;
             }
             Msg::Start => {
-                self.status = Status::Searching;
                 self.worker.send(Request::Start);
-                self.job.start();
             }
             Msg::Pause => {
                 self.worker.send(Request::Pause);
-                self.status = Status::Paused;
-                self.job.stop();
             }
             Msg::SetGen(gen) => {
                 self.generation = gen;
@@ -148,17 +144,23 @@ impl Component for Model {
             }
             Msg::Reset => {
                 self.generation = 0;
+                self.period = Some(self.props.period);
                 self.worker.send(Request::SetWorld(self.props.clone()));
             }
             Msg::DataReceived(response) => match response {
-                Response::WorldStatus(WorldStatus {
-                    world,
-                    period,
-                    status,
-                }) => {
+                Response::UpdateWorld(world) => {
                     self.world = Some(world);
-                    self.period = Some(period);
-                    self.status = status;
+                }
+                Response::UpdateStatus(status) => {
+                    let old_status = self.status;
+                    if self.status != status {
+                        match (old_status, status) {
+                            (Status::Searching, _) => self.job.stop(),
+                            (_, Status::Searching) => self.job.start(),
+                            _ => (),
+                        }
+                        self.status = status;
+                    }
                 }
                 Response::InvalidRule => {
                     let mut dialog = DialogService::new();

@@ -91,15 +91,9 @@ pub enum Request {
 impl Transferable for Request {}
 
 #[derive(Serialize, Deserialize)]
-pub struct WorldStatus {
-    pub world: String,
-    pub period: isize,
-    pub status: Status,
-}
-
-#[derive(Serialize, Deserialize)]
 pub enum Response {
-    WorldStatus(WorldStatus),
+    UpdateWorld(String),
+    UpdateStatus(Status),
     InvalidRule,
 }
 
@@ -110,16 +104,13 @@ pub enum Msg {
 }
 
 impl Worker {
-    fn response_world_status(&mut self, id: HandlerId, gen: isize) {
+    fn update_world(&mut self, id: HandlerId, gen: isize) {
         let world = self.search.display_gen(gen);
-        let period = self.search.period();
+        self.link.response(id, Response::UpdateWorld(world));
+    }
+    fn update_status(&mut self, id: HandlerId) {
         let status = self.status;
-        let world_status = WorldStatus {
-            world,
-            period,
-            status,
-        };
-        self.link.response(id, Response::WorldStatus(world_status));
+        self.link.response(id, Response::UpdateStatus(status));
     }
 }
 
@@ -172,11 +163,13 @@ impl Agent for Worker {
         match msg {
             Request::Start => {
                 self.status = Status::Searching;
+                self.update_status(id);
                 self.job.start();
             }
             Request::Pause => {
                 self.job.stop();
                 self.status = Status::Paused;
+                self.update_status(id);
             }
             Request::SetWorld(props) => {
                 self.job.stop();
@@ -193,7 +186,7 @@ impl Agent for Worker {
                     );
                     self.search =
                         Box::new(Search::new(world, props.new_state, props.max_cell_count));
-                    self.response_world_status(id, 0);
+                    self.update_world(id, 0);
                 } else if let Ok(rule) = parse_isotropic(&props.rule_string) {
                     let world = World::new(
                         dimensions,
@@ -205,19 +198,20 @@ impl Agent for Worker {
                     );
                     self.search =
                         Box::new(Search::new(world, props.new_state, props.max_cell_count));
-                    self.response_world_status(id, 0);
+                    self.update_world(id, 0);
                 } else {
                     self.link.response(id, Response::InvalidRule);
                 }
             }
             Request::DisplayGen(gen) => {
-                self.response_world_status(id, gen);
+                self.update_world(id, gen);
+                self.update_status(id);
             }
         }
     }
 
     fn connected(&mut self, id: HandlerId) {
-        self.response_world_status(id, 0);
+        self.update_world(id, 0);
     }
 
     fn name_of_resource() -> &'static str {
