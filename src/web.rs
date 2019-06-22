@@ -37,6 +37,7 @@ pub enum Msg {
     SetSymmetry(Symmetry),
     SetOrder(Option<bool>),
     SetNewState(NewState),
+    SetMax(Option<u32>),
     Reset,
     DataReceived(Response),
     None,
@@ -141,6 +142,9 @@ impl Component for Model {
             }
             Msg::SetNewState(new_state) => {
                 self.props.new_state = new_state;
+            }
+            Msg::SetMax(max_cell_count) => {
+                self.props.max_cell_count = max_cell_count;
             }
             Msg::Reset => {
                 self.generation = 0;
@@ -375,6 +379,33 @@ impl Renderable<Model> for Model {
                 </select>
             },
         );
+        let set_max = view_setting(
+            "Max cells: ",
+            "Maximal number of alive cells in the first generation\n\
+             If this value is set to 0, it means there is no limitation.\n",
+            html! {
+                <input
+                    type = "number",
+                    value = match self.props.max_cell_count {
+                        None => 0,
+                        Some(i) => i,
+                    },
+                    min = "0",
+                    onchange = |e| {
+                        if let ChangeData::Value(v) = e {
+                            let max_cell_count = v.parse().unwrap();
+                            let max_cell_count = match max_cell_count {
+                                0 => None,
+                                i => Some(i),
+                            };
+                            Msg::SetMax(max_cell_count)
+                        } else {
+                            Msg::None
+                        }
+                    },
+                />
+            },
+        );
 
         let settings = html! {
             <div id = "settings",>
@@ -403,6 +434,7 @@ impl Renderable<Model> for Model {
                     { set_period }
                     { set_dx }
                     { set_dy }
+                    { set_max }
                     { set_symmetry }
                     { set_order }
                     { set_new_state }

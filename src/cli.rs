@@ -133,6 +133,19 @@ pub fn parse_args() -> Option<Args> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("MAX")
+                .help("Maximal number of alive cells in the first generation")
+                .long_help(
+                    "Maximal number of alive cells in the first generation\n\
+                     If this value is set to 0, it means there is no limitation.\n",
+                )
+                .short("m")
+                .long("max")
+                .default_value("0")
+                .takes_value(true)
+                .validator(|d| d.parse::<u32>().map(|_| ()).map_err(|e| e.to_string())),
+        )
+        .arg(
             Arg::with_name("ALL")
                 .help("Searches for all possible pattern")
                 .long_help(
@@ -180,12 +193,17 @@ pub fn parse_args() -> Option<Args> {
         "random" | "r" => Random,
         _ => FirstRandomThenDead(0),
     };
+    let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
+    let max_cell_count = match max_cell_count {
+        0 => None,
+        i => Some(i),
+    };
 
     let rule_string = &matches.value_of("RULE").unwrap();
 
     if let Ok(rule) = parse_life(rule_string) {
         let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
-        let search = Box::new(Search::new(world, new_state));
+        let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
             search,
             all,
@@ -194,7 +212,7 @@ pub fn parse_args() -> Option<Args> {
         })
     } else if let Ok(rule) = parse_isotropic(rule_string) {
         let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
-        let search = Box::new(Search::new(world, new_state));
+        let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
             search,
             all,

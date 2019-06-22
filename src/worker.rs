@@ -19,6 +19,7 @@ pub struct Props {
     pub symmetry: Symmetry,
     pub column_first: Option<bool>,
     pub new_state: NewState,
+    pub max_cell_count: Option<u32>,
     pub rule_string: String,
 }
 
@@ -33,6 +34,7 @@ impl Default for Props {
             symmetry: Symmetry::C1,
             column_first: None,
             new_state: Choose(Dead),
+            max_cell_count: None,
             rule_string: String::from("B3/S23"),
         }
     }
@@ -138,7 +140,7 @@ impl Agent for Worker {
             rule,
             props.column_first,
         );
-        let search = Box::new(Search::new(world, props.new_state));
+        let search = Box::new(Search::new(world, props.new_state, props.max_cell_count));
 
         let view_freq = 10000;
         let status = Status::Paused;
@@ -189,7 +191,8 @@ impl Agent for Worker {
                         rule,
                         props.column_first,
                     );
-                    self.search = Box::new(Search::new(world, props.new_state));
+                    self.search =
+                        Box::new(Search::new(world, props.new_state, props.max_cell_count));
                     self.response_world_status(id, 0);
                 } else if let Ok(rule) = parse_isotropic(&props.rule_string) {
                     let world = World::new(
@@ -200,7 +203,8 @@ impl Agent for Worker {
                         rule,
                         props.column_first,
                     );
-                    self.search = Box::new(Search::new(world, props.new_state));
+                    self.search =
+                        Box::new(Search::new(world, props.new_state, props.max_cell_count));
                     self.response_world_status(id, 0);
                 } else {
                     self.link.response(id, Response::InvalidRule);

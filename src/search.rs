@@ -48,10 +48,16 @@ pub struct Search<D: Desc, R: Rule<Desc = D>> {
     set_table: Vec<CellId>,
     // 下一个要检验其状态的细胞，详见 proceed 函数
     next_set: usize,
+    // 极大的活细胞个数
+    max_cell_count: Option<u32>,
 }
 
 impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
-    pub fn new(world: World<D, R>, new_state: NewState) -> Search<D, R> {
+    pub fn new(
+        world: World<D, R>,
+        new_state: NewState,
+        max_cell_count: Option<u32>,
+    ) -> Search<D, R> {
         let size = (world.width * world.height * world.period) as usize;
         let set_table = Vec::with_capacity(size);
         let new_state = match new_state {
@@ -70,6 +76,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
             new_state,
             set_table,
             next_set: 0,
+            max_cell_count,
         }
     }
 
@@ -127,6 +134,14 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     // 通过 consistify 和对称性把所有能确定的细胞确定下来
     fn proceed(&mut self) -> bool {
         while self.next_set < self.set_table.len() {
+            match self.max_cell_count {
+                None => (),
+                Some(max) => {
+                    if self.world.cell_count.get() > max {
+                        return false;
+                    }
+                }
+            }
             let cell_id = self.set_table[self.next_set];
             let cell = &self.world[cell_id];
             let state = cell.state.get().unwrap();

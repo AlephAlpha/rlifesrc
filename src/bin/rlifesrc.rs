@@ -1,7 +1,7 @@
-#[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
-use rlifesrc::web;
 #[cfg(not(any(target_arch = "wasm32", target_arch = "asmjs")))]
 use rlifesrc::cli;
+#[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
+use rlifesrc::web;
 
 #[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
 fn main() {

@@ -50,10 +50,12 @@ pub struct LifeCell<D> {
     pub nbhd: Cell<[Option<CellId>; 8]>,
     // 与此细胞对称（因此状态一致）的细胞
     pub sym: RefCell<Vec<CellId>>,
+    // 此细胞是否在第一代
+    pub first_gen: bool,
 }
 
 impl<D: Desc> LifeCell<D> {
-    pub fn new(id: CellId, state: Option<State>, free: bool) -> Self {
+    pub fn new(id: CellId, state: Option<State>, free: bool, first_gen: bool) -> Self {
         let desc = Cell::new(D::new(state));
         let state = Cell::new(state);
         let free = Cell::new(free);
@@ -70,6 +72,7 @@ impl<D: Desc> LifeCell<D> {
             succ,
             nbhd,
             sym,
+            first_gen,
         }
     }
 }
@@ -191,6 +194,9 @@ pub struct World<D: Desc, R: Rule<Desc = D>> {
 
     // 公用的搜索范围外的死细胞
     dead_cell: LifeCell<D>,
+
+    // 已知的活细胞个数
+    pub cell_count: Cell<u32>,
 }
 
 impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
@@ -227,11 +233,14 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         for id in 0..(width + 2) * (height + 2) * period {
             let t = id % period;
             let state = if b0 && t % 2 == 1 { Alive } else { Dead };
-            cells.push(LifeCell::new(id as usize, Some(state), false));
+            let first_gen = t == 0;
+            cells.push(LifeCell::new(id as usize, Some(state), false, first_gen));
         }
 
         // 用不到 dead_cell 的 id，随便设一个值
-        let dead_cell = LifeCell::new(0, Some(Dead), false);
+        let dead_cell = LifeCell::new(0, Some(Dead), false, false);
+
+        let cell_count = Cell::new(0);
 
         let life = World {
             width,
@@ -241,6 +250,7 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             column_first,
             cells,
             dead_cell,
+            cell_count,
         };
 
         // 先设定细胞的邻域
@@ -375,6 +385,14 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         cell.state.set(state);
         cell.free.set(free);
         D::set_nbhd(&self, &cell, old_state, state);
+        if cell.first_gen {
+            match (state, old_state) {
+                (Some(Alive), Some(Alive)) => (),
+                (Some(Alive), _) => self.cell_count.set(self.cell_count.get() + 1),
+                (_, Some(Alive)) => self.cell_count.set(self.cell_count.get() - 1),
+                _ => (),
+            }
+        }
     }
 
     // 显示某一代的整个世界
