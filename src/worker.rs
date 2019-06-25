@@ -9,6 +9,9 @@ use yew::services::{Task, TimeoutService};
 use yew::worker::*;
 use yew::Callback;
 
+// 这部份的很多写法是照抄 yew 自带的范例
+// https://github.com/DenisKolodin/yew
+
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Props {
     pub width: isize,

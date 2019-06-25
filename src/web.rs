@@ -383,7 +383,7 @@ impl Renderable<Model> for Model {
         );
         let set_max = view_setting(
             "Max cells: ",
-            "Maximal number of alive cells in the first generation\n\
+            "Maximal number of living cells in the first generation\n\
              If this value is set to 0, it means there is no limitation.\n",
             html! {
                 <input

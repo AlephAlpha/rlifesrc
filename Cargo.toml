@@ -5,7 +5,6 @@ authors = ["AlephAlpha <alephalpha911@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-combine = "3.8.1"
 
 [target.'cfg(any(target_arch = "wasm32", target_arch = "asmjs"))'.dependencies]
 rand = { version = "0.6.5", features = ["stdweb"] }
