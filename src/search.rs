@@ -1,7 +1,4 @@
-pub mod rules;
-pub mod world;
-
-use world::*;
+use crate::world::*;
 use NewState::{Choose, FirstRandomThenDead, Random};
 
 #[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]

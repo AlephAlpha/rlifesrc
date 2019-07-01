@@ -1,6 +1,6 @@
-use crate::search::rules::{parse_isotropic, parse_life};
-use crate::search::world::State::Dead;
-use crate::search::world::{Symmetry, World};
+use crate::parse_rules::{parse_isotropic, parse_life};
+use crate::world::State::Dead;
+use crate::world::{Symmetry, World};
 use crate::search::NewState::Choose;
 use crate::search::{NewState, Search, Status, TraitSearch};
 use serde::{Deserialize, Serialize};
@@ -110,7 +110,9 @@ impl Worker {
     fn update_world(&mut self, id: HandlerId, gen: isize) {
         let world = self.search.display_gen(gen);
         self.link.response(id, Response::UpdateWorld(world));
+        self.update_status(id);
     }
+
     fn update_status(&mut self, id: HandlerId) {
         let status = self.status;
         self.link.response(id, Response::UpdateStatus(status));
@@ -208,7 +210,6 @@ impl Agent for Worker {
             }
             Request::DisplayGen(gen) => {
                 self.update_world(id, gen);
-                self.update_status(id);
             }
         }
     }

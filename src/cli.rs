@@ -1,6 +1,6 @@
-use crate::search::rules::{parse_isotropic, parse_life};
-use crate::search::world::State::{Alive, Dead};
-use crate::search::world::World;
+use crate::parse_rules::{parse_isotropic, parse_life};
+use crate::world::State::{Alive, Dead};
+use crate::world::World;
 use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
 use crate::search::{Search, Status, TraitSearch};
 use crate::tui::search_with_tui;

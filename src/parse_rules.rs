@@ -1,48 +1,18 @@
-use super::isotropic;
-use super::life;
+use crate::rules::isotropic;
+use crate::rules::life;
+use std::iter::Peekable;
+use std::str::Chars;
 
-/// std::str::Chars 加上一个缓冲的字节
-/// 以下的 parser 中会从 &str 中一个字符一个字符地读取，
-/// 如果这个字符不对，可以把它塞回到缓冲区。
-struct Chars<'a> {
-    chars: std::str::Chars<'a>,
-    buffer: Option<char>,
-}
-
-impl<'a> Chars<'a> {
-    fn new(s: &'a str) -> Self {
-        Chars {
-            chars: s.chars(),
-            buffer: None,
-        }
-    }
-
-    fn push(&mut self, c: char) {
-        self.buffer = Some(c)
-    }
-}
-
-impl<'a> Iterator for Chars<'a> {
-    type Item = char;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.buffer.take() {
-            Some(c) => Some(c),
-            None => self.chars.next(),
-        }
-    }
-}
-
-fn parse_bs_life(chars: &mut Chars) -> Result<Vec<u8>, String> {
+fn parse_bs_life(chars: &mut Peekable<Chars>) -> Result<Vec<u8>, String> {
     let mut bs = Vec::new();
 
-    while let Some(c) = chars.next() {
+    while let Some(&c) = chars.peek() {
         match c {
-            c if c.is_digit(9) => bs.push(c.to_string().parse::<u8>().unwrap()),
-            '/' | 'S' | 's' => {
-                chars.push(c);
-                return Ok(bs);
-            }
+            c if c.is_digit(9) => {
+                chars.next();
+                bs.push(c.to_string().parse::<u8>().unwrap());
+            },
+            '/' | 'S' | 's' => return Ok(bs),
             _ => return Err(String::from("Missing number in rule")),
         }
     }
@@ -50,15 +20,17 @@ fn parse_bs_life(chars: &mut Chars) -> Result<Vec<u8>, String> {
 }
 
 pub fn parse_life(input: &str) -> Result<life::Life, String> {
-    let mut chars = Chars::new(input);
+    let mut chars = input.chars().peekable();
     match chars.next() {
         Some('B') | Some('b') => (),
         _ => return Err(String::from("Expected B at start of rule")),
     }
     let b = parse_bs_life(&mut chars)?;
-    match chars.next() {
-        Some('/') => (),
-        Some(c) => chars.push(c),
+    match chars.peek() {
+        Some('/') => {
+            chars.next();
+        }
+        Some(_) => (),
         None => return Err(String::from("Missing expected slash between b and s")),
     }
     match chars.next() {
@@ -73,42 +45,42 @@ pub fn parse_life(input: &str) -> Result<life::Life, String> {
 }
 
 #[allow(clippy::cognitive_complexity)]
-fn parse_bs_isotropic(chars: &mut Chars) -> Result<Vec<u8>, String> {
+fn parse_bs_isotropic(chars: &mut Peekable<Chars>) -> Result<Vec<u8>, String> {
     let mut bs = Vec::new();
 
     // 原来宏时可以放到函数里边的。
     macro_rules! parse_keys {
         ( $( $key: expr => $value: expr, )* ) => {
             {
+                chars.next();
                 let all_keys = vec![$( $key, )*];
-                let keys = match chars.next() {
+                let keys = match chars.peek() {
                     Some('-') => {
+                        chars.next();
                         let mut keys = Vec::new();
-                        while let Some(c) = chars.next() {
+                        while let Some(&c) = chars.peek() {
                             if all_keys.contains(&c) {
+                                chars.next();
                                 keys.push(c);
                             } else {
-                                chars.push(c);
                                 break;
                             }
                         }
                         all_keys.into_iter().filter(|c| !keys.contains(c)).collect()
                     }
                     Some(c) if all_keys.contains(&c) => {
-                        chars.push(c);
                         let mut keys = Vec::new();
-                        while let Some(c) = chars.next() {
+                        while let Some(&c) = chars.peek() {
                             if all_keys.contains(&c) {
+                                chars.next();
                                 keys.push(c);
                             } else {
-                                chars.push(c);
                                 break;
                             }
                         }
                         keys
                     }
-                    Some(c) => {
-                        chars.push(c);
+                    Some(_) => {
                         all_keys
                     }
                     None => all_keys
@@ -129,9 +101,12 @@ fn parse_bs_isotropic(chars: &mut Chars) -> Result<Vec<u8>, String> {
         };
     }
 
-    while let Some(c) = chars.next() {
+    while let Some(&c) = chars.peek() {
         match c {
-            '0' => bs.push(0x00),
+            '0' => {
+                chars.next();
+                bs.push(0x00);
+            }
             '1' => parse_keys! {
                 'c' => [0x01, 0x04, 0x20, 0x80],
                 'e' => [0x02, 0x08, 0x10, 0x40],
@@ -195,28 +170,31 @@ fn parse_bs_isotropic(chars: &mut Chars) -> Result<Vec<u8>, String> {
                 'c' => vec![0x7f, 0xdf, 0xfb, 0xfe],
                 'e' => vec![0xbf, 0xef, 0xf7, 0xfd],
             },
-            '8' => bs.push(0xff),
+            '8' => {
+                chars.next();
+                bs.push(0x00);
+            }
             '/' | 'S' | 's' => {
-                chars.push(c);
                 return Ok(bs);
             }
             _ => return Err(String::from("Missing number in rule")),
         }
     }
-
     Ok(bs)
 }
 
 pub fn parse_isotropic(input: &str) -> Result<isotropic::Life, String> {
-    let mut chars = Chars::new(input);
+    let mut chars = input.chars().peekable();
     match chars.next() {
         Some('B') | Some('b') => (),
         _ => return Err(String::from("Expected B at start of rule")),
     }
     let b = parse_bs_isotropic(&mut chars)?;
-    match chars.next() {
-        Some('/') => (),
-        Some(c) => chars.push(c),
+    match chars.peek() {
+        Some('/') => {
+            chars.next();
+        }
+        Some(_) => (),
         None => return Err(String::from("Missing expected slash between b and s")),
     }
     match chars.next() {

@@ -4,6 +4,7 @@ set -e
 
 cd $(dirname "$0")
 cargo web deploy --release
+cargo web build --release --bin worker --target wasm32-unknown-unknown
 cp ./target/deploy/* .deploy_git/
 cp ./target/wasm32-unknown-unknown/release/worker.js .deploy_git/
 cp ./target/wasm32-unknown-unknown/release/worker.wasm .deploy_git/
