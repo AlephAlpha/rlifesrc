@@ -31,13 +31,13 @@ cd rlifesrc
 RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
 
-编译需要一定时间，请耐心等待
+编译需要一定时间，请耐心等待。
 
 编译好的文件是 `./target/release/rlifesrc`。
 
 ### 编译网页版
 
-为了把 Rust 编译成 WebAssembly，需要安装 [cargo-web](https://github.com/DenisKolodin/yew)。
+为了把 Rust 编译成 WebAssembly，需要安装 [cargo-web](https://github.com/koute/cargo-web)。
 
 用
 
