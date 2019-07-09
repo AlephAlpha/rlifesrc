@@ -45,21 +45,19 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release
 cargo web build --release
 ```
 
-来编译即可。然后用
+来编译即可。
+
+由于用了 Web Worker，需要编译两个文件，无法直接使用 `cargo web start` 来运行，或者用 `cargo web deploy` 编译成静态网页。只能在编译之后手动把 `target/wasm32-unknown-unknown/release/` 文件夹里的以 `*.js` 和 `*.wasm` 结尾的四个文件，以及 `static` 中的两个文件，复制到同一个文件夹：
 
 ```bash
-cargo web build --release
+mkdir -p some_folder/
+cp target/wasm32-unknown-unknown/release/*.{js,wasm} some_folder/
+cp static/* some_folder/
 ```
 
-来运行。使用时按其说明在浏览器打开网页（一般是 127.0.0.1:8000）即可。
+然后用浏览器打开这个文件夹里的 `index.html` 文件即可运行。
 
-也可以用
-
-```bash
-cargo web deploy --release
-```
-
-来编译成静态网页，无需服务器即可使用。
+也可以把它们部署到自己的网站，比如说 GitHub Pages。
 
 ## 用法
 

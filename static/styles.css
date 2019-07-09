@@ -1,6 +1,6 @@
 body {
     background-color: #eee;
-    font-family: sans-serif;
+    font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 div {
@@ -43,7 +43,7 @@ button {
 
 .label, #generation {
     display: inline-block;
-    margin-right: 0.5em;
+    margin-right: 10px;
     text-align: right;
     width: 80px;
 }

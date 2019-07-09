@@ -3,11 +3,9 @@
 set -e
 
 cd $(dirname "$0")
-cargo web deploy --release
-cargo web build --release --bin worker --target wasm32-unknown-unknown
-cp ./target/deploy/* .deploy_git/
-cp ./target/wasm32-unknown-unknown/release/worker.js .deploy_git/
-cp ./target/wasm32-unknown-unknown/release/worker.wasm .deploy_git/
+cargo web build --release
+cp target/wasm32-unknown-unknown/release/*.{js,wasm} .deploy_git/
+cp static/* .deploy_git/
 cd .deploy_git
 git add -A
 git commit -m "Update Github Pages"
