@@ -185,7 +185,7 @@ impl Renderable<Model> for Model {
         let set_generation = html! {
             <div>
                 <label>
-                    <span id = "generation",>
+                    <span id = "generation">
                         { &format!("Showing generation {}: ", self.generation) }
                     </span>
                     <input
@@ -347,9 +347,9 @@ impl Renderable<Model> for Model {
                         }
                     },
                 >
-                    <option value = "a",> { "Automatic" } </option>
-                    <option value = "c",> { "Column first" } </option>
-                    <option value = "r",> { "Row first" } </option>
+                    <option value = "a"> { "Automatic" } </option>
+                    <option value = "c"> { "Column first" } </option>
+                    <option value = "r"> { "Row first" } </option>
                 </select>
             },
         );
@@ -374,10 +374,10 @@ impl Renderable<Model> for Model {
                         }
                     },
                 >
-                    <option value = "d",> { "Dead" } </option>
-                    <option value = "a",> { "Alive" } </option>
-                    <option value = "r",> { "Random" } </option>
-                    <option value = "frtd",> { "Smart" } </option>
+                    <option value = "d"> { "Dead" } </option>
+                    <option value = "a"> { "Alive" } </option>
+                    <option value = "r"> { "Random" } </option>
+                    <option value = "frtd"> { "Smart" } </option>
                 </select>
             },
         );
@@ -410,8 +410,8 @@ impl Renderable<Model> for Model {
         );
 
         let settings = html! {
-            <div id = "settings",>
-                <div id = "buttons",>
+            <div id = "settings">
+                <div id = "buttons">
                     <button
                         onclick = |_| Msg::Start,
                         disabled = self.status == Status::Searching,
@@ -445,12 +445,12 @@ impl Renderable<Model> for Model {
         };
 
         html! {
-            <div id = "rlifesrc",>
+            <div id = "rlifesrc">
                 <h1>
-                    <a href = "https://github.com/AlephAlpha/rlifesrc/",>
+                    <a href = "https://github.com/AlephAlpha/rlifesrc/">
                         { "rlifesrc" }
                     </a>
-                    <span id = "subheading",>
+                    <span id = "subheading">
                         { "A Game of Life pattern searcher written in Rust. " }
                     </span>
                 </h1>
@@ -469,9 +469,9 @@ impl Renderable<Model> for Model {
 
 fn view_setting(label: &str, description: &str, setting: Html<Model>) -> Html<Model> {
     html! {
-        <div title = description,  class = "setting",>
+        <div title = description,  class = "setting">
             <label>
-                <span class = "label",>
+                <span class = "label">
                     { label }
                 </span>
                 { setting }
