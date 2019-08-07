@@ -1,8 +1,8 @@
-use crate::world::State::{Alive, Dead};
-use crate::world::Symmetry;
 use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
 use crate::search::{NewState, Status};
 use crate::worker::{Props, Request, Response, Worker};
+use crate::world::State::{Alive, Dead};
+use crate::world::Symmetry;
 use std::time::Duration;
 use yew::components::Select;
 use yew::html;

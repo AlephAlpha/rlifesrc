@@ -1,8 +1,9 @@
-use crate::parse_rules::{parse_isotropic, parse_life};
-use crate::world::State::Dead;
-use crate::world::{Symmetry, World};
+use crate::rules::{isotropic, life};
 use crate::search::NewState::Choose;
 use crate::search::{NewState, Search, Status, TraitSearch};
+use crate::world::State::Dead;
+use crate::world::{Symmetry, World};
+use ca_rules::ParseBSRules;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::services::{Task, TimeoutService};
@@ -127,7 +128,7 @@ impl Agent for Worker {
 
     fn create(link: AgentLink<Self>) -> Self {
         let props: Props = Default::default();
-        let rule = parse_life(&props.rule_string).unwrap();
+        let rule = life::Life::parse_rule(&props.rule_string).unwrap();
         let world = World::new(
             (props.width, props.height, props.period),
             props.dx,
@@ -180,7 +181,7 @@ impl Agent for Worker {
                 self.job.stop();
                 self.status = Status::Paused;
                 let dimensions = (props.width, props.height, props.period);
-                if let Ok(rule) = parse_life(&props.rule_string) {
+                if let Ok(rule) = life::Life::parse_rule(&props.rule_string) {
                     let world = World::new(
                         dimensions,
                         props.dx,
@@ -192,7 +193,7 @@ impl Agent for Worker {
                     self.search =
                         Box::new(Search::new(world, props.new_state, props.max_cell_count));
                     self.update_world(id, 0);
-                } else if let Ok(rule) = parse_isotropic(&props.rule_string) {
+                } else if let Ok(rule) = isotropic::Life::parse_rule(&props.rule_string) {
                     let world = World::new(
                         dimensions,
                         props.dx,

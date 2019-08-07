@@ -1,4 +1,3 @@
-mod parse_rules;
 mod rules;
 mod search;
 mod world;

@@ -1,4 +1,6 @@
 use super::super::world::*;
+use ca_rules::neighborhood;
+use ca_rules::ParseBSRules;
 
 #[derive(Clone, Copy, Default)]
 // 邻域的八个细胞的状态
@@ -288,5 +290,13 @@ impl Rule for Life {
                 }
             }
         }
+    }
+}
+
+impl ParseBSRules for Life {
+    type Neighborhood = neighborhood::Isotropic;
+
+    fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
+        Life::new(b, s)
     }
 }

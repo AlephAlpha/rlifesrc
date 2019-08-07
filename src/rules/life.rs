@@ -1,4 +1,6 @@
 use super::super::world::*;
+use ca_rules::neighborhood;
+use ca_rules::ParseBSRules;
 
 #[derive(Clone, Copy)]
 // 邻域的细胞统计
@@ -276,5 +278,13 @@ impl Rule for Life {
                 }
             }
         }
+    }
+}
+
+impl ParseBSRules for Life {
+    type Neighborhood = neighborhood::Lifelike;
+
+    fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
+        Life::new(b, s)
     }
 }

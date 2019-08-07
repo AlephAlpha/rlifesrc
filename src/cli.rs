@@ -1,9 +1,10 @@
-use crate::parse_rules::{parse_isotropic, parse_life};
-use crate::world::State::{Alive, Dead};
-use crate::world::World;
+use crate::rules::{isotropic, life};
 use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
 use crate::search::{Search, Status, TraitSearch};
 use crate::tui::search_with_tui;
+use crate::world::State::{Alive, Dead};
+use crate::world::World;
+use ca_rules::ParseBSRules;
 use clap::AppSettings::AllowNegativeNumbers;
 use clap::{App, Arg};
 
@@ -103,7 +104,11 @@ pub fn parse_args() -> Option<Args> {
                 .long("rule")
                 .default_value("B3/S23")
                 .takes_value(true)
-                .validator(|d| parse_isotropic(&d).map(|_| ())),
+                .validator(|d| {
+                    isotropic::Life::parse_rule(&d)
+                        .map(|_| ())
+                        .map_err(|e| e.to_string())
+                }),
         )
         .arg(
             Arg::with_name("ORDER")
@@ -201,7 +206,7 @@ pub fn parse_args() -> Option<Args> {
 
     let rule_string = &matches.value_of("RULE").unwrap();
 
-    if let Ok(rule) = parse_life(rule_string) {
+    if let Ok(rule) = life::Life::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
@@ -210,7 +215,7 @@ pub fn parse_args() -> Option<Args> {
             no_tui,
             reset,
         })
-    } else if let Ok(rule) = parse_isotropic(rule_string) {
+    } else if let Ok(rule) = isotropic::Life::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
