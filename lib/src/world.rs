@@ -6,15 +6,12 @@ use std::ops::Index;
 use std::str::FromStr;
 pub use State::{Alive, Dead};
 
-#[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
+#[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
 
 // 细胞状态
 #[derive(Clone, Copy, PartialEq)]
-#[cfg_attr(
-    any(target_arch = "wasm32", target_arch = "asmjs"),
-    derive(Serialize, Deserialize)
-)]
+#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum State {
     Dead,
     Alive,
@@ -119,10 +116,7 @@ pub trait Rule: Sized {
 
 // 对称性
 #[derive(Clone, Copy, PartialEq)]
-#[cfg_attr(
-    any(target_arch = "wasm32", target_arch = "asmjs"),
-    derive(Serialize, Deserialize)
-)]
+#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum Symmetry {
     C1,
     C2,
@@ -172,6 +166,12 @@ impl Display for Symmetry {
         };
         write!(f, "{}", s)?;
         Ok(())
+    }
+}
+
+impl Default for Symmetry {
+    fn default() -> Self {
+        Symmetry::C1
     }
 }
 

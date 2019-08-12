@@ -9,6 +9,7 @@
 [点此试用网页版。](https://alephalpha.github.io/rlifesrc/)
 
 * [编译](#编译)
+  * [编译原生版](#编译原生版)
   * [编译网页版](#编译网页版)
 * [用法](#用法)
   * [命令行界面](#命令行)
@@ -23,35 +24,46 @@
 
 文本界面是用 [pancurses](https://github.com/ihalila/pancurses) 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。如果只需要网页版，不必安装这些依赖。
 
-准备好了之后，就可以下载和安装：
+准备好了之后，就可以用 `git clone` 下载：
 
 ```bash
 git clone https://github.com/AlephAlpha/rlifesrc.git
-cd rlifesrc
+cd rlifesrc/
+```
+
+### 编译原生版
+
+原生版（文本界面和命令行界面）在 `tui` 目录中，编译之前要先 `cd` 到该目录（否则会尝试网页版编译成机器码，而导致出错）。
+
+```bash
+cd tui/
 RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
 
 编译需要一定时间，请耐心等待。
 
-编译好的文件是 `./target/release/rlifesrc`。
+编译好的文件是 `./target/release/rlifesrc-tui`。
 
 ### 编译网页版
 
-为了把 Rust 编译成 WebAssembly，需要安装 [cargo-web](https://github.com/koute/cargo-web)。
+网页版在 `web` 目录中。
 
-用
+网页版无法编译成机器码，只能编译成 WebAssembly，因此需要先安装 [cargo-web](https://github.com/koute/cargo-web)。
+
+安装了 cargo-web 之后，用
 
 ```bash
+cd web/
 cargo web build --release
 ```
 
-来编译即可。
+来编译即可。记得一定要 `cd` 到 `web` 目录。
 
 由于用了 Web Worker，需要编译两个文件，无法直接使用 `cargo web start` 来运行，或者用 `cargo web deploy` 编译成静态网页。只能在编译之后手动把 `target/wasm32-unknown-unknown/release/` 文件夹里的以 `*.js` 和 `*.wasm` 结尾的四个文件，以及 `static` 中的两个文件，复制到同一个文件夹：
 
 ```bash
 mkdir -p some_folder/
-cp target/wasm32-unknown-unknown/release/*.{js,wasm} some_folder/
+cp ../target/wasm32-unknown-unknown/release/*.{js,wasm} some_folder/
 cp static/* some_folder/
 ```
 
@@ -63,7 +75,7 @@ cp static/* some_folder/
 
 这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。支持 Life-like 和 Isotropic non-totalistic 的规则。
 
-本地运行的版本需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc`。也可以用 `cargo run --release --bin rlifesrc` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
+本地运行的版本需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc-tui`。也可以用 `cargo run --release --bin rlifesrc` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
 
 ```plaintext
 USAGE:

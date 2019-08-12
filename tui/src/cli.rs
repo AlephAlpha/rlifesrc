@@ -1,12 +1,12 @@
-use crate::rules::{isotropic, life};
-use crate::search::NewState::{Choose, FirstRandomThenDead, Random};
-use crate::search::{Search, Status, TraitSearch};
 use crate::tui::search_with_tui;
-use crate::world::State::{Alive, Dead};
-use crate::world::World;
 use ca_rules::ParseBSRules;
 use clap::AppSettings::AllowNegativeNumbers;
 use clap::{App, Arg};
+use rlifesrc_lib::rules::{isotropic, life};
+use rlifesrc_lib::search::NewState::{Choose, FirstRandomThenDead, Random};
+use rlifesrc_lib::search::{Search, Status, TraitSearch};
+use rlifesrc_lib::world::State::{Alive, Dead};
+use rlifesrc_lib::world::World;
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')

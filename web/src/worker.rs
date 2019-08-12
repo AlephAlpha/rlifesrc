@@ -1,29 +1,37 @@
-use crate::rules::{isotropic, life};
-use crate::search::NewState::Choose;
-use crate::search::{NewState, Search, Status, TraitSearch};
-use crate::world::State::Dead;
-use crate::world::{Symmetry, World};
 use ca_rules::ParseBSRules;
+use rlifesrc_lib::rules::{isotropic, life};
+use rlifesrc_lib::search::NewState::Choose;
+use rlifesrc_lib::search::{NewState, Search, Status, TraitSearch};
+use rlifesrc_lib::world::State::Dead;
+use rlifesrc_lib::world::{Symmetry, World};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::services::{Task, TimeoutService};
 use yew::worker::*;
 use yew::Callback;
+use yew::Properties;
 
 // 这部份的很多写法是照抄 yew 自带的范例
 // https://github.com/DenisKolodin/yew
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Properties, Serialize, Deserialize)]
 pub struct Props {
+    #[props(required)]
     pub width: isize,
+    #[props(required)]
     pub height: isize,
+    #[props(required)]
     pub period: isize,
     pub dx: isize,
     pub dy: isize,
     pub symmetry: Symmetry,
+    #[props(required)]
     pub column_first: Option<bool>,
+    #[props(required)]
     pub new_state: NewState,
+    #[props(required)]
     pub max_cell_count: Option<u32>,
+    #[props(required)]
     pub rule_string: String,
 }
 

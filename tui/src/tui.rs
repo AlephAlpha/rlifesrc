@@ -1,5 +1,5 @@
-use crate::search::{Status, TraitSearch};
 use pancurses::{curs_set, endwin, initscr, noecho, resize_term, Input, Window};
+use rlifesrc_lib::search::{Status, TraitSearch};
 use stopwatch::Stopwatch;
 
 pub fn search_with_tui(mut search: Box<dyn TraitSearch>, reset: bool) {
