@@ -59,15 +59,9 @@ pre {
 
 .label,
 button,
-input,
-select {
+.setting input,
+.setting select {
     margin-bottom: 10px;
-}
-
-.label {
-    padding-right: 5%;
-    text-align: right;
-    flex: 3;
 }
 
 #buttons button {
@@ -78,7 +72,14 @@ select {
     flex: 4;
 }
 
-input,
-select {
+.label {
+    padding-right: 10px;
+    text-align: right;
+    flex: 3;
+}
+
+.setting input,
+.setting select {
     flex: 7;
+    min-width: 0;
 }
