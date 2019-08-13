@@ -1,9 +1,8 @@
 use ca_rules::ParseBSRules;
 use rlifesrc_lib::rules::{isotropic, life};
-use rlifesrc_lib::search::NewState::Choose;
-use rlifesrc_lib::search::{NewState, Search, Status, TraitSearch};
-use rlifesrc_lib::world::State::Dead;
-use rlifesrc_lib::world::{Symmetry, World};
+use rlifesrc_lib::NewState::Choose;
+use rlifesrc_lib::State::Dead;
+use rlifesrc_lib::{NewState, Search, Status, Symmetry, TraitSearch, World};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::services::{Task, TimeoutService};

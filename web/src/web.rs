@@ -1,8 +1,7 @@
 use crate::worker::{Props, Request, Response, Worker};
-use rlifesrc_lib::search::NewState::{Choose, FirstRandomThenDead, Random};
-use rlifesrc_lib::search::{NewState, Status};
-use rlifesrc_lib::world::State::{Alive, Dead};
-use rlifesrc_lib::world::Symmetry;
+use rlifesrc_lib::NewState::{Choose, FirstRandomThenDead, Random};
+use rlifesrc_lib::State::{Alive, Dead};
+use rlifesrc_lib::{NewState, Status, Symmetry};
 use std::time::Duration;
 use yew::components::Select;
 use yew::html;

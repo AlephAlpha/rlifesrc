@@ -16,8 +16,8 @@ impl Desc for NbhdDesc {
         }
     }
 
-    fn set_nbhd<R: Rule<Desc = Self>>(
-        world: &World<Self, R>,
+    fn set_nbhd(
+        world_cells: &Vec<LifeCell<Self>>,
         cell: &LifeCell<Self>,
         old_state: Option<State>,
         state: Option<State>,
@@ -30,7 +30,7 @@ impl Desc for NbhdDesc {
             _ => 0x0000,
         };
         for (i, &neigh_id) in cell.nbhd.iter().rev().enumerate() {
-            let neigh = &world[neigh_id.unwrap()];
+            let neigh = &world_cells[neigh_id.unwrap()];
             let mut desc = neigh.desc.get();
             desc.0 ^= change_num << i;
             neigh.desc.set(desc);

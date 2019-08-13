@@ -3,10 +3,9 @@ use ca_rules::ParseBSRules;
 use clap::AppSettings::AllowNegativeNumbers;
 use clap::{App, Arg};
 use rlifesrc_lib::rules::{isotropic, life};
-use rlifesrc_lib::search::NewState::{Choose, FirstRandomThenDead, Random};
-use rlifesrc_lib::search::{Search, Status, TraitSearch};
-use rlifesrc_lib::world::State::{Alive, Dead};
-use rlifesrc_lib::world::World;
+use rlifesrc_lib::NewState::{Choose, FirstRandomThenDead, Random};
+use rlifesrc_lib::State::{Alive, Dead};
+use rlifesrc_lib::{Search, Status, TraitSearch, World};
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')

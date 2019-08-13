@@ -1,3 +1,6 @@
 pub mod rules;
-pub mod search;
-pub mod world;
+mod search;
+mod world;
+
+pub use search::{NewState, Search, Status, TraitSearch};
+pub use world::{State, Symmetry, World};

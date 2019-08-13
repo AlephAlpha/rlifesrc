@@ -10,7 +10,7 @@ pub use State::{Alive, Dead};
 use serde::{Deserialize, Serialize};
 
 // 细胞状态
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum State {
     Dead,
@@ -56,10 +56,10 @@ impl<D: Desc> LifeCell<D> {
         let desc = Cell::new(D::new(state));
         let state = Cell::new(state);
         let free = Cell::new(free);
-        let pred = Default::default();
-        let succ = Default::default();
-        let nbhd = Default::default();
-        let sym = Default::default();
+        let pred = None;
+        let succ = None;
+        let nbhd = [None; 8];
+        let sym = Vec::new();
         LifeCell {
             id,
             state,
@@ -80,8 +80,8 @@ pub trait Desc: Copy {
     fn new(state: Option<State>) -> Self;
 
     // 改变一个细胞的状态时处理其邻域中所有细胞的邻域状态
-    fn set_nbhd<R: Rule<Desc = Self>>(
-        world: &World<Self, R>,
+    fn set_nbhd(
+        world_cells: &Vec<LifeCell<Self>>,
         cell: &LifeCell<Self>,
         old_state: Option<State>,
         state: Option<State>,
@@ -115,7 +115,7 @@ pub trait Rule: Sized {
 }
 
 // 对称性
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum Symmetry {
     C1,
@@ -377,10 +377,9 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
 
     // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
     pub fn set_cell(&self, cell: &LifeCell<D>, state: Option<State>, free: bool) {
-        let old_state = cell.state.get();
-        cell.state.set(state);
+        let old_state = cell.state.replace(state);
         cell.free.set(free);
-        D::set_nbhd(&self, &cell, old_state, state);
+        D::set_nbhd(&self.cells, &cell, old_state, state);
         if cell.first_gen {
             match (state, old_state) {
                 (Some(Alive), Some(Alive)) => (),
