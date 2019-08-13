@@ -183,20 +183,16 @@ impl Renderable<Model> for Model {
             Status::Paused => "Paused.",
         };
         let set_generation = html! {
-            <div>
-                <label>
-                    <span id = "generation">
-                        { &format!("Showing generation {}: ", self.generation) }
-                    </span>
-                    <input
-                        id = "set_generation",
-                        type = "range",
-                        value = self.generation,
-                        min = "0",
-                        max = self.period.unwrap_or(1) - 1,
-                        oninput = |e| Msg::SetGen(e.value.parse().unwrap()),
-                    />
-                </label>
+            <div id = "set_generation">
+                { "Showing generation " }
+                <input
+                    type = "number",
+                    value = self.generation,
+                    min = "0",
+                    max = self.period.unwrap_or(1) - 1,
+                    oninput = |e| Msg::SetGen(e.value.parse().unwrap()),
+                />
+                { "." }
             </div>
         };
         let set_width = view_setting(
@@ -430,17 +426,17 @@ impl Renderable<Model> for Model {
                     >
                         { "Set World" }
                     </button>
-                    { set_rule }
-                    { set_width }
-                    { set_height }
-                    { set_period }
-                    { set_dx }
-                    { set_dy }
-                    { set_max }
-                    { set_symmetry }
-                    { set_order }
-                    { set_new_state }
                 </div>
+                { set_rule }
+                { set_width }
+                { set_height }
+                { set_period }
+                { set_dx }
+                { set_dy }
+                { set_max }
+                { set_symmetry }
+                { set_order }
+                { set_new_state }
             </div>
         };
 
@@ -454,10 +450,12 @@ impl Renderable<Model> for Model {
                         { "A Game of Life pattern searcher written in Rust. " }
                     </span>
                 </h1>
-                <pre>
-                    { self.world.clone().unwrap_or_default() }
-                </pre>
                 <div>
+                    <pre>
+                    { self.world.clone().unwrap_or_default() }
+                    </pre>
+                </div>
+                <div id = "status">
                     { status }
                 </div>
                 { set_generation }
@@ -469,13 +467,11 @@ impl Renderable<Model> for Model {
 
 fn view_setting(label: &str, description: &str, setting: Html<Model>) -> Html<Model> {
     html! {
-        <div title = description,  class = "setting">
-            <label>
-                <span class = "label">
-                    { label }
-                </span>
-                { setting }
-            </label>
-        </div>
+        <label title = description,  class = "setting">
+            <span class = "label">
+                { label }
+            </span>
+            { setting }
+        </label>
     }
 }

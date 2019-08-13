@@ -67,7 +67,7 @@ cp ../target/wasm32-unknown-unknown/release/*.{js,wasm} some_folder/
 cp static/* some_folder/
 ```
 
-然后用浏览器打开这个文件夹里的 `index.html` 文件即可运行。
+然后用浏览器打开这个文件夹里的 `index.html` 文件即可运行。（如果在火狐浏览器中无法本地运行，原因[见此](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS/Errors/CORSRequestNotHttp)。不清楚别的浏览器有没有类似的问题。）
 
 也可以把它们部署到自己的网站，比如说 GitHub Pages。
 

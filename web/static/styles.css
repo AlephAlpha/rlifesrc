@@ -1,62 +1,84 @@
 body {
-    background-color: #eee;
+    background-color: #ddd;
     font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
-div {
-    margin-top: 5px;
-    margin-bottom: 5px;
+    font-size: 16px;
+    line-height: 1.5rem;
 }
 
 #rlifesrc {
     background-color: #fff;
-    border-radius: 1em;
-    margin: 1em auto;
-    max-width: 800px;
-    padding: 20px;
+    border-radius: 20px;
+    margin: 10px auto;
+    max-width: 600px;
+    padding: 50px;
+}
+
+#h1 {
+    font-size: 2rem;
+    margin-left: 5px;
 }
 
 #subheading {
     color: #666;
     font-weight: normal;
-    font-size: 0.5em;
-    margin-left: 1em;
+    font-size: 1rem;
+    margin-left: 10px;
 }
 
 pre {
     background-color: #eee;
     font-family: monospace;
-    font-size: 16px;
-    margin: 5px;
-    max-height: 300px;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    line-height: 1rem;
+    margin: 20px 0;
+    max-height: 400px;
     overflow: auto;
     padding: 5px;
 }
 
-#settings {
-    width: 300px;
-}
-
-button {
-    margin-right: 10px;
-}
-
-.label, #generation {
-    display: inline-block;
-    margin-right: 10px;
-    text-align: right;
-    width: 80px;
-}
-
-input, select {
-    box-sizing: border-box;
-    width: 200px;
-}
-
-#generation {
-    width: auto;
-}
-
+#status,
 #set_generation {
-    width: 100px;
+    margin: 5px 0;
+}
+
+#set_generation input {
+    width: 3rem;
+}
+
+#settings {
+    margin: 0 auto;
+    max-width: 400px;
+}
+
+#buttons,
+.setting {
+    display: flex;
+}
+
+
+.label,
+button,
+input,
+select {
+    margin-bottom: 10px;
+}
+
+.label {
+    padding-right: 5%;
+    text-align: right;
+    flex: 3;
+}
+
+#buttons button {
+    flex: 3;
+}
+
+#buttons button:last-of-type {
+    flex: 4;
+}
+
+input,
+select {
+    flex: 7;
 }
