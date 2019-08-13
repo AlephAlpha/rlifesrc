@@ -74,7 +74,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     // 确保由一个细胞本身和邻域能得到其后一代，由此确定一些未知细胞的状态
     fn consistify(&mut self, cell_id: CellId) -> bool {
         let cell = &self.world[cell_id];
-        let succ_id = cell.succ.get();
+        let succ_id = cell.succ;
         let succ = &self.world[succ_id];
         let state = cell.state.get();
         let desc = cell.desc.get();
@@ -111,12 +111,10 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
     fn consistify10(&mut self, cell_id: CellId) -> bool {
         self.consistify(cell_id) && {
             let cell = &self.world[cell_id];
-            let pred_id = cell.pred.get().unwrap();
+            let pred_id = cell.pred.unwrap();
             self.consistify(pred_id) && {
-                let cell = &self.world[cell_id];
-                cell.nbhd
-                    .get()
-                    .iter()
+                let nbhd = self.world[cell_id].nbhd;
+                nbhd.iter()
                     .all(|&neigh_id| self.consistify(neigh_id.unwrap()))
             }
         }
@@ -136,7 +134,7 @@ impl<D: Desc, R: Rule<Desc = D>> Search<D, R> {
             let cell_id = self.set_table[self.next_set];
             let cell = &self.world[cell_id];
             let state = cell.state.get().unwrap();
-            for &sym_id in cell.sym.borrow().iter() {
+            for &sym_id in cell.sym.iter() {
                 let sym = &self.world[sym_id];
                 if let Some(old_state) = sym.state.get() {
                     if state != old_state {

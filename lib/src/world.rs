@@ -1,6 +1,6 @@
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::fmt::{Display, Error, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
@@ -40,13 +40,13 @@ pub struct LifeCell<D> {
     // 细胞的状态是否由别的细胞决定
     pub free: Cell<bool>,
     // 同一位置上一代的细胞
-    pub pred: Cell<Option<CellId>>,
+    pub pred: Option<CellId>,
     // 同一位置下一代的细胞
-    pub succ: Cell<Option<CellId>>,
+    pub succ: Option<CellId>,
     // 细胞的邻域
-    pub nbhd: Cell<[Option<CellId>; 8]>,
+    pub nbhd: [Option<CellId>; 8],
     // 与此细胞对称（因此状态一致）的细胞
-    pub sym: RefCell<Vec<CellId>>,
+    pub sym: Vec<CellId>,
     // 此细胞是否在第一代
     pub first_gen: bool,
 }
@@ -242,7 +242,7 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
 
         let cell_count = Cell::new(0);
 
-        let life = World {
+        let mut life = World {
             width,
             height,
             period,
@@ -269,12 +269,9 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             for y in -1..=height {
                 for t in 0..period {
                     let id = life.find_cell((x, y, t)).unwrap();
-                    let cell = &life.cells[id];
-                    let mut nbhd = cell.nbhd.get();
                     for (i, (nx, ny)) in neighbors.iter().enumerate() {
-                        nbhd[i] = life.find_cell((x + nx, y + ny, t));
+                        life.cells[id].nbhd[i] = life.find_cell((x + nx, y + ny, t));
                     }
-                    cell.nbhd.set(nbhd)
                 }
             }
         }
@@ -284,35 +281,34 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             for y in -1..=height {
                 for t in 0..period {
                     let id = life.find_cell((x, y, t)).unwrap();
-                    let cell = &life.cells[id];
 
                     // 默认的细胞状态
                     let default = if b0 && t % 2 == 1 { Alive } else { Dead };
 
                     // 用 set 设置细胞状态
                     if 0 <= x && x < width && 0 <= y && y < height {
-                        life.set_cell(cell, None, true);
+                        life.set_cell(&life.cells[id], None, true);
                     }
 
                     // 设定前一代；若前一代不在范围内则把此细胞设为 default
                     if t != 0 {
-                        cell.pred.set(life.find_cell((x, y, t - 1)));
+                        life.cells[id].pred = life.find_cell((x, y, t - 1));
                     } else {
                         let pred = life.find_cell((x - dx, y - dy, period - 1));
                         if pred.is_some() {
-                            cell.pred.set(pred);
+                            life.cells[id].pred = pred;
                         } else if 0 <= x && x < width && 0 <= y && y < height {
-                            life.set_cell(cell, Some(default), false);
+                            life.set_cell(&life.cells[id], Some(default), false);
                         }
                     }
 
                     // 设定后一代；若后一代不在范围内则不设
                     if t != period - 1 {
-                        cell.succ.set(life.find_cell((x, y, t + 1)));
+                        life.cells[id].succ = life.find_cell((x, y, t + 1));
                     } else {
                         let succ = life.find_cell((x + dx, y + dy, 0));
                         if succ.is_some() {
-                            cell.succ.set(succ);
+                            life.cells[id].succ = succ;
                         }
                     }
 
@@ -352,9 +348,9 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
                     for coord in sym_coords {
                         let sym = life.find_cell(coord);
                         if 0 <= coord.0 && coord.0 < width && 0 <= coord.1 && coord.1 < height {
-                            cell.sym.borrow_mut().push(sym.unwrap());
+                            life.cells[id].sym.push(sym.unwrap());
                         } else if 0 <= x && x < width && 0 <= y && y < height {
-                            life.set_cell(cell, Some(default), false);
+                            life.set_cell(&life.cells[id], Some(default), false);
                         }
                     }
                 }

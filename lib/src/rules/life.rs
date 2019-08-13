@@ -33,7 +33,7 @@ impl Desc for NbhdDesc {
             Some(Alive) => 0x01,
             None => 0x00,
         };
-        for &neigh_id in cell.nbhd.get().iter() {
+        for &neigh_id in cell.nbhd.iter() {
             let neigh = &world[neigh_id.unwrap()];
             let mut desc = neigh.desc.get();
             desc.0 -= old_state_num;
@@ -268,7 +268,7 @@ impl Rule for Life {
         set_table: &mut Vec<CellId>,
     ) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
-            for &neigh_id in cell.nbhd.get().iter() {
+            for &neigh_id in cell.nbhd.iter() {
                 if let Some(neigh_id) = neigh_id {
                     let neigh = &world[neigh_id];
                     if neigh.state.get().is_none() {
