@@ -16,12 +16,7 @@ impl Desc for NbhdDesc {
         }
     }
 
-    fn set_nbhd(
-        world_cells: &Vec<LifeCell<Self>>,
-        cell: &LifeCell<Self>,
-        old_state: Option<State>,
-        state: Option<State>,
-    ) {
+    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
         let change_num = match (state, old_state) {
             (Some(Dead), Some(Alive)) => 0x0101,
             (Some(Alive), Some(Dead)) => 0x0101,
@@ -29,8 +24,8 @@ impl Desc for NbhdDesc {
             (Some(Alive), None) | (None, Some(Alive)) => 0x0001,
             _ => 0x0000,
         };
-        for (i, &neigh_id) in cell.nbhd.iter().rev().enumerate() {
-            let neigh = &world_cells[neigh_id.unwrap()];
+        for (i, &neigh) in cell.nbhd.get().iter().rev().enumerate() {
+            let neigh = neigh.unwrap();
             let mut desc = neigh.desc.get();
             desc.0 ^= change_num << i;
             neigh.desc.set(desc);
@@ -266,27 +261,26 @@ impl Rule for Life {
         self.impl_table[index]
     }
 
-    fn consistify_nbhd(
+    fn consistify_nbhd<'a>(
         &self,
-        cell: &LifeCell<NbhdDesc>,
-        world: &World<NbhdDesc, Self>,
+        cell: &LifeCell<'a, NbhdDesc>,
+        world: &World<'a, NbhdDesc, Self>,
         desc: NbhdDesc,
         state: Option<State>,
         succ_state: State,
-        set_table: &mut Vec<CellId>,
+        set_table: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
     ) {
         let nbhd_states = self.implication_nbhd(state, desc, succ_state).0;
         if nbhd_states != 0 {
-            for (i, &neigh_id) in cell.nbhd.iter().enumerate() {
+            for (i, &neigh) in cell.nbhd.get().iter().enumerate() {
                 let state = match nbhd_states >> i & 0x0101 {
                     0x0001 => Alive,
                     0x0100 => Dead,
                     _ => continue,
                 };
-                if let Some(neigh_id) = neigh_id {
-                    let neigh = &world[neigh_id];
+                if let Some(neigh) = neigh {
                     world.set_cell(neigh, Some(state), false);
-                    set_table.push(neigh_id);
+                    set_table.push(neigh);
                 }
             }
         }

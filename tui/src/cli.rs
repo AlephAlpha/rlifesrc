@@ -3,7 +3,7 @@ use ca_rules::ParseBSRules;
 use clap::AppSettings::AllowNegativeNumbers;
 use clap::{App, Arg};
 use rlifesrc_lib::rules::{isotropic, life};
-use rlifesrc_lib::NewState::{Choose, FirstRandomThenDead, Random};
+use rlifesrc_lib::NewState::{Choose, Random, Smart};
 use rlifesrc_lib::State::{Alive, Dead};
 use rlifesrc_lib::{Search, Status, TraitSearch, World};
 
@@ -195,7 +195,7 @@ pub fn parse_args() -> Option<Args> {
         "dead" | "d" => Choose(Dead),
         "alive" | "a" => Choose(Alive),
         "random" | "r" => Random,
-        _ => FirstRandomThenDead(0),
+        _ => Smart,
     };
     let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
     let max_cell_count = match max_cell_count {
@@ -207,6 +207,7 @@ pub fn parse_args() -> Option<Args> {
 
     if let Ok(rule) = life::Life::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
+        // world.init(dx, dy, symmetry);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
             search,

@@ -1,15 +1,14 @@
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::fmt::{Display, Error, Formatter};
-use std::ops::Index;
 use std::str::FromStr;
 pub use State::{Alive, Dead};
 
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
 
-// 细胞状态
+/// 细胞状态
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum State {
@@ -26,95 +25,86 @@ impl Distribution<State> for Standard {
     }
 }
 
-// 所有的细胞保存在一个向量中，细胞的 id 等于其在向量中的位置
-pub type CellId = usize;
-
-// D 表示邻域的状态
-pub struct LifeCell<D> {
-    // 细胞的 id
-    pub id: CellId,
-    // 细胞自身的状态
+/// 细胞
+///
+/// `D` 表示邻域的状态。
+pub struct LifeCell<'a, D: Desc> {
+    /// 细胞自身的状态
     pub state: Cell<Option<State>>,
-    // 细胞邻域的状态
+    /// 细胞邻域的状态
     pub desc: Cell<D>,
-    // 细胞的状态是否由别的细胞决定
+    /// 细胞的状态是否由别的细胞决定
     pub free: Cell<bool>,
-    // 同一位置上一代的细胞
-    pub pred: Option<CellId>,
-    // 同一位置下一代的细胞
-    pub succ: Option<CellId>,
-    // 细胞的邻域
-    pub nbhd: [Option<CellId>; 8],
-    // 与此细胞对称（因此状态一致）的细胞
-    pub sym: Vec<CellId>,
-    // 此细胞是否在第一代
+    /// 同一位置上一代的细胞
+    pub pred: Cell<Option<&'a LifeCell<'a, D>>>,
+    /// 同一位置下一代的细胞
+    pub succ: Cell<Option<&'a LifeCell<'a, D>>>,
+    /// 细胞的邻域
+    pub nbhd: Cell<[Option<&'a LifeCell<'a, D>>; 8]>,
+    /// 与此细胞对称（因此状态一致）的细胞
+    pub sym: RefCell<Vec<&'a LifeCell<'a, D>>>,
+    /// 此细胞是否在第一代
     pub first_gen: bool,
+    /// 此细胞是否在第一行/第一列
+    pub first_col: bool,
 }
 
-impl<D: Desc> LifeCell<D> {
-    pub fn new(id: CellId, state: Option<State>, free: bool, first_gen: bool) -> Self {
-        let desc = Cell::new(D::new(state));
-        let state = Cell::new(state);
-        let free = Cell::new(free);
-        let pred = None;
-        let succ = None;
-        let nbhd = [None; 8];
-        let sym = Vec::new();
+impl<'a, D: Desc> LifeCell<'a, D> {
+    pub fn new(state: Option<State>, free: bool, first_gen: bool, first_col: bool) -> Self {
         LifeCell {
-            id,
-            state,
-            desc,
-            free,
-            pred,
-            succ,
-            nbhd,
-            sym,
+            state: Cell::new(state),
+            desc: Cell::new(D::new(state)),
+            free: Cell::new(free),
+            pred: Default::default(),
+            succ: Default::default(),
+            nbhd: Default::default(),
+            sym: Default::default(),
             first_gen,
+            first_col,
         }
     }
 }
 
-// 邻域的状态应该满足一个 trait
+/// 邻域的状态
 pub trait Desc: Copy {
-    // 通过一个细胞的状态生成一个默认的邻域
+    /// 通过一个细胞的状态生成一个默认的邻域
     fn new(state: Option<State>) -> Self;
 
-    // 改变一个细胞的状态时处理其邻域中所有细胞的邻域状态
-    fn set_nbhd(
-        world_cells: &Vec<LifeCell<Self>>,
-        cell: &LifeCell<Self>,
-        old_state: Option<State>,
-        state: Option<State>,
-    );
+    /// 改变一个细胞的状态时处理其邻域中所有细胞的邻域状态
+    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>);
 }
 
-// 把规则写成一个 Trait，方便以后支持更多的规则
+/// 规则
 pub trait Rule: Sized {
     type Desc: Desc;
 
-    // 规则是否是 B0
+    /// 规则是否包含 B0
+    ///
+    /// 也就是说，如果一个细胞邻域中全部细胞都是死的，此细胞下一代会不会活过来。
     fn b0(&self) -> bool;
 
-    // 由一个细胞及其邻域的状态得到其后一代的状态
+    /// 由一个细胞及其邻域的状态得到其后一代的状态
     fn transition(&self, state: Option<State>, desc: Self::Desc) -> Option<State>;
 
-    // 由一个细胞的邻域以及其后一代的状态，决定其本身的状态
+    /// 由一个细胞的邻域以及其后一代的状态，决定其本身的状态
     fn implication(&self, desc: Self::Desc, succ_state: State) -> Option<State>;
 
-    // 由一个细胞本身、邻域以及其后一代的状态，改变其邻域中某些未知细胞的状态
-    // 并把改变了值的细胞放到 set_table 中
-    fn consistify_nbhd(
+    /// 由一个细胞本身、邻域以及其后一代的状态，改变其邻域中某些未知细胞的状态，
+    /// 并把改变了值的细胞放到 `set_table` 中。
+    fn consistify_nbhd<'a>(
         &self,
-        cell: &LifeCell<Self::Desc>,
-        world: &World<Self::Desc, Self>,
+        cell: &LifeCell<'a, Self::Desc>,
+        world: &World<'a, Self::Desc, Self>,
         desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        set_table: &mut Vec<CellId>,
+        set_table: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
     );
 }
 
-// 对称性
+/// 对称性
+///
+/// 其含义和 Oscar Cunningham 的 Logic Life Search 一样。
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum Symmetry {
@@ -175,31 +165,43 @@ impl Default for Symmetry {
     }
 }
 
-// 横座标，纵座标，时间
-type Coord = (isize, isize, isize);
+/// 细胞的坐标
+///
+/// （横座标，纵座标，时间）
+pub type Coord = (isize, isize, isize);
 
-// 世界
-pub struct World<D: Desc, R: Rule<Desc = D>> {
+/// 世界
+pub struct World<'a, D: Desc, R: 'a + Rule<Desc = D>> {
+    /// 宽度
     pub width: isize,
+    /// 高度
     pub height: isize,
+    /// 周期
     pub period: isize,
+    /// 规则
     pub rule: R,
 
-    // 搜索顺序是先行后列还是先列后行
-    // 通过比较行数和列数的大小来自动决定
+    /// 搜索顺序是先行后列还是先列后行
+    ///
+    /// 通过比较行数和列数的大小来自动决定。
     pub column_first: bool,
 
-    // 搜索范围内的所有细胞的列表
-    cells: Vec<LifeCell<D>>,
+    /// 搜索范围内的所有细胞的列表
+    cells: Vec<LifeCell<'a, D>>,
 
-    // 公用的搜索范围外的死细胞
-    dead_cell: LifeCell<D>,
+    /// 公用的搜索范围外的死细胞
+    ///
+    /// 如果一个细胞的下一代超出了搜索范围，其 `succ` 会设为 `dead_cell`。
+    dead_cell: LifeCell<'a, D>,
 
-    // 已知的活细胞个数
+    /// 已知的活细胞个数
     pub cell_count: Cell<u32>,
 }
 
-impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
+impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
+    /// 新建一个世界
+    ///
+    /// 创建了之后需要用 `init` 来初始化。
     pub fn new(
         (width, height, period): Coord,
         dx: isize,
@@ -225,24 +227,30 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             }
         };
 
-        let b0 = rule.b0();
-
         let mut cells = Vec::with_capacity(((width + 2) * (height + 2) * period) as usize);
 
         // 先全部填上死细胞；如果是 B0 的规则，则在奇数代填上活细胞
-        for id in 0..(width + 2) * (height + 2) * period {
-            let t = id % period;
-            let state = if b0 && t % 2 == 1 { Alive } else { Dead };
-            let first_gen = t == 0;
-            cells.push(LifeCell::new(id as usize, Some(state), false, first_gen));
+        let (w, h) = if column_first {
+            (width, height)
+        } else {
+            (height, width)
+        };
+        for x in -1..=w {
+            for _y in -1..=h {
+                for t in 0..period {
+                    let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
+                    let first_gen = t == 0;
+                    let first_col = x == 0;
+                    cells.push(LifeCell::new(Some(state), false, first_gen, first_col));
+                }
+            }
         }
 
-        // 用不到 dead_cell 的 id，随便设一个值
-        let dead_cell = LifeCell::new(0, Some(Dead), false, false);
+        let dead_cell = LifeCell::new(Some(Dead), false, false, false);
 
         let cell_count = Cell::new(0);
 
-        let mut life = World {
+        let world = World {
             width,
             height,
             period,
@@ -253,7 +261,15 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             cell_count,
         };
 
-        // 先设定细胞的邻域
+        world.init(dx, dy, symmetry);
+        world
+    }
+
+    /// 初始化整个世界
+    ///
+    /// 这一步必须和前面的 `new` 分开，因为方法无法返回引用了局部变量的值。
+    pub fn init(&self, dx: isize, dy: isize, symmetry: Symmetry) {
+        // 先设定细胞的邻域，以便后面 `set_cell`
         // 注意：对于范围边缘的细胞，邻域可能指向不存在的细胞！
         let neighbors = [
             (-1, -1),
@@ -265,103 +281,138 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             (1, 0),
             (1, 1),
         ];
-        for x in -1..=width {
-            for y in -1..=height {
-                for t in 0..period {
-                    let id = life.find_cell((x, y, t)).unwrap();
+        for x in -1..=self.width {
+            for y in -1..=self.height {
+                for t in 0..self.period {
+                    let cell = self.find_cell((x, y, t)).unwrap();
+                    let mut nbhd = cell.nbhd.take();
                     for (i, (nx, ny)) in neighbors.iter().enumerate() {
-                        life.cells[id].nbhd[i] = life.find_cell((x + nx, y + ny, t));
+                        if let Some(neigh) = self.find_cell((x + nx, y + ny, t)) {
+                            unsafe {
+                                let neigh: *const LifeCell<_> = neigh;
+                                nbhd[i] = neigh.as_ref();
+                            }
+                        }
                     }
+                    cell.nbhd.set(nbhd);
                 }
             }
         }
 
         // 再给范围内的细胞添加别的信息
-        for x in -1..=width {
-            for y in -1..=height {
-                for t in 0..period {
-                    let id = life.find_cell((x, y, t)).unwrap();
+        for x in -1..=self.width {
+            for y in -1..=self.height {
+                for t in 0..self.period {
+                    let cell = self.find_cell((x, y, t)).unwrap();
 
                     // 默认的细胞状态
-                    let default = if b0 && t % 2 == 1 { Alive } else { Dead };
+                    let default = if self.rule.b0() && t % 2 == 1 {
+                        Alive
+                    } else {
+                        Dead
+                    };
 
-                    // 用 set 设置细胞状态
-                    if 0 <= x && x < width && 0 <= y && y < height {
-                        life.set_cell(&life.cells[id], None, true);
+                    // 用 `set` 设置细胞状态
+                    if 0 <= x && x < self.width && 0 <= y && y < self.height {
+                        self.set_cell(cell, None, true);
                     }
 
-                    // 设定前一代；若前一代不在范围内则把此细胞设为 default
+                    // 设定前一代；若前一代不在范围内则把原细胞的状态设为 `default`
                     if t != 0 {
-                        life.cells[id].pred = life.find_cell((x, y, t - 1));
+                        let pred = self.find_cell((x, y, t - 1)).unwrap();
+                        unsafe {
+                            let pred: *const LifeCell<_> = pred;
+                            cell.pred.set(pred.as_ref());
+                        }
                     } else {
-                        let pred = life.find_cell((x - dx, y - dy, period - 1));
-                        if pred.is_some() {
-                            life.cells[id].pred = pred;
-                        } else if 0 <= x && x < width && 0 <= y && y < height {
-                            life.set_cell(&life.cells[id], Some(default), false);
+                        let pred = self.find_cell((x - dx, y - dy, self.period - 1));
+                        if let Some(pred) = pred {
+                            unsafe {
+                                let pred: *const LifeCell<_> = pred;
+                                cell.pred.set(pred.as_ref());
+                            }
+                        } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
+                            self.set_cell(cell, Some(default), false);
                         }
                     }
 
-                    // 设定后一代；若后一代不在范围内则不设
-                    if t != period - 1 {
-                        life.cells[id].succ = life.find_cell((x, y, t + 1));
+                    // 设定后一代；若后一代不在范围内则设其 `succ` 为 `dead_cell`
+                    if t != self.period - 1 {
+                        let succ = self.find_cell((x, y, t + 1)).unwrap();
+                        unsafe {
+                            let succ: *const LifeCell<_> = succ;
+                            cell.succ.set(succ.as_ref());
+                        }
                     } else {
-                        let succ = life.find_cell((x + dx, y + dy, 0));
-                        if succ.is_some() {
-                            life.cells[id].succ = succ;
+                        let succ = self.find_cell((x + dx, y + dy, 0));
+                        if let Some(succ) = succ {
+                            unsafe {
+                                let succ: *const LifeCell<_> = succ;
+                                cell.succ.set(succ.as_ref());
+                            }
+                        } else {
+                            unsafe {
+                                let succ: *const LifeCell<_> = &self.dead_cell;
+                                cell.succ.set(succ.as_ref());
+                            }
                         }
                     }
 
-                    // 设定对称的细胞；若对称的细胞不在范围内则把此细胞设为 default
+                    // 设定对称的细胞；若对称的细胞不在范围内则把原细胞的状态设为 `default`
                     let sym_coords = match symmetry {
                         Symmetry::C1 => vec![],
-                        Symmetry::C2 => vec![(width - 1 - x, height - 1 - y, t)],
+                        Symmetry::C2 => vec![(self.width - 1 - x, self.height - 1 - y, t)],
                         Symmetry::C4 => vec![
-                            (y, width - 1 - x, t),
-                            (width - 1 - x, height - 1 - y, t),
-                            (height - 1 - y, x, t),
+                            (y, self.width - 1 - x, t),
+                            (self.width - 1 - x, self.height - 1 - y, t),
+                            (self.height - 1 - y, x, t),
                         ],
-                        Symmetry::D2Row => vec![(width - 1 - x, y, t)],
-                        Symmetry::D2Column => vec![(x, height - 1 - y, t)],
+                        Symmetry::D2Row => vec![(self.width - 1 - x, y, t)],
+                        Symmetry::D2Column => vec![(x, self.height - 1 - y, t)],
                         Symmetry::D2Diag => vec![(y, x, t)],
-                        Symmetry::D2Antidiag => vec![(height - 1 - y, width - 1 - x, t)],
+                        Symmetry::D2Antidiag => vec![(self.height - 1 - y, self.width - 1 - x, t)],
                         Symmetry::D4Ortho => vec![
-                            (width - 1 - x, y, t),
-                            (x, height - 1 - y, t),
-                            (width - 1 - x, height - 1 - y, t),
+                            (self.width - 1 - x, y, t),
+                            (x, self.height - 1 - y, t),
+                            (self.width - 1 - x, self.height - 1 - y, t),
                         ],
                         Symmetry::D4Diag => vec![
                             (y, x, t),
-                            (height - 1 - y, width - 1 - x, t),
-                            (width - 1 - x, height - 1 - y, t),
+                            (self.height - 1 - y, self.width - 1 - x, t),
+                            (self.width - 1 - x, self.height - 1 - y, t),
                         ],
                         Symmetry::D8 => vec![
-                            (y, width - 1 - x, t),
-                            (height - 1 - y, x, t),
-                            (width - 1 - x, y, t),
-                            (x, height - 1 - y, t),
+                            (y, self.width - 1 - x, t),
+                            (self.height - 1 - y, x, t),
+                            (self.width - 1 - x, y, t),
+                            (x, self.height - 1 - y, t),
                             (y, x, t),
-                            (height - 1 - y, width - 1 - x, t),
-                            (width - 1 - x, height - 1 - y, t),
+                            (self.height - 1 - y, self.width - 1 - x, t),
+                            (self.width - 1 - x, self.height - 1 - y, t),
                         ],
                     };
                     for coord in sym_coords {
-                        let sym = life.find_cell(coord);
-                        if 0 <= coord.0 && coord.0 < width && 0 <= coord.1 && coord.1 < height {
-                            life.cells[id].sym.push(sym.unwrap());
-                        } else if 0 <= x && x < width && 0 <= y && y < height {
-                            life.set_cell(&life.cells[id], Some(default), false);
+                        let sym = self.find_cell(coord);
+                        if 0 <= coord.0
+                            && coord.0 < self.width
+                            && 0 <= coord.1
+                            && coord.1 < self.height
+                        {
+                            unsafe {
+                                let sym: *const LifeCell<_> = sym.unwrap();
+                                cell.sym.borrow_mut().push(sym.as_ref().unwrap());
+                            }
+                        } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
+                            self.set_cell(cell, Some(default), false);
                         }
                     }
                 }
             }
         }
-
-        life
     }
 
-    // 通过坐标查找细胞
-    fn find_cell(&self, coord: Coord) -> Option<CellId> {
+    /// 通过坐标查找细胞
+    fn find_cell(&self, coord: Coord) -> Option<&LifeCell<'a, D>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = if self.column_first {
@@ -369,17 +420,17 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
             } else {
                 ((y + 1) * (self.width + 2) + x + 1) * self.period + t
             };
-            Some(index as usize)
+            Some(&self.cells[index as usize])
         } else {
             None
         }
     }
 
-    // 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
+    /// 设定一个细胞的值，并处理其邻域中所有细胞的邻域状态
     pub fn set_cell(&self, cell: &LifeCell<D>, state: Option<State>, free: bool) {
         let old_state = cell.state.replace(state);
         cell.free.set(free);
-        D::set_nbhd(&self.cells, &cell, old_state, state);
+        D::set_nbhd(&cell, old_state, state);
         if cell.first_gen {
             match (state, old_state) {
                 (Some(Alive), Some(Alive)) => (),
@@ -390,13 +441,13 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         }
     }
 
-    // 显示某一代的整个世界
+    /// 显示某一代的整个世界
     pub fn display_gen(&self, t: isize) -> String {
         let mut str = String::new();
         let t = t % self.period;
         for y in 0..self.height {
             for x in 0..self.width {
-                let state = self[self.find_cell((x, y, t))].state.get();
+                let state = self.find_cell((x, y, t)).unwrap().state.get();
                 let s = match state {
                     Some(Dead) => '.',
                     Some(Alive) => 'O',
@@ -409,12 +460,12 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
         str
     }
 
-    // 获取一个未知的细胞
-    pub fn get_unknown(&self) -> Option<&LifeCell<D>> {
+    /// 获取一个未知的细胞
+    pub fn get_unknown(&self) -> Option<&LifeCell<'a, D>> {
         self.cells.iter().find(|cell| cell.state.get().is_none())
     }
 
-    // 确保搜出来的图样非空，而且最小周期不小于指定的周期
+    /// 确保搜出来的图样非空，而且最小周期不小于指定的周期
     pub fn nontrivial(&self) -> bool {
         let nonzero = self
             .cells
@@ -430,25 +481,5 @@ impl<D: Desc, R: Rule<Desc = D>> World<D, R> {
                             .chunks(self.period as usize)
                             .any(|c| c[0].state.get() != c[t as usize].state.get())
                 }))
-    }
-}
-
-// 通过 Index 来由 id 获取细胞
-impl<D: Desc, R: Rule<Desc = D>> Index<CellId> for World<D, R> {
-    type Output = LifeCell<D>;
-
-    fn index(&self, id: CellId) -> &Self::Output {
-        &self.cells[id]
-    }
-}
-
-impl<D: Desc, R: Rule<Desc = D>> Index<Option<CellId>> for World<D, R> {
-    type Output = LifeCell<D>;
-
-    fn index(&self, id: Option<CellId>) -> &Self::Output {
-        match id {
-            Some(id) => &self.cells[id],
-            None => &self.dead_cell,
-        }
     }
 }

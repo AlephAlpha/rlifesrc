@@ -17,12 +17,7 @@ impl Desc for NbhdDesc {
         }
     }
 
-    fn set_nbhd(
-        world_cells: &Vec<LifeCell<Self>>,
-        cell: &LifeCell<Self>,
-        old_state: Option<State>,
-        state: Option<State>,
-    ) {
+    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
         let old_state_num = match old_state {
             Some(Dead) => 0x10,
             Some(Alive) => 0x01,
@@ -33,8 +28,8 @@ impl Desc for NbhdDesc {
             Some(Alive) => 0x01,
             None => 0x00,
         };
-        for &neigh_id in cell.nbhd.iter() {
-            let neigh = &world_cells[neigh_id.unwrap()];
+        for &neigh in cell.nbhd.get().iter() {
+            let neigh = neigh.unwrap();
             let mut desc = neigh.desc.get();
             desc.0 -= old_state_num;
             desc.0 += state_num;
@@ -258,22 +253,21 @@ impl Rule for Life {
         self.impl_table[index]
     }
 
-    fn consistify_nbhd(
+    fn consistify_nbhd<'a>(
         &self,
-        cell: &LifeCell<NbhdDesc>,
-        world: &World<NbhdDesc, Self>,
+        cell: &LifeCell<'a, NbhdDesc>,
+        world: &World<'a, NbhdDesc, Self>,
         desc: NbhdDesc,
         state: Option<State>,
         succ_state: State,
-        set_table: &mut Vec<CellId>,
+        set_table: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
     ) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
-            for &neigh_id in cell.nbhd.iter() {
-                if let Some(neigh_id) = neigh_id {
-                    let neigh = &world[neigh_id];
+            for &neigh in cell.nbhd.get().iter() {
+                if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
                         world.set_cell(neigh, Some(state), false);
-                        set_table.push(neigh_id);
+                        set_table.push(neigh);
                     }
                 }
             }

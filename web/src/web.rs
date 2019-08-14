@@ -1,5 +1,5 @@
 use crate::worker::{Props, Request, Response, Worker};
-use rlifesrc_lib::NewState::{Choose, FirstRandomThenDead, Random};
+use rlifesrc_lib::NewState::{Choose, Random, Smart};
 use rlifesrc_lib::State::{Alive, Dead};
 use rlifesrc_lib::{NewState, Status, Symmetry};
 use std::time::Duration;
@@ -361,7 +361,7 @@ impl Renderable<Model> for Model {
                                 "d" => Msg::SetNewState(Choose(Dead)),
                                 "a" => Msg::SetNewState(Choose(Alive)),
                                 "r" => Msg::SetNewState(Random),
-                                "frtd" => Msg::SetNewState(FirstRandomThenDead(0)),
+                                "s" => Msg::SetNewState(Smart),
                                 _ => Msg::None,
                             }
                         } else {
@@ -372,7 +372,7 @@ impl Renderable<Model> for Model {
                     <option value = "d"> { "Dead" } </option>
                     <option value = "a"> { "Alive" } </option>
                     <option value = "r"> { "Random" } </option>
-                    <option value = "frtd"> { "Smart" } </option>
+                    <option value = "s"> { "Smart" } </option>
                 </select>
             },
         );
