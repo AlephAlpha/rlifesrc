@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 ca-rules = "0.1.0"
-rlifesrc-lib = { path = "../lib" }
+rlifesrc-lib = { path = "../" }
 clap = "2.33.0"
 pancurses = "0.16.1"
 stopwatch = "0.0.7"
