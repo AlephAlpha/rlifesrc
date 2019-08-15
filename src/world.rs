@@ -1,6 +1,6 @@
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::fmt::{Display, Error, Formatter};
 use std::str::FromStr;
 pub use State::{Alive, Dead};
@@ -36,13 +36,13 @@ pub struct LifeCell<'a, D: Desc> {
     /// 细胞的状态是否由别的细胞决定
     pub free: Cell<bool>,
     /// 同一位置上一代的细胞
-    pub pred: Cell<Option<&'a LifeCell<'a, D>>>,
+    pub pred: Option<&'a LifeCell<'a, D>>,
     /// 同一位置下一代的细胞
-    pub succ: Cell<Option<&'a LifeCell<'a, D>>>,
+    pub succ: Option<&'a LifeCell<'a, D>>,
     /// 细胞的邻域
-    pub nbhd: Cell<[Option<&'a LifeCell<'a, D>>; 8]>,
+    pub nbhd: [Option<&'a LifeCell<'a, D>>; 8],
     /// 与此细胞对称（因此状态一致）的细胞
-    pub sym: RefCell<Vec<&'a LifeCell<'a, D>>>,
+    pub sym: Vec<&'a LifeCell<'a, D>>,
     /// 此细胞是否在第一代
     pub first_gen: bool,
     /// 此细胞是否在第一行/第一列
@@ -187,6 +187,9 @@ pub struct World<'a, D: Desc, R: 'a + Rule<Desc = D>> {
     pub column_first: bool,
 
     /// 搜索范围内的所有细胞的列表
+    ///
+    /// 此列表在创建了世界之后不会再动，里边所有的细胞都会活到寿终正寝之时，
+    /// 因此后面的 unsafe 是安全的。
     cells: Vec<LifeCell<'a, D>>,
 
     /// 公用的搜索范围外的死细胞
@@ -248,7 +251,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
 
         let cell_count = Cell::new(0);
 
-        let world = World {
+        let mut world = World {
             width,
             height,
             period,
@@ -264,7 +267,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
     }
 
     /// 初始化整个世界
-    fn init(&self, dx: isize, dy: isize, symmetry: Symmetry) {
+    fn init(&mut self, dx: isize, dy: isize, symmetry: Symmetry) {
         // 先设定细胞的邻域，以便后面 `set_cell`
         // 注意：对于范围边缘的细胞，邻域可能指向不存在的细胞！
         let neighbors = [
@@ -280,17 +283,16 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
-                    let cell = self.find_cell((x, y, t)).unwrap();
-                    let mut nbhd = cell.nbhd.take();
+                    let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
                     for (i, (nx, ny)) in neighbors.iter().enumerate() {
                         if let Some(neigh) = self.find_cell((x + nx, y + ny, t)) {
+                            let neigh: *const _ = neigh;
                             unsafe {
-                                let neigh: *const LifeCell<_> = neigh;
-                                nbhd[i] = neigh.as_ref();
+                                let cell = cell_ptr.as_mut().unwrap();
+                                cell.nbhd[i] = neigh.as_ref();
                             }
                         }
                     }
-                    cell.nbhd.set(nbhd);
                 }
             }
         }
@@ -299,6 +301,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
+                    let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
 
                     // 默认的细胞状态
@@ -315,17 +318,18 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
 
                     // 设定前一代；若前一代不在范围内则把原细胞的状态设为 `default`
                     if t != 0 {
-                        let pred = self.find_cell((x, y, t - 1)).unwrap();
+                        let pred: *const _ = self.find_cell((x, y, t - 1)).unwrap();
                         unsafe {
-                            let pred: *const LifeCell<_> = pred;
-                            cell.pred.set(pred.as_ref());
+                            let cell = cell_ptr.as_mut().unwrap();
+                            cell.pred = pred.as_ref();
                         }
                     } else {
                         let pred = self.find_cell((x - dx, y - dy, self.period - 1));
                         if let Some(pred) = pred {
+                            let pred: *const _ = pred;
                             unsafe {
-                                let pred: *const LifeCell<_> = pred;
-                                cell.pred.set(pred.as_ref());
+                                let cell = cell_ptr.as_mut().unwrap();
+                                cell.pred = pred.as_ref();
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             self.set_cell(cell, Some(default), false);
@@ -334,23 +338,21 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
 
                     // 设定后一代；若后一代不在范围内则设其 `succ` 为 `dead_cell`
                     if t != self.period - 1 {
-                        let succ = self.find_cell((x, y, t + 1)).unwrap();
+                        let succ: *const _ = self.find_cell((x, y, t + 1)).unwrap();
                         unsafe {
-                            let succ: *const LifeCell<_> = succ;
-                            cell.succ.set(succ.as_ref());
+                            let cell = cell_ptr.as_mut().unwrap();
+                            cell.succ = succ.as_ref();
                         }
                     } else {
                         let succ = self.find_cell((x + dx, y + dy, 0));
-                        if let Some(succ) = succ {
-                            unsafe {
-                                let succ: *const LifeCell<_> = succ;
-                                cell.succ.set(succ.as_ref());
-                            }
+                        let succ: *const _ = if let Some(succ) = succ {
+                            succ
                         } else {
-                            unsafe {
-                                let succ: *const LifeCell<_> = &self.dead_cell;
-                                cell.succ.set(succ.as_ref());
-                            }
+                            &self.dead_cell
+                        };
+                        unsafe {
+                            let cell = cell_ptr.as_mut().unwrap();
+                            cell.succ = succ.as_ref();
                         }
                     }
 
@@ -388,15 +390,15 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
                         ],
                     };
                     for coord in sym_coords {
-                        let sym = self.find_cell(coord);
                         if 0 <= coord.0
                             && coord.0 < self.width
                             && 0 <= coord.1
                             && coord.1 < self.height
                         {
+                            let sym: *const _ = self.find_cell(coord).unwrap();
                             unsafe {
-                                let sym: *const LifeCell<_> = sym.unwrap();
-                                cell.sym.borrow_mut().push(sym.as_ref().unwrap());
+                                let cell = cell_ptr.as_mut().unwrap();
+                                cell.sym.push(sym.as_ref().unwrap());
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             self.set_cell(cell, Some(default), false);
@@ -417,6 +419,21 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
                 ((y + 1) * (self.width + 2) + x + 1) * self.period + t
             };
             Some(&self.cells[index as usize])
+        } else {
+            None
+        }
+    }
+
+    /// 通过坐标查找细胞
+    fn find_cell_mut(&mut self, coord: Coord) -> Option<&mut LifeCell<'a, D>> {
+        let (x, y, t) = coord;
+        if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
+            let index = if self.column_first {
+                ((x + 1) * (self.height + 2) + y + 1) * self.period + t
+            } else {
+                ((y + 1) * (self.width + 2) + x + 1) * self.period + t
+            };
+            Some(&mut self.cells[index as usize])
         } else {
             None
         }

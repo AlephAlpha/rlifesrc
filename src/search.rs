@@ -64,7 +64,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
 
     /// 确保由一个细胞本身和邻域能得到其后一代，由此确定一些未知细胞的状态
     fn consistify(&mut self, cell: &'a LifeCell<'a, D>) -> bool {
-        let succ = cell.succ.get().unwrap();
+        let succ = cell.succ.unwrap();
         let state = cell.state.get();
         let desc = cell.desc.get();
         if let Some(new_state) = self.world.rule.transition(state, desc) {
@@ -96,13 +96,12 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
         true
     }
 
-    /// `consistify` 一个细胞前一代，本身，以及邻域中的所有细胞
+    /// `consistify` 一个细胞前一代，本身，以及邻域，共十个细胞
     fn consistify10(&mut self, cell: &'a LifeCell<'a, D>) -> bool {
         self.consistify(cell) && {
-            let pred = cell.pred.get().unwrap();
+            let pred = cell.pred.unwrap();
             self.consistify(pred) && {
                 cell.nbhd
-                    .get()
                     .iter()
                     .all(|&neigh_id| self.consistify(neigh_id.unwrap()))
             }
@@ -119,7 +118,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
             }
             let cell = self.set_table[self.next_set];
             let state = cell.state.get().unwrap();
-            for &sym in cell.sym.borrow().iter() {
+            for &sym in cell.sym.iter() {
                 if let Some(old_state) = sym.state.get() {
                     if state != old_state {
                         return false;

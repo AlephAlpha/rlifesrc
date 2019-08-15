@@ -25,7 +25,7 @@ impl Desc for NbhdDesc {
             (Some(Alive), None) | (None, Some(Alive)) => 0x0001,
             _ => 0x0000,
         };
-        for (i, &neigh) in cell.nbhd.get().iter().rev().enumerate() {
+        for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
             let neigh = neigh.unwrap();
             let mut desc = neigh.desc.get();
             desc.0 ^= change_num << i;
@@ -274,7 +274,7 @@ impl Rule for Life {
     ) {
         let nbhd_states = self.implication_nbhd(state, desc, succ_state).0;
         if nbhd_states != 0 {
-            for (i, &neigh) in cell.nbhd.get().iter().enumerate() {
+            for (i, &neigh) in cell.nbhd.iter().enumerate() {
                 let state = match nbhd_states >> i & 0x0101 {
                     0x0001 => Alive,
                     0x0100 => Dead,
