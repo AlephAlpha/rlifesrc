@@ -351,7 +351,7 @@ impl Renderable<Model> for Model {
         let set_new_state = view_setting(
             "New state: ",
             "How to choose a state for unknown cells\n\
-             \"Smart\" means choosing a random state for cells in the first row/column, \
+             \"Smart\" means choosing a alive for cells in the first row/column, \
              and dead for other cells.\n",
             html! {
                 <select

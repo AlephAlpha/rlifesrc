@@ -75,11 +75,11 @@ button,
 .label {
     padding-right: 10px;
     text-align: right;
-    flex: 3;
+    flex: 4;
 }
 
 .setting input,
 .setting select {
-    flex: 7;
+    flex: 6;
     min-width: 0;
 }

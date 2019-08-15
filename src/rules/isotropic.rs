@@ -3,8 +3,9 @@ use ca_rules::neighborhood;
 use ca_rules::ParseBSRules;
 
 #[derive(Clone, Copy, Default)]
-// 邻域的八个细胞的状态
-// 16位的二进制数，前8位中的 1 表示死细胞，后8位中的 1 表示活细胞
+/// 邻域的八个细胞的状态
+///
+/// 16位的二进制数，前8位中的 1 表示死细胞，后8位中的 1 表示活细胞。
 pub struct NbhdDesc(u16);
 
 impl Desc for NbhdDesc {
@@ -33,7 +34,7 @@ impl Desc for NbhdDesc {
     }
 }
 
-// 用一个结构体来放 transition 和 implication 的结果
+/// 用一个结构体来放 `transition` 和 `implication` 的结果
 #[derive(Clone, Copy, Default)]
 struct Implication<T> {
     dead: T,
@@ -41,8 +42,9 @@ struct Implication<T> {
     none: T,
 }
 
-// Non-totalistic 的规则
-// 不提供规则本身的数据，只保存 transition 和 implication 的结果
+/// Isotropic non-totalistic 的规则
+///
+/// 不提供规则本身的数据，只保存 `transition` 和 `implication` 的结果。
 pub struct Life {
     b0: bool,
     trans_table: Box<[Implication<Option<State>>; 65536]>,

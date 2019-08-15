@@ -184,7 +184,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
                     Random => rand::random(),
                     Smart => {
                         if cell.first_col {
-                            rand::random()
+                            Alive
                         } else {
                             Dead
                         }

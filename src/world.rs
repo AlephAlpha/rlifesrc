@@ -200,8 +200,6 @@ pub struct World<'a, D: Desc, R: 'a + Rule<Desc = D>> {
 
 impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
     /// 新建一个世界
-    ///
-    /// 创建了之后需要用 `init` 来初始化。
     pub fn new(
         (width, height, period): Coord,
         dx: isize,
@@ -266,9 +264,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
     }
 
     /// 初始化整个世界
-    ///
-    /// 这一步必须和前面的 `new` 分开，因为方法无法返回引用了局部变量的值。
-    pub fn init(&self, dx: isize, dy: isize, symmetry: Symmetry) {
+    fn init(&self, dx: isize, dy: isize, symmetry: Symmetry) {
         // 先设定细胞的邻域，以便后面 `set_cell`
         // 注意：对于范围边缘的细胞，邻域可能指向不存在的细胞！
         let neighbors = [

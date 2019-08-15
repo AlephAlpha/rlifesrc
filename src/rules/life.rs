@@ -3,9 +3,11 @@ use ca_rules::neighborhood;
 use ca_rules::ParseBSRules;
 
 #[derive(Clone, Copy)]
-// 邻域的细胞统计
-// 由于死细胞和活细胞的数量都不超过 8，可以一起放到一个字节中
-// 0x01 代表活，0x10 代表死
+/// 邻域的细胞统计
+///
+/// 由于死细胞和活细胞的数量都不超过 8，可以一起放到一个字节中。
+///
+/// 0x01 代表活，0x10 代表死。
 pub struct NbhdDesc(u8);
 
 impl Desc for NbhdDesc {
@@ -38,7 +40,7 @@ impl Desc for NbhdDesc {
     }
 }
 
-// 用一个结构体来放 transition 和 implication 的结果
+/// 用一个结构体来放 `transition` 和 `implication` 的结果
 #[derive(Clone, Copy, Default)]
 struct Implication {
     dead: Option<State>,
@@ -46,7 +48,9 @@ struct Implication {
     none: Option<State>,
 }
 
-// 规则，其中不提供规则本身的数据，只保存 transition 和 implication 的结果
+/// Life-like 的规则
+///
+/// 不提供规则本身的数据，只保存 `transition` 和 `implication` 的结果。
 pub struct Life {
     b0: bool,
     trans_table: [Implication; 256],

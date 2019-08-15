@@ -127,7 +127,7 @@ pub fn parse_args() -> Option<Args> {
                 .help("How to choose a state for unknown cells")
                 .long_help(
                     "How to choose a state for unknown cells\n\
-                     \"Smart\" means choosing a random state for cells in the first\
+                     \"Smart\" means choosing alive for cells in the first\
                      row/column,\nand dead for other cells.\n",
                 )
                 .short("c")
@@ -195,7 +195,8 @@ pub fn parse_args() -> Option<Args> {
         "dead" | "d" => Choose(Dead),
         "alive" | "a" => Choose(Alive),
         "random" | "r" => Random,
-        _ => Smart,
+        "smart" | "s" => Smart,
+        _ => Choose(Dead),
     };
     let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
     let max_cell_count = match max_cell_count {
