@@ -32,7 +32,7 @@ pre {
     letter-spacing: 1px;
     line-height: 1rem;
     margin: 20px 0;
-    max-height: 400px;
+    max-height: 300px;
     overflow: auto;
     padding: 5px;
 }
@@ -75,11 +75,11 @@ button,
 .label {
     padding-right: 10px;
     text-align: right;
-    flex: 4;
+    flex: 3;
 }
 
 .setting input,
 .setting select {
-    flex: 6;
+    flex: 7;
     min-width: 0;
 }

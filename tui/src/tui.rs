@@ -59,9 +59,11 @@ impl SearchWindow {
         self.world_win.mvprintw(0, 0, search.display_gen(self.gen));
         self.world_win.refresh();
         self.top_bar.erase();
-        self.top_bar.mvprintw(0, 0, format!("Gen: {}", self.gen));
-        self.top_bar
-            .printw(format!("  Cells: {}", search.cell_count()));
+        self.top_bar.mvprintw(
+            0,
+            0,
+            format!("Gen: {}  Cells: {}", self.gen, search.cell_count()),
+        );
         match self.status {
             Status::Searching => 1,
             _ => self.top_bar.printw(format!("  Time: {:.2?}", self.timing)),

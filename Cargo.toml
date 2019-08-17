@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 ca-rules = "0.1.0"
 rand = "0.7.0"
-serde = { version = "1.0.98", features = ["derive"], optional = true }
+serde = { version = "1.0.99", features = ["derive"], optional = true }
 
 [features]
 default = []

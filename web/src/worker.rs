@@ -13,7 +13,9 @@ use yew::Properties;
 // 这部份的很多写法是照抄 yew 自带的范例
 // https://github.com/DenisKolodin/yew
 
-#[derive(Clone, PartialEq, Properties, Serialize, Deserialize)]
+const VIEW_FREQ: u32 = 10000;
+
+#[derive(Clone, Debug, PartialEq, Properties, Serialize, Deserialize)]
 pub struct Props {
     #[props(required)]
     pub width: isize,
@@ -54,7 +56,7 @@ impl Default for Props {
 struct Job {
     timeout: TimeoutService,
     callback: Callback<()>,
-    task: Option<Box<Task>>,
+    task: Option<Box<dyn Task>>,
 }
 
 impl Job {
@@ -84,7 +86,6 @@ impl Job {
 }
 
 pub struct Worker {
-    view_freq: usize,
     status: Status,
     search: Box<dyn TraitSearch>,
     link: AgentLink<Worker>,
@@ -146,12 +147,10 @@ impl Agent for Worker {
         );
         let search = Box::new(Search::new(world, props.new_state, props.max_cell_count));
 
-        let view_freq = 10000;
         let status = Status::Paused;
         let job = Job::new(&link);
 
         Worker {
-            view_freq,
             status,
             search,
             link,
@@ -163,7 +162,7 @@ impl Agent for Worker {
         match msg {
             Msg::Step => {
                 if let Status::Searching = self.status {
-                    self.status = self.search.search(Some(self.view_freq));
+                    self.status = self.search.search(Some(VIEW_FREQ));
                     self.job.start();
                 } else {
                     self.job.stop();

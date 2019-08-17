@@ -18,7 +18,7 @@ pub struct Model {
     generation: isize,
     world: Option<String>,
     period: Option<isize>,
-    worker: Box<Bridge<Worker>>,
+    worker: Box<dyn Bridge<Worker>>,
     job: Job,
 }
 
@@ -45,7 +45,7 @@ pub enum Msg {
 struct Job {
     interval: IntervalService,
     callback: Callback<()>,
-    task: Option<Box<Task>>,
+    task: Option<Box<dyn Task>>,
 }
 
 impl Job {
@@ -466,7 +466,7 @@ impl Renderable<Model> for Model {
 
 fn view_setting(label: &str, description: &str, setting: Html<Model>) -> Html<Model> {
     html! {
-        <label title = description,  class = "setting">
+        <label title = description, class = "setting">
             <span class = "label">
                 { label }
             </span>
