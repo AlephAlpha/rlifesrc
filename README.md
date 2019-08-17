@@ -2,7 +2,7 @@
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
-由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 javascript 的情况下弄成一个网页，写得非常糟糕，和原版的 lifesrc 相比缺少很多功能，但速度要稍快一些（网页版除外）。
+由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 javascript 的情况下弄成一个网页，写得非常糟糕，和原版的 lifesrc 相比缺少很多功能，但支持 non-totalistic 的规则，而且速度要快一些（网页版除外）。
 
 支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [Isotropic non-totalistic](http://conwaylife.com/wiki/Isotropic_non-totalistic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。
 
@@ -75,7 +75,7 @@ cp static/* some_folder/
 
 这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。支持 Life-like 和 Isotropic non-totalistic 的规则。
 
-本地运行的版本需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc-tui`。也可以用 `cargo run --release --bin rlifesrc` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
+原生版需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc-tui`。也可以在 `tui` 目录中用 `cargo run --release` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
 
 ```plaintext
 USAGE:
@@ -172,19 +172,20 @@ ARGS:
 比如说，输入
 
 ```bash
-./target/release/rlifesrc 7 7 3
+./target/release/rlifesrc-tui 26 8 4 0 1 -c a --no-tui
 ```
 
 会显示以下结果：
 
 ```plaintext
-....O..
-..OOO..
-.O...OO
-..O..O.
-..OO.O.
-OO..O..
-OO.....
+.O........................
+.O.......OOO...........OOO
+O.O....OO.....OOO.........
+.......OOOOO.OOOOO....O..O
+.....O.O..O..O...O.....O..
+.OOOOOO...O..OO....OOOOOO.
+..OO......O.O..OO...O.....
+............O......O......
 ```
 
 加上命令行选项 `--all` 会一个一个地输出所有的结果。
@@ -193,31 +194,23 @@ OO.....
 
 文本界面也十分简陋，但可以显示搜索过程和搜索所用的时间。
 
-刚进入文本界面的时候，大概是这个样子：
+刚进入文本界面的时候，大概是这个样子（以 `./target/release/rlifesrc-tui 26 8 4 0 1 -c a` 为例）：
 
-```plaintext
-???????
-???????
-???????
-???????
-???????
-???????
-???????
+![](screenshots/Screenshot_0.png)
 
-
-Showing generation 0. Time taken: 0ns.
-Paused. Press [space] to resume.
-```
-
-其中 `?` 表示未知的细胞。
+其中 `?` 表示未知的细胞。`Cells` 表示第 0 代中已知的活细胞数。
 
 然后按空格键或回车键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一代/下一代。注意此用法和原版的 lifesrc 并不一样。
 
-搜索到的结果同样以 Plaintext 格式显示。此时再按空格键或回车键的话会在当前结果的基础上搜下一个结果。除非加上命令行选项 `--reset-time`，否则不会重置计时。
+搜索到的结果同样以 Plaintext 格式显示，如下图：
 
-在退出之前记得把结果复制到别的地方。退出之后不会显示任何结果。
+![](screenshots/Screenshot_1.png)
 
-如果搜索的图样比终端的窗口大小还要大，将无法完整显示。这是文本界面最大的缺陷。
+此时再按空格键或回车键的话会在当前结果的基础上搜下一个结果。
+
+搜索过程中不会显示搜索时间。搜索下一个结果时不会重置计时，除非加上命令行选项 `--reset-time`。
+
+如果搜索的图样比终端的窗口大小还要大，将无法完整显示。这是文本界面最主要的缺陷。
 
 ### 网页版
 

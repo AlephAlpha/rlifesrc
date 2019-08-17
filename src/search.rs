@@ -159,7 +159,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
     }
 
     /// 走；不对就退回来，换一下细胞的状态，再走，如此下去
-    fn go(&mut self, step: &mut usize) -> bool {
+    fn go(&mut self, step: &mut u32) -> bool {
         loop {
             *step += 1;
             if self.proceed() {
@@ -171,7 +171,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
     }
 
     /// 最终搜索函数
-    pub fn search(&mut self, max_step: Option<usize>) -> Status {
+    pub fn search(&mut self, max_step: Option<u32>) -> Status {
         let mut step_count = 0;
         if self.world.get_unknown().is_none() && !self.backup() {
             return Status::None;
@@ -219,26 +219,33 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
 /// 一是直接在 `World` 和 `LifeCell` 里边用 trait object，但可能会影响速度
 /// 二是把所有可能的规则对应的 `Search` 写成一个 Enum，但感觉好蠢
 pub trait TraitSearch {
-    fn search(&mut self, max_step: Option<usize>) -> Status;
+    /// 最终搜索函数
+    fn search(&mut self, max_step: Option<u32>) -> Status;
 
+    /// 显示某一代的整个世界
     fn display_gen(&self, t: isize) -> String;
 
+    /// 世界的周期
     fn period(&self) -> isize;
+
+    /// 世界中已知的活细胞数量
+    fn cell_count(&self) -> u32;
 }
 
 impl<'a, D: Desc, R: Rule<Desc = D>> TraitSearch for Search<'a, D, R> {
-    /// 最终搜索函数
-    fn search(&mut self, max_step: Option<usize>) -> Status {
+    fn search(&mut self, max_step: Option<u32>) -> Status {
         self.search(max_step)
     }
 
-    /// 显示某一代的整个世界
     fn display_gen(&self, t: isize) -> String {
         self.world.display_gen(t)
     }
 
-    /// 世界的周期
     fn period(&self) -> isize {
         self.world.period
+    }
+
+    fn cell_count(&self) -> u32 {
+        self.world.cell_count.get()
     }
 }

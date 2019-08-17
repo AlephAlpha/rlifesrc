@@ -208,7 +208,6 @@ pub fn parse_args() -> Option<Args> {
 
     if let Ok(rule) = life::Life::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
-        // world.init(dx, dy, symmetry);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
             search,
