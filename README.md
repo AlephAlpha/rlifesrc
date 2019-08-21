@@ -67,9 +67,7 @@ cp ../target/wasm32-unknown-unknown/release/*.{js,wasm} some_folder/
 cp static/* some_folder/
 ```
 
-然后用浏览器打开这个文件夹里的 `index.html` 文件即可运行。（如果在火狐浏览器中无法本地运行，原因[见此](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS/Errors/CORSRequestNotHttp)。不清楚别的浏览器有没有类似的问题。）
-
-也可以把它们部署到自己的网站，比如说 GitHub Pages。
+然后就可以把这个文件夹中的内容部署到自己的网站，比如说 GitHub Pages。注意由于[此问题](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS/Errors/CORSRequestNotHttp)，无法直接在浏览器打开 `index.html` 来运行；至少火狐浏览器如此。
 
 ## 用法
 
@@ -159,9 +157,9 @@ ARGS:
 
 搜索顺序中的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。
 
-`CHOOSE`（网页版叫 “New state”）指的是如何为未知的细胞选取状态。其中 “smart” 指的是：如果这个未知细胞在第一行/第一列，则先设为生；如果不在第一行/第一列，则先设为死；具体是第一行还是第一列由搜索顺序决定。其实一点也不智能，不过我想不出别的名字了。这个模式适合搜索比较窄但可能很长的图样，但未必比 “random” 或 “alive” 快。
+`CHOOSE` 指的是如何为未知的细胞选取状态。其中 “smart” 指的是：如果这个未知细胞在第一行/第一列，则先设为生；如果不在第一行/第一列，则先设为死；具体是第一行还是第一列由搜索顺序决定。其实一点也不智能，不过我想不出别的名字了。这个模式适合搜索比较窄但可能很长的图样，但未必比 “random” 或 “alive” 快。
 
-`MAX` 在网页版叫 “Max cells”，这个值指的是第一代（确切地说应该是第 0 代）活细胞个数的极大值。其中用 0 表示无穷大。
+`MAX` 指的是第一代（确切地说应该是第 0 代）活细胞个数的极大值。其中用 0 表示无穷大。
 
 ### 命令行
 

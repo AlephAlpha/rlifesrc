@@ -1,7 +1,7 @@
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::cell::Cell;
-use std::fmt::{Display, Error, Formatter};
+use std::fmt::{Debug, Error, Formatter};
 use std::str::FromStr;
 pub use State::{Alive, Dead};
 
@@ -105,7 +105,7 @@ pub trait Rule: Sized {
 /// 对称性
 ///
 /// 其含义和 Oscar Cunningham 的 Logic Life Search 一样。
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum Symmetry {
     C1,
@@ -140,7 +140,7 @@ impl FromStr for Symmetry {
     }
 }
 
-impl Display for Symmetry {
+impl Debug for Symmetry {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let s = match self {
             Symmetry::C1 => "C1",

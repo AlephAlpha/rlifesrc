@@ -1,85 +1,97 @@
 body {
-    background-color: #ddd;
-    font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: "Liberation Sans", Helvetica, Arial, sans-serif;
     font-size: 16px;
     line-height: 1.5rem;
+    margin: 0;
 }
 
-#rlifesrc {
-    background-color: #fff;
-    border-radius: 20px;
-    margin: 10px auto;
-    max-width: 600px;
-    padding: 50px;
+header {
+    align-items: baseline;
+    background: black;
+    display: flex;
+    flex-flow: row wrap;
+    line-height: 1rem;
+    padding: 0 25px 5px 25px;
+    position: relative;
 }
 
-#h1 {
+h1 a {
+    color: white;
     font-size: 2rem;
-    margin-left: 5px;
+    font-weight: normal;
+}
+
+h1 a:hover,
+h1 a:focus {
+    text-decoration: none;
 }
 
 #subheading {
-    color: #666;
-    font-weight: normal;
+    color: lightgray;
     font-size: 1rem;
     margin-left: 10px;
 }
 
+main {
+    display: flex;
+    flex-flow: row-reverse wrap;
+}
+
+#world {
+    flex: 4;
+    padding: 20px;
+}
+
 pre {
     background-color: #eee;
-    font-family: monospace;
+    font-family: "Liberation Mono", Consolas, monospace;
     font-size: 1rem;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     line-height: 1rem;
-    margin: 20px 0;
     max-height: 300px;
+    max-width: 800px;
     overflow: auto;
     padding: 5px;
 }
 
-#status,
-#set_generation {
-    margin: 5px 0;
+#data span {
+    margin: 10px;
 }
 
-#set_generation input {
-    width: 3rem;
+#data span:first-of-type {
+    margin-left: 0;
 }
 
 #settings {
-    margin: 0 auto;
-    max-width: 400px;
+    display: grid;
+    gap: 10px;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(10, 1fr);
+    flex: 1;
+    padding: 20px;
 }
 
 #buttons,
 .setting {
-    display: flex;
-}
-
-
-.label,
-button,
-.setting input,
-.setting select {
-    margin-bottom: 10px;
+    display: contents;
 }
 
 #buttons button {
-    flex: 3;
+    grid-column: span 3;
 }
 
 #buttons button:last-of-type {
-    flex: 4;
+    grid-column: span 4;
 }
 
-.label {
-    padding-right: 10px;
+.setting label {
+    grid-column: span 3;
     text-align: right;
-    flex: 3;
 }
 
 .setting input,
 .setting select {
-    flex: 7;
+    grid-column: span 7;
     min-width: 0;
+    width: auto;
 }

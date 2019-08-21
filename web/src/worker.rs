@@ -1,7 +1,7 @@
 use ca_rules::ParseBSRules;
 use rlifesrc_lib::rules::{isotropic, life};
 use rlifesrc_lib::NewState::Choose;
-use rlifesrc_lib::State::Dead;
+use rlifesrc_lib::State::Alive;
 use rlifesrc_lib::{NewState, Search, Status, Symmetry, TraitSearch, World};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -39,14 +39,14 @@ pub struct Props {
 impl Default for Props {
     fn default() -> Self {
         Props {
-            width: 7,
-            height: 7,
-            period: 3,
+            width: 26,
+            height: 8,
+            period: 4,
             dx: 0,
-            dy: 0,
+            dy: 1,
             symmetry: Symmetry::C1,
             column_first: None,
-            new_state: Choose(Dead),
+            new_state: Choose(Alive),
             max_cell_count: None,
             rule_string: String::from("B3/S23"),
         }
@@ -104,7 +104,7 @@ impl Transferable for Request {}
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {
-    UpdateWorld(String),
+    UpdateWorld((String, u32)),
     UpdateStatus(Status),
     InvalidRule,
 }
@@ -118,7 +118,8 @@ pub enum Msg {
 impl Worker {
     fn update_world(&mut self, id: HandlerId, gen: isize) {
         let world = self.search.display_gen(gen);
-        self.link.response(id, Response::UpdateWorld(world));
+        self.link
+            .response(id, Response::UpdateWorld((world, self.search.cell_count())));
         self.update_status(id);
     }
 
