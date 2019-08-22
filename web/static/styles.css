@@ -39,6 +39,7 @@ main {
 
 #world {
     flex: 4;
+    min-width: 200px;
     padding: 20px;
 }
 
@@ -48,7 +49,7 @@ pre {
     font-size: 1rem;
     letter-spacing: 2px;
     line-height: 1rem;
-    max-height: 300px;
+    max-height: 400px;
     max-width: 800px;
     overflow: auto;
     padding: 5px;
@@ -68,6 +69,7 @@ pre {
     grid-auto-columns: auto;
     grid-template-columns: repeat(10, 1fr);
     flex: 1;
+    min-width: 200px;
     padding: 20px;
 }
 

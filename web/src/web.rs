@@ -192,9 +192,7 @@ impl Renderable<Model> for Model {
                 <main>
                     <div id = "world">
                         { self.data() }
-                        <pre>
-                        { self.world.clone().unwrap_or_default() }
-                        </pre>
+                        { self.world() }
                         { self.status() }
                     </div>
                     <div id = "settings">
@@ -218,6 +216,14 @@ impl Renderable<Model> for Model {
 }
 
 impl Model {
+    fn world(&self) -> Html<Self> {
+        html! {
+            <pre>
+                { self.world.clone().unwrap_or_default() }
+            </pre>
+        }
+    }
+
     fn data(&self) -> Html<Self> {
         html! {
             <div id="data">
