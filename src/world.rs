@@ -102,9 +102,91 @@ pub trait Rule: Sized {
     );
 }
 
+/// 变换。旋转或翻转
+///
+/// 8 个不同的值，对应二面体群 D8 的 8 个元素。
+///
+/// `Id` 表示恒等变换。
+///
+/// `R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。
+///
+/// `F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。
+///
+/// 注意有些变换仅在世界是正方形时才有意义。
+#[derive(Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
+pub enum Transform {
+    Id,
+    Rotate90,
+    Rotate180,
+    Rotate270,
+    FlipRow,
+    FlipColumn,
+    FlipDiag,
+    FlipAntidiag,
+}
+
+impl FromStr for Transform {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Id" => Ok(Transform::Id),
+            "R90" => Ok(Transform::Rotate90),
+            "R180" => Ok(Transform::Rotate180),
+            "R270" => Ok(Transform::Rotate270),
+            "F|" => Ok(Transform::FlipRow),
+            "F-" => Ok(Transform::FlipColumn),
+            "F\\" => Ok(Transform::FlipDiag),
+            "F/" => Ok(Transform::FlipAntidiag),
+            _ => Err(String::from("invalid Transform")),
+        }
+    }
+}
+
+impl Debug for Transform {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        let s = match self {
+            Transform::Id => "Id",
+            Transform::Rotate90 => "R90",
+            Transform::Rotate180 => "R180",
+            Transform::Rotate270 => "R270",
+            Transform::FlipRow => "F|",
+            Transform::FlipColumn => "F-",
+            Transform::FlipDiag => "F\\",
+            Transform::FlipAntidiag => "F/",
+        };
+        write!(f, "{}", s)?;
+        Ok(())
+    }
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Transform::Id
+    }
+}
+
+impl Transform {
+    /// 此变换是否要求世界是正方形
+    pub fn square_world(self) -> bool {
+        match self {
+            Transform::Rotate90
+            | Transform::Rotate270
+            | Transform::FlipDiag
+            | Transform::FlipAntidiag => true,
+            _ => false,
+        }
+    }
+}
+
 /// 对称性
 ///
-/// 其含义和 Oscar Cunningham 的 Logic Life Search 一样。
+/// 10 个不同的值，对应二面体群 D8 的 10 个子群。
+///
+/// 这些符号的含义和 Oscar Cunningham 的 Logic Life Search 一样。
+///
+/// 注意有些对称性仅在世界是正方形时才有意义。
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum Symmetry {
@@ -165,6 +247,20 @@ impl Default for Symmetry {
     }
 }
 
+impl Symmetry {
+    /// 此对称性是否要求世界是正方形
+    pub fn square_world(self) -> bool {
+        match self {
+            Symmetry::C4
+            | Symmetry::D2Diag
+            | Symmetry::D2Antidiag
+            | Symmetry::D4Diag
+            | Symmetry::D8 => true,
+            _ => false,
+        }
+    }
+}
+
 /// 细胞的坐标
 ///
 /// （横座标，纵座标，时间）
@@ -207,6 +303,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
         (width, height, period): Coord,
         dx: isize,
         dy: isize,
+        transform: Transform,
         symmetry: Symmetry,
         rule: R,
         column_first: Option<bool>,
@@ -262,12 +359,12 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
             cell_count,
         };
 
-        world.init(dx, dy, symmetry);
+        world.init(dx, dy, transform, symmetry);
         world
     }
 
     /// 初始化整个世界
-    fn init(&mut self, dx: isize, dy: isize, symmetry: Symmetry) {
+    fn init(&mut self, dx: isize, dy: isize, transform: Transform, symmetry: Symmetry) {
         // 先设定细胞的邻域，以便后面 `set_cell`
         // 注意：对于范围边缘的细胞，邻域可能指向不存在的细胞！
         let neighbors = [
@@ -324,7 +421,17 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
                             cell.pred = pred.as_ref();
                         }
                     } else {
-                        let pred = self.find_cell((x - dx, y - dy, self.period - 1));
+                        let (new_x, new_y) = match transform {
+                            Transform::Id => (x, y),
+                            Transform::Rotate90 => (self.height - 1 - y, x),
+                            Transform::Rotate180 => (self.width - 1 - x, self.height - 1 - y),
+                            Transform::Rotate270 => (y, self.width - 1 - x),
+                            Transform::FlipRow => (self.width - 1 - x, y),
+                            Transform::FlipColumn => (x, self.height - 1 - y),
+                            Transform::FlipDiag => (y, x),
+                            Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
+                        };
+                        let pred = self.find_cell((new_x - dx, new_y - dy, self.period - 1));
                         if let Some(pred) = pred {
                             let pred: *const _ = pred;
                             unsafe {
@@ -344,7 +451,17 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
                             cell.succ = succ.as_ref();
                         }
                     } else {
-                        let succ = self.find_cell((x + dx, y + dy, 0));
+                        let (new_x, new_y) = match transform {
+                            Transform::Id => (x, y),
+                            Transform::Rotate90 => (y, self.width - 1 - x),
+                            Transform::Rotate180 => (self.width - 1 - x, self.height - 1 - y),
+                            Transform::Rotate270 => (self.height - 1 - y, x),
+                            Transform::FlipRow => (self.width - 1 - x, y),
+                            Transform::FlipColumn => (x, self.height - 1 - y),
+                            Transform::FlipDiag => (y, x),
+                            Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
+                        };
+                        let succ = self.find_cell((new_x + dx, new_y + dy, 0));
                         let succ: *const _ = if let Some(succ) = succ {
                             succ
                         } else {

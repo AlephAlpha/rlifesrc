@@ -86,6 +86,8 @@ impl SearchWindow {
         self.top_bar = self.window.subwin(1, win_x, 0, 0).unwrap();
         self.bottom_bar = self.window.subwin(1, win_x, win_y - 1, 0).unwrap();
         self.world_win = self.window.subwin(win_y - 2, win_x, 1, 0).unwrap();
+        self.top_bar.bkgdset(ColorPair(1));
+        self.bottom_bar.bkgdset(ColorPair(1));
     }
 
     fn quit(&self) -> bool {

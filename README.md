@@ -128,6 +128,16 @@ OPTIONS:
             详见 http://conwaylife.com/wiki/Symmetry
              [默认: C1]  [可能的值: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
+    -t, --transform <TRANSFORM>    
+            图样的变换
+            图样在一个周期之后如何变换（旋转或翻转）。每周期先进行此变换，再进行平移。
+            其中一些变换可能需要加上引号。
+            "Id" 表示恒等变换。
+            "R" (Rotate) 表示逆时针旋转。
+            "F" (Flip) 表示沿某轴线翻转。
+             [默认: Id]  [可能的值: Id, R90, R180, R270, F|, F-, F\, F/]
+
+
 ARGS:
     <X>
             图样的宽度
@@ -153,7 +163,11 @@ ARGS:
 
 网页版涉及到的参数和选项与此类似，不过是直接在网页中输入，并点击 “Set World” 确认。
 
-对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](http://conwaylife.com/wiki/Symmetry)。
+10 种不同的对称性，对应二面体群 D8 的 10 个子群。对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](http://conwaylife.com/wiki/Symmetry)。
+
+8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。`F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://www.conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
+
+注意有些变换和对称性要求世界是正方形。在网页版中，如果世界的宽和高不一致，这些变换和对称性将无法选取；如果已经选取了这样的变换或对称性，在更改宽或高时另一个值也会随之变化。
 
 搜索顺序中的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。
 

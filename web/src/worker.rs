@@ -2,7 +2,7 @@ use ca_rules::ParseBSRules;
 use rlifesrc_lib::rules::{isotropic, life};
 use rlifesrc_lib::NewState::Choose;
 use rlifesrc_lib::State::Alive;
-use rlifesrc_lib::{NewState, Search, Status, Symmetry, TraitSearch, World};
+use rlifesrc_lib::{NewState, Search, Status, Symmetry, TraitSearch, Transform, World};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::services::{Task, TimeoutService};
@@ -25,6 +25,7 @@ pub struct Props {
     pub period: isize,
     pub dx: isize,
     pub dy: isize,
+    pub transform: Transform,
     pub symmetry: Symmetry,
     #[props(required)]
     pub column_first: Option<bool>,
@@ -44,6 +45,7 @@ impl Default for Props {
             period: 4,
             dx: 0,
             dy: 1,
+            transform: Transform::Id,
             symmetry: Symmetry::C1,
             column_first: None,
             new_state: Choose(Alive),
@@ -142,6 +144,7 @@ impl Agent for Worker {
             (props.width, props.height, props.period),
             props.dx,
             props.dy,
+            props.transform,
             props.symmetry,
             rule,
             props.column_first,
@@ -193,6 +196,7 @@ impl Agent for Worker {
                         dimensions,
                         props.dx,
                         props.dy,
+                        props.transform,
                         props.symmetry,
                         rule,
                         props.column_first,
@@ -205,6 +209,7 @@ impl Agent for Worker {
                         dimensions,
                         props.dx,
                         props.dy,
+                        props.transform,
                         props.symmetry,
                         rule,
                         props.column_first,

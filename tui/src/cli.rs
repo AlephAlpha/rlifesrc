@@ -1,11 +1,10 @@
 use crate::tui::search_with_tui;
 use ca_rules::ParseBSRules;
-use clap::AppSettings::AllowNegativeNumbers;
-use clap::{App, Arg};
+use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::rules::{isotropic, life};
 use rlifesrc_lib::NewState::{Choose, Random, Smart};
 use rlifesrc_lib::State::{Alive, Dead};
-use rlifesrc_lib::{Search, Status, TraitSearch, World};
+use rlifesrc_lib::{Search, Status, Symmetry, TraitSearch, Transform, World};
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
@@ -20,8 +19,9 @@ pub struct Args {
 
 pub fn parse_args() -> Option<Args> {
     let app = App::new("rlifesrc")
+        .about("Searching for patterns in Conway's Game of Life")
         .version("0.1.0")
-        .setting(AllowNegativeNumbers)
+        .settings(&[AppSettings::AllowNegativeNumbers, AppSettings::ColoredHelp])
         .arg(
             Arg::with_name("X")
                 .help("Width of the pattern")
@@ -76,21 +76,39 @@ pub fn parse_args() -> Option<Args> {
                 .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
         )
         .arg(
+            Arg::with_name("TRANSFORM")
+                .help("Transformation of the pattern")
+                .long_help(
+                    "Transformation of the pattern\n\
+                     How the pattern transform after a period. It will apply this transformation \
+                     before the translation.\n\
+                     You may need to add quotation marks for some of the transformations.\n\
+                     \"Id\" is the identical transformation.\n\
+                     \"R\" means counterclockwise rotation.\n\
+                     \"F\" means flipping (reflection) across an axis.\n",
+                )
+                .short("t")
+                .long("transform")
+                .takes_value(true)
+                .possible_values(&["Id", "R90", "R180", "R270", "F|", "F-", "F\\", "F/"])
+                .default_value("Id"),
+        )
+        .arg(
             Arg::with_name("SYMMETRY")
                 .help("Symmetry of the pattern")
                 .long_help(
                     "Symmetry of the pattern\n\
                      You may need to add quotation marks for some of the symmetries.\n\
                      The usages of these symmetries are the same as Oscar Cunningham's \
-                     Logic Life Search.\nSee http://conwaylife.com/wiki/Symmetry.\n",
+                     Logic Life Search.\nSee http://conwaylife.com/wiki/Symmetry \n",
                 )
                 .short("s")
                 .long("symmetry")
+                .takes_value(true)
                 .possible_values(&[
                     "C1", "C2", "C4", "D2|", "D2-", "D2\\", "D2/", "D4+", "D4X", "D8",
                 ])
-                .default_value("C1")
-                .takes_value(true),
+                .default_value("C1"),
         )
         .arg(
             Arg::with_name("RULE")
@@ -101,8 +119,8 @@ pub fn parse_args() -> Option<Args> {
                 )
                 .short("r")
                 .long("rule")
-                .default_value("B3/S23")
                 .takes_value(true)
+                .default_value("B3/S23")
                 .validator(|d| {
                     isotropic::Life::parse_rule(&d)
                         .map(|_| ())
@@ -118,9 +136,9 @@ pub fn parse_args() -> Option<Args> {
                 )
                 .short("o")
                 .long("order")
+                .takes_value(true)
                 .possible_values(&["row", "column", "automatic", "r", "c", "a"])
-                .default_value("automatic")
-                .takes_value(true),
+                .default_value("automatic"),
         )
         .arg(
             Arg::with_name("CHOOSE")
@@ -132,9 +150,9 @@ pub fn parse_args() -> Option<Args> {
                 )
                 .short("c")
                 .long("choose")
+                .takes_value(true)
                 .possible_values(&["dead", "alive", "random", "smart", "d", "a", "r", "s"])
-                .default_value("dead")
-                .takes_value(true),
+                .default_value("dead"),
         )
         .arg(
             Arg::with_name("MAX")
@@ -145,8 +163,8 @@ pub fn parse_args() -> Option<Args> {
                 )
                 .short("m")
                 .long("max")
-                .default_value("0")
                 .takes_value(true)
+                .default_value("0")
                 .validator(|d| d.parse::<u32>().map(|_| ()).map_err(|e| e.to_string())),
         )
         .arg(
@@ -157,7 +175,8 @@ pub fn parse_args() -> Option<Args> {
                      Only useful when --no-tui is set.\n",
                 )
                 .short("a")
-                .long("all"),
+                .long("all")
+                .requires("NOTUI"),
         )
         .arg(
             Arg::with_name("RESET")
@@ -182,7 +201,32 @@ pub fn parse_args() -> Option<Args> {
     let dx = matches.value_of("DX").unwrap().parse().unwrap();
     let dy = matches.value_of("DY").unwrap().parse().unwrap();
 
-    let symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
+    let transform: Transform = matches.value_of("TRANSFORM").unwrap().parse().unwrap();
+    let symmetry: Symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
+
+    if width != height {
+        if transform.square_world() {
+            let error = Error::with_description(
+                &format!(
+                    "The transformation '{:?}' is only valid for square worlds",
+                    transform
+                ),
+                ErrorKind::InvalidValue,
+            );
+            error.exit();
+        }
+        if symmetry.square_world() {
+            let error = Error::with_description(
+                &format!(
+                    "The symmetry '{:?}' is only valid for square worlds",
+                    symmetry
+                ),
+                ErrorKind::InvalidValue,
+            );
+            error.exit();
+        }
+    }
+
     let all = matches.is_present("ALL");
     let reset = matches.is_present("RESET");
     let no_tui = matches.is_present("NOTUI");
@@ -207,7 +251,7 @@ pub fn parse_args() -> Option<Args> {
     let rule_string = &matches.value_of("RULE").unwrap();
 
     if let Ok(rule) = life::Life::parse_rule(rule_string) {
-        let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
+        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
             search,
@@ -216,7 +260,7 @@ pub fn parse_args() -> Option<Args> {
             reset,
         })
     } else if let Ok(rule) = isotropic::Life::parse_rule(rule_string) {
-        let world = World::new(dimensions, dx, dy, symmetry, rule, column_first);
+        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
             search,

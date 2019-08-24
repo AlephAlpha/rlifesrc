@@ -1,7 +1,7 @@
 use crate::worker::{Props, Request, Response, Worker};
 use rlifesrc_lib::NewState::{Choose, Random, Smart};
 use rlifesrc_lib::State::{Alive, Dead};
-use rlifesrc_lib::{NewState, Status, Symmetry};
+use rlifesrc_lib::{NewState, Status, Symmetry, Transform};
 use std::time::Duration;
 use yew::html;
 use yew::html::ChangeData;
@@ -32,8 +32,9 @@ pub enum Msg {
     SetPeriod(isize),
     SetDx(isize),
     SetDy(isize),
-    SetRule(String),
+    SetTrans(Transform),
     SetSym(Symmetry),
+    SetRule(String),
     SetOrder(Option<bool>),
     SetChoose(NewState),
     SetMax(Option<u32>),
@@ -114,9 +115,15 @@ impl Component for Model {
             }
             Msg::SetWidth(width) => {
                 self.props.width = width;
+                if self.props.transform.square_world() || self.props.symmetry.square_world() {
+                    self.props.height = width;
+                }
             }
             Msg::SetHeight(height) => {
                 self.props.height = height;
+                if self.props.transform.square_world() || self.props.symmetry.square_world() {
+                    self.props.width = height;
+                }
             }
             Msg::SetPeriod(period) => {
                 self.props.period = period;
@@ -127,11 +134,14 @@ impl Component for Model {
             Msg::SetDy(dy) => {
                 self.props.dy = dy;
             }
-            Msg::SetRule(rule_string) => {
-                self.props.rule_string = rule_string;
+            Msg::SetTrans(transform) => {
+                self.props.transform = transform;
             }
             Msg::SetSym(symmetry) => {
                 self.props.symmetry = symmetry;
+            }
+            Msg::SetRule(rule_string) => {
+                self.props.rule_string = rule_string;
             }
             Msg::SetOrder(column_first) => {
                 self.props.column_first = column_first;
@@ -204,8 +214,9 @@ impl Renderable<Model> for Model {
                         { self.set_period() }
                         { self.set_dx() }
                         { self.set_dy() }
-                        { self.set_max() }
+                        { self.set_trans() }
                         { self.set_sym() }
+                        { self.set_max() }
                         { self.set_order() }
                         { self.set_choose() }
                     </div>
@@ -494,6 +505,57 @@ impl Model {
         }
     }
 
+    fn set_trans(&self) -> Html<Self> {
+        html! {
+            <div class = "setting">
+                <label for = "set_trans">
+                    <abbr title = "How the pattern transform after a period. \
+                    It will apply this transformation before the translation.">
+                    { "Trans" }
+                    </abbr>
+                    { ":" }
+                </label>
+                <select
+                    id = "set_trans",
+                    onchange = |e| {
+                        if let ChangeData::Select(s) = e {
+                            match s.raw_value().as_ref() {
+                                "Id" => Msg::SetTrans(Transform::Id),
+                                "Rotate 90°" => Msg::SetTrans(Transform::Rotate90),
+                                "Rotate 180°" => Msg::SetTrans(Transform::Rotate180),
+                                "Rotate 270°" => Msg::SetTrans(Transform::Rotate270),
+                                "Flip |" => Msg::SetTrans(Transform::FlipRow),
+                                "Flip -" => Msg::SetTrans(Transform::FlipColumn),
+                                "Flip \\" => Msg::SetTrans(Transform::FlipDiag),
+                                "Flip /" => Msg::SetTrans(Transform::FlipAntidiag),
+                                _ => Msg::None,
+                            }
+                        } else {
+                            Msg::None
+                        }
+                    },
+                >
+                    <option> { "Id" } </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "Rotate 90°" }
+                    </option>
+                    <option> { "Rotate 180°" } </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "Rotate 270°" }
+                    </option>
+                    <option> { "Flip |" } </option>
+                    <option> { "Flip -" } </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "Flip \\" }
+                    </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "Flip /" }
+                    </option>
+                </select>
+            </div>
+        }
+    }
+
     fn set_sym(&self) -> Html<Self> {
         html! {
             <div class = "setting">
@@ -527,14 +589,24 @@ impl Model {
                 >
                     <option> { "C1" } </option>
                     <option> { "C2" } </option>
-                    <option> { "C4" } </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "C4" }
+                    </option>
                     <option> { "D2|" } </option>
                     <option> { "D2-" } </option>
-                    <option> { "D2\\" } </option>
-                    <option> { "D2/" } </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "D2\\" }
+                    </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "D2/" }
+                    </option>
                     <option> { "D4+" } </option>
-                    <option> { "D4X" } </option>
-                    <option> { "D8" } </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "D4X" }
+                    </option>
+                    <option disabled = self.props.width != self.props.height>
+                        { "D8" }
+                    </option>
                 </select>
             </div>
         }
