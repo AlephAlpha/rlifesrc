@@ -8,38 +8,30 @@ use std::time::Duration;
 use yew::services::{Task, TimeoutService};
 use yew::worker::*;
 use yew::Callback;
-use yew::Properties;
 
 // 这部份的很多写法是照抄 yew 自带的范例
 // https://github.com/DenisKolodin/yew
 
 const VIEW_FREQ: u32 = 10000;
 
-#[derive(Clone, Debug, PartialEq, Properties, Serialize, Deserialize)]
-pub struct Props {
-    #[props(required)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Data {
     pub width: isize,
-    #[props(required)]
     pub height: isize,
-    #[props(required)]
     pub period: isize,
     pub dx: isize,
     pub dy: isize,
     pub transform: Transform,
     pub symmetry: Symmetry,
-    #[props(required)]
     pub column_first: Option<bool>,
-    #[props(required)]
     pub new_state: NewState,
-    #[props(required)]
     pub max_cell_count: Option<u32>,
-    #[props(required)]
     pub rule_string: String,
 }
 
-impl Default for Props {
+impl Default for Data {
     fn default() -> Self {
-        Props {
+        Data {
             width: 26,
             height: 8,
             period: 4,
@@ -98,7 +90,7 @@ pub struct Worker {
 pub enum Request {
     Start,
     Pause,
-    SetWorld(Props),
+    SetWorld(Data),
     DisplayGen(isize),
 }
 
@@ -138,18 +130,18 @@ impl Agent for Worker {
     type Output = Response;
 
     fn create(link: AgentLink<Self>) -> Self {
-        let props: Props = Default::default();
-        let rule = life::Life::parse_rule(&props.rule_string).unwrap();
+        let data: Data = Default::default();
+        let rule = life::Life::parse_rule(&data.rule_string).unwrap();
         let world = World::new(
-            (props.width, props.height, props.period),
-            props.dx,
-            props.dy,
-            props.transform,
-            props.symmetry,
+            (data.width, data.height, data.period),
+            data.dx,
+            data.dy,
+            data.transform,
+            data.symmetry,
             rule,
-            props.column_first,
+            data.column_first,
         );
-        let search = Box::new(Search::new(world, props.new_state, props.max_cell_count));
+        let search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
 
         let status = Status::Paused;
         let job = Job::new(&link);
@@ -187,35 +179,33 @@ impl Agent for Worker {
                 self.status = Status::Paused;
                 self.update_status(id);
             }
-            Request::SetWorld(props) => {
+            Request::SetWorld(data) => {
                 self.job.stop();
                 self.status = Status::Paused;
-                let dimensions = (props.width, props.height, props.period);
-                if let Ok(rule) = life::Life::parse_rule(&props.rule_string) {
+                let dimensions = (data.width, data.height, data.period);
+                if let Ok(rule) = life::Life::parse_rule(&data.rule_string) {
                     let world = World::new(
                         dimensions,
-                        props.dx,
-                        props.dy,
-                        props.transform,
-                        props.symmetry,
+                        data.dx,
+                        data.dy,
+                        data.transform,
+                        data.symmetry,
                         rule,
-                        props.column_first,
+                        data.column_first,
                     );
-                    self.search =
-                        Box::new(Search::new(world, props.new_state, props.max_cell_count));
+                    self.search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
                     self.update_world(id, 0);
-                } else if let Ok(rule) = isotropic::Life::parse_rule(&props.rule_string) {
+                } else if let Ok(rule) = isotropic::Life::parse_rule(&data.rule_string) {
                     let world = World::new(
                         dimensions,
-                        props.dx,
-                        props.dy,
-                        props.transform,
-                        props.symmetry,
+                        data.dx,
+                        data.dy,
+                        data.transform,
+                        data.symmetry,
                         rule,
-                        props.column_first,
+                        data.column_first,
                     );
-                    self.search =
-                        Box::new(Search::new(world, props.new_state, props.max_cell_count));
+                    self.search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
                     self.update_world(id, 0);
                 } else {
                     self.link.response(id, Response::InvalidRule);

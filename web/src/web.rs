@@ -1,4 +1,4 @@
-use crate::worker::{Props, Request, Response, Worker};
+use crate::worker::{Data, Request, Response, Worker};
 use rlifesrc_lib::NewState::{Choose, Random, Smart};
 use rlifesrc_lib::State::{Alive, Dead};
 use rlifesrc_lib::{NewState, Status, Symmetry, Transform};
@@ -12,7 +12,7 @@ use yew::*;
 // https://github.com/DenisKolodin/yew
 
 pub struct Model {
-    props: Props,
+    data: Data,
     status: Status,
     gen: isize,
     cells: u32,
@@ -77,16 +77,17 @@ impl Job {
 
 impl Component for Model {
     type Message = Msg;
-    type Properties = Props;
+    type Properties = ();
 
-    fn create(props: Self::Properties, mut link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
+        let data = Default::default();
         let status = Status::Paused;
         let job = Job::new(&mut link);
         let callback = link.send_back(Msg::DataReceived);
         let worker = Worker::bridge(callback);
 
         Model {
-            props,
+            data,
             status,
             gen: 0,
             cells: 0,
@@ -114,48 +115,48 @@ impl Component for Model {
                 self.worker.send(Request::DisplayGen(self.gen));
             }
             Msg::SetWidth(width) => {
-                self.props.width = width;
-                if self.props.transform.square_world() || self.props.symmetry.square_world() {
-                    self.props.height = width;
+                self.data.width = width;
+                if self.data.transform.square_world() || self.data.symmetry.square_world() {
+                    self.data.height = width;
                 }
             }
             Msg::SetHeight(height) => {
-                self.props.height = height;
-                if self.props.transform.square_world() || self.props.symmetry.square_world() {
-                    self.props.width = height;
+                self.data.height = height;
+                if self.data.transform.square_world() || self.data.symmetry.square_world() {
+                    self.data.width = height;
                 }
             }
             Msg::SetPeriod(period) => {
-                self.props.period = period;
+                self.data.period = period;
             }
             Msg::SetDx(dx) => {
-                self.props.dx = dx;
+                self.data.dx = dx;
             }
             Msg::SetDy(dy) => {
-                self.props.dy = dy;
+                self.data.dy = dy;
             }
             Msg::SetTrans(transform) => {
-                self.props.transform = transform;
+                self.data.transform = transform;
             }
             Msg::SetSym(symmetry) => {
-                self.props.symmetry = symmetry;
+                self.data.symmetry = symmetry;
             }
             Msg::SetRule(rule_string) => {
-                self.props.rule_string = rule_string;
+                self.data.rule_string = rule_string;
             }
             Msg::SetOrder(column_first) => {
-                self.props.column_first = column_first;
+                self.data.column_first = column_first;
             }
             Msg::SetChoose(new_state) => {
-                self.props.new_state = new_state;
+                self.data.new_state = new_state;
             }
             Msg::SetMax(max_cell_count) => {
-                self.props.max_cell_count = max_cell_count;
+                self.data.max_cell_count = max_cell_count;
             }
             Msg::Reset => {
                 self.gen = 0;
-                self.period = Some(self.props.period);
-                self.worker.send(Request::SetWorld(self.props.clone()));
+                self.period = Some(self.data.period);
+                self.worker.send(Request::SetWorld(self.data.clone()));
             }
             Msg::DataReceived(response) => match response {
                 Response::UpdateWorld((world, cells)) => {
@@ -329,7 +330,7 @@ impl Model {
                 <input
                     id = "set_rule",
                     type = "text",
-                    value = self.props.rule_string.clone(),
+                    value = self.data.rule_string.clone(),
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetRule(v)
@@ -354,7 +355,7 @@ impl Model {
                 <input
                     id = "set_width",
                     type = "number",
-                    value = self.props.width,
+                    value = self.data.width,
                     min = "1",
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
@@ -380,7 +381,7 @@ impl Model {
                 <input
                     id = "set_height",
                     type = "number",
-                    value = self.props.height,
+                    value = self.data.height,
                     min = "1",
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
@@ -406,7 +407,7 @@ impl Model {
                 <input
                     id = "set_period",
                     type = "number",
-                    value = self.props.period,
+                    value = self.data.period,
                     min = "1",
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
@@ -432,7 +433,7 @@ impl Model {
                 <input
                     id = "set_dx",
                     type = "number",
-                    value = self.props.dx,
+                    value = self.data.dx,
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetDx(v.parse().unwrap())
@@ -457,7 +458,7 @@ impl Model {
                 <input
                     id = "set_dy",
                     type = "number",
-                    value = self.props.dy,
+                    value = self.data.dy,
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetDy(v.parse().unwrap())
@@ -483,7 +484,7 @@ impl Model {
                 <input
                     id = "set_max",
                     type = "number",
-                    value = match self.props.max_cell_count {
+                    value = match self.data.max_cell_count {
                         None => 0,
                         Some(i) => i,
                     },
@@ -536,19 +537,19 @@ impl Model {
                     },
                 >
                     <option> { "Id" } </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "Rotate 90°" }
                     </option>
                     <option> { "Rotate 180°" } </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "Rotate 270°" }
                     </option>
                     <option> { "Flip |" } </option>
                     <option> { "Flip -" } </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "Flip \\" }
                     </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "Flip /" }
                     </option>
                 </select>
@@ -589,22 +590,22 @@ impl Model {
                 >
                     <option> { "C1" } </option>
                     <option> { "C2" } </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "C4" }
                     </option>
                     <option> { "D2|" } </option>
                     <option> { "D2-" } </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "D2\\" }
                     </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "D2/" }
                     </option>
                     <option> { "D4+" } </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "D4X" }
                     </option>
-                    <option disabled = self.props.width != self.props.height>
+                    <option disabled = self.data.width != self.data.height>
                         { "D8" }
                     </option>
                 </select>
