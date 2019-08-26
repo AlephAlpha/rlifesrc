@@ -10,9 +10,9 @@ use yew::worker::*;
 use yew::Callback;
 
 // 这部份的很多写法是照抄 yew 自带的范例
-// https://github.com/DenisKolodin/yew
+// https://github.com/yewstack/yew
 
-const VIEW_FREQ: u32 = 10000;
+const VIEW_FREQ: u32 = 20000;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Data {
@@ -56,7 +56,7 @@ struct Job {
 impl Job {
     fn new(link: &AgentLink<Worker>) -> Self {
         let timeout = TimeoutService::new();
-        let callback = link.send_back(|_| Msg::Step);
+        let callback = link.send_back(|_| Step);
         let task = None;
         Job {
             timeout,
@@ -105,15 +105,14 @@ pub enum Response {
 
 impl Transferable for Response {}
 
-pub enum Msg {
-    Step,
-}
+pub struct Step;
 
 impl Worker {
     fn update_world(&mut self, id: HandlerId, gen: isize) {
         let world = self.search.display_gen(gen);
+        let count = self.search.cell_count();
         self.link
-            .response(id, Response::UpdateWorld((world, self.search.cell_count())));
+            .response(id, Response::UpdateWorld((world, count)));
         self.update_status(id);
     }
 
@@ -125,7 +124,7 @@ impl Worker {
 
 impl Agent for Worker {
     type Reach = Public;
-    type Message = Msg;
+    type Message = Step;
     type Input = Request;
     type Output = Response;
 
@@ -154,16 +153,12 @@ impl Agent for Worker {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) {
-        match msg {
-            Msg::Step => {
-                if let Status::Searching = self.status {
-                    self.status = self.search.search(Some(VIEW_FREQ));
-                    self.job.start();
-                } else {
-                    self.job.stop();
-                }
-            }
+    fn update(&mut self, _msg: Self::Message) {
+        if let Status::Searching = self.status {
+            self.status = self.search.search(Some(VIEW_FREQ));
+            self.job.start();
+        } else {
+            self.job.stop();
         }
     }
 

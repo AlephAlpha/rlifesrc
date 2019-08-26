@@ -9,15 +9,15 @@ use yew::services::{DialogService, IntervalService, Task};
 use yew::*;
 
 // 这部份的很多写法是照抄 yew 自带的范例
-// https://github.com/DenisKolodin/yew
+// https://github.com/yewstack/yew
 
 pub struct Model {
     data: Data,
     status: Status,
     gen: isize,
     cells: u32,
-    world: Option<String>,
-    period: Option<isize>,
+    world: String,
+    period: isize,
     worker: Box<dyn Bridge<Worker>>,
     job: Job,
 }
@@ -80,19 +80,31 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let data = Default::default();
+        let data: Data = Default::default();
         let status = Status::Paused;
         let job = Job::new(&mut link);
         let callback = link.send_back(Msg::DataReceived);
         let worker = Worker::bridge(callback);
+
+        let world = String::from(
+            "??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????",
+        );
+        let period = data.period;
 
         Model {
             data,
             status,
             gen: 0,
             cells: 0,
-            world: None,
-            period: None,
+            world,
+            period,
             worker,
             job,
         }
@@ -155,12 +167,12 @@ impl Component for Model {
             }
             Msg::Reset => {
                 self.gen = 0;
-                self.period = Some(self.data.period);
+                self.period = self.data.period;
                 self.worker.send(Request::SetWorld(self.data.clone()));
             }
             Msg::DataReceived(response) => match response {
                 Response::UpdateWorld((world, cells)) => {
-                    self.world = Some(world);
+                    self.world = world;
                     self.cells = cells;
                 }
                 Response::UpdateStatus(status) => {
@@ -192,7 +204,10 @@ impl Renderable<Model> for Model {
             <div id = "rlifesrc">
                 <header>
                     <h1>
-                        <a href = "https://github.com/AlephAlpha/rlifesrc/">
+                        <a
+                            href = "https://github.com/AlephAlpha/rlifesrc/"
+                            title = "Fork me on GitHub"
+                        >
                             { "rlifesrc" }
                         </a>
                     </h1>
@@ -231,7 +246,7 @@ impl Model {
     fn world(&self) -> Html<Self> {
         html! {
             <pre>
-                { self.world.clone().unwrap_or_default() }
+                { self.world.clone() }
             </pre>
         }
     }
@@ -275,19 +290,19 @@ impl Model {
         html! {
             <div id = "buttons">
                 <button
-                    onclick = |_| Msg::Start,
+                    onclick = |_| Msg::Start
                     disabled = self.status == Status::Searching
                 >
                     { "Start" }
                 </button>
                 <button
-                    onclick = |_| Msg::Pause,
+                    onclick = |_| Msg::Pause
                     disabled = self.status != Status::Searching
                 >
                     { "Pause" }
                 </button>
                 <button
-                    onclick = |_| Msg::Reset,
+                    onclick = |_| Msg::Reset
                     title = "Reset the world"
                 >
                     { "Set World" }
@@ -306,11 +321,11 @@ impl Model {
                     { ":" }
                 </label>
                 <input
-                    id = "set_gen",
-                    type = "range",
-                    value = self.gen,
-                    min = "0",
-                    max = self.period.unwrap_or(1) - 1,
+                    id = "set_gen"
+                    type = "range"
+                    value = self.gen
+                    min = "0"
+                    max = self.period - 1
                     oninput = |e| Msg::SetGen(e.value.parse().unwrap())
                 />
             </div>
@@ -328,16 +343,16 @@ impl Model {
                     { ":" }
                 </label>
                 <input
-                    id = "set_rule",
-                    type = "text",
-                    value = self.data.rule_string.clone(),
+                    id = "set_rule"
+                    type = "text"
+                    value = self.data.rule_string.clone()
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetRule(v)
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 />
             </div>
         }
@@ -353,17 +368,17 @@ impl Model {
                     { ":" }
                 </label>
                 <input
-                    id = "set_width",
-                    type = "number",
-                    value = self.data.width,
-                    min = "1",
+                    id = "set_width"
+                    type = "number"
+                    value = self.data.width
+                    min = "1"
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetWidth(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 />
             </div>
         }
@@ -379,17 +394,17 @@ impl Model {
                     { ":" }
                 </label>
                 <input
-                    id = "set_height",
-                    type = "number",
-                    value = self.data.height,
-                    min = "1",
+                    id = "set_height"
+                    type = "number"
+                    value = self.data.height
+                    min = "1"
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetHeight(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 />
             </div>
         }
@@ -405,17 +420,17 @@ impl Model {
                     { ":" }
                 </label>
                 <input
-                    id = "set_period",
-                    type = "number",
-                    value = self.data.period,
-                    min = "1",
+                    id = "set_period"
+                    type = "number"
+                    value = self.data.period
+                    min = "1"
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetPeriod(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 />
             </div>
         }
@@ -431,16 +446,16 @@ impl Model {
                     { ":" }
                 </label>
                 <input
-                    id = "set_dx",
-                    type = "number",
-                    value = self.data.dx,
+                    id = "set_dx"
+                    type = "number"
+                    value = self.data.dx
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetDx(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 />
             </div>
         }
@@ -456,9 +471,9 @@ impl Model {
                     { ":" }
                 </label>
                 <input
-                    id = "set_dy",
-                    type = "number",
-                    value = self.data.dy,
+                    id = "set_dy"
+                    type = "number"
+                    value = self.data.dy
                     onchange = |e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetDy(v.parse().unwrap())
@@ -500,7 +515,7 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 />
             </div>
         }
@@ -517,7 +532,7 @@ impl Model {
                     { ":" }
                 </label>
                 <select
-                    id = "set_trans",
+                    id = "set_trans"
                     onchange = |e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
@@ -534,7 +549,7 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 >
                     <option> { "Id" } </option>
                     <option disabled = self.data.width != self.data.height>
@@ -567,7 +582,7 @@ impl Model {
                     { ":" }
                 </label>
                 <select
-                    id = "set_sym",
+                    id = "set_sym"
                     onchange = |e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
@@ -586,7 +601,7 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 >
                     <option> { "C1" } </option>
                     <option> { "C2" } </option>
@@ -623,7 +638,7 @@ impl Model {
                     { ":" }
                 </label>
                 <select
-                    id = "set_order",
+                    id = "set_order"
                     onchange = |e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
@@ -635,7 +650,7 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 >
                     <option> { "Automatic" } </option>
                     <option value = "Column"> { "Column first" } </option>
@@ -657,7 +672,7 @@ impl Model {
                     { ":" }
                 </label>
                 <select
-                    id = "set_order",
+                    id = "set_order"
                     onchange = |e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
@@ -670,7 +685,7 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    },
+                    }
                 >
                     <option> { "Alive" } </option>
                     <option> { "Dead" } </option>
