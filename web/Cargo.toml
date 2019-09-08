@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ca-rules = "0.1.0"
+ca-rules = "0.2.0"
 rlifesrc-lib = { path = "../", features = ["stdweb"] }
 serde = { version = "1.0.99", features = ["derive"] }
 yew = "0.8.0"

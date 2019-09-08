@@ -1,4 +1,4 @@
-use ca_rules::ParseBSRules;
+use ca_rules::{ParseLife, ParseNtLife};
 use rlifesrc_lib::rules::{isotropic, life};
 use rlifesrc_lib::NewState::Choose;
 use rlifesrc_lib::State::Alive;

@@ -1,5 +1,5 @@
 use crate::tui::search_with_tui;
-use ca_rules::ParseBSRules;
+use ca_rules::{ParseLife, ParseNtLife};
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::rules::{isotropic, life};
 use rlifesrc_lib::NewState::{Choose, Random, Smart};
