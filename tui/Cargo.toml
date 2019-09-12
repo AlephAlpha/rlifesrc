@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ca-rules = "0.2.0"
 rlifesrc-lib = { path = "../" }
 clap = "2.33.0"
 pancurses = "0.16.1"

@@ -1,5 +1,4 @@
-use ca_rules::{ParseLife, ParseNtLife};
-use rlifesrc_lib::rules::{isotropic, life};
+use rlifesrc_lib::rules::{isotropic, life, ParseLife, ParseNtLife};
 use rlifesrc_lib::NewState::Choose;
 use rlifesrc_lib::State::Alive;
 use rlifesrc_lib::{NewState, Search, Status, Symmetry, TraitSearch, Transform, World};

@@ -1,7 +1,6 @@
 use crate::tui::search_with_tui;
-use ca_rules::{ParseLife, ParseNtLife};
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
-use rlifesrc_lib::rules::{isotropic, life};
+use rlifesrc_lib::rules::{isotropic, life, ParseLife, ParseNtLife};
 use rlifesrc_lib::NewState::{Choose, Random, Smart};
 use rlifesrc_lib::State::{Alive, Dead};
 use rlifesrc_lib::{Search, Status, Symmetry, TraitSearch, Transform, World};

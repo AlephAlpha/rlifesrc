@@ -466,7 +466,7 @@ impl Model {
             <div class = "setting">
                 <label for = "set_dy">
                     <abbr title = "Vertical translation.">
-                    { "dx" }
+                    { "dy" }
                     </abbr>
                     { ":" }
                 </label>
