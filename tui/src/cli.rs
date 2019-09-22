@@ -1,8 +1,7 @@
 use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
-    life::{self, ParseLife},
-    ntlife::{self, ParseNtLife},
+    rules::{Life, NtLife},
     NewState::{Choose, Random, Smart},
     State::{Alive, Dead},
 };
@@ -123,11 +122,7 @@ pub fn parse_args() -> Option<Args> {
                 .long("rule")
                 .takes_value(true)
                 .default_value("B3/S23")
-                .validator(|d| {
-                    ntlife::Life::parse_rule(&d)
-                        .map(|_| ())
-                        .map_err(|e| e.to_string())
-                }),
+                .validator(|d| NtLife::parse_rule(&d).map(|_| ())),
         )
         .arg(
             Arg::with_name("ORDER")
@@ -252,7 +247,7 @@ pub fn parse_args() -> Option<Args> {
 
     let rule_string = &matches.value_of("RULE").unwrap();
 
-    if let Ok(rule) = life::Life::parse_rule(rule_string) {
+    if let Ok(rule) = Life::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {
@@ -261,7 +256,7 @@ pub fn parse_args() -> Option<Args> {
             no_tui,
             reset,
         })
-    } else if let Ok(rule) = ntlife::Life::parse_rule(rule_string) {
+    } else if let Ok(rule) = NtLife::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {

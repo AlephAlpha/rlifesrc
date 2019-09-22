@@ -2,7 +2,7 @@
 
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
-    rules::{Desc, Rule},
+    rules::Rule,
 };
 use std::{
     cell::Cell,
@@ -13,7 +13,7 @@ use std::{
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
 
-impl<'a, D: Desc> LifeCell<'a, D> {
+impl<'a, R: Rule> LifeCell<'a, R> {
     /// Generate a new cell with state `state`, such that its neighborhood
     /// descriptor says that all neighboring cells also have the same state.
     ///
@@ -21,7 +21,7 @@ impl<'a, D: Desc> LifeCell<'a, D> {
     fn new(state: State) -> Self {
         LifeCell {
             state: Cell::new(Some(state)),
-            desc: Cell::new(D::new(Some(state))),
+            desc: Cell::new(R::new_desc(Some(state))),
             ..Default::default()
         }
     }
@@ -40,7 +40,7 @@ impl<'a, D: Desc> LifeCell<'a, D> {
 /// `F` means reflections (flips).
 /// The symbol after it is the axis of reflection.
 ///
-/// The transformation is applied _after_ the translation.
+/// The transformation is applied _before_ the translation.
 ///
 /// Some of the transformations are only valid when the world is square.
 #[derive(Clone, Copy, PartialEq)]
@@ -270,20 +270,20 @@ impl Symmetry {
 pub type Coord = (isize, isize, isize);
 
 /// The world.
-pub struct World<'a, D: Desc, R: 'a + Rule<Desc = D>> {
+pub struct World<'a, R: Rule> {
     /// Width.
-    pub width: isize,
+    pub(crate) width: isize,
     /// Height.
-    pub height: isize,
+    pub(crate) height: isize,
     /// Period.
-    pub period: isize,
+    pub(crate) period: isize,
     /// The rule of the cellular automaton.
-    pub rule: R,
+    pub(crate) rule: R,
 
     /// Search order. Whether the search starts from columns.
     ///
     /// Automatically determined by the width and the height of the world.
-    pub column_first: bool,
+    pub(crate) column_first: bool,
 
     /// A vector that stores all the cells in the search range.
     ///
@@ -292,20 +292,30 @@ pub struct World<'a, D: Desc, R: 'a + Rule<Desc = D>> {
     // So the unsafe code below is actually safe.
     //
     // TODO: wrap it with a `std::pin::Pin`.
-    cells: Vec<LifeCell<'a, D>>,
+    cells: Vec<LifeCell<'a, R>>,
 
     /// A shared dead cell outside the search range.
     ///
     /// If the next generation of a cell is out of the search range,
     /// its `succ` would be this `dead_cell`.
-    dead_cell: LifeCell<'a, D>,
+    dead_cell: LifeCell<'a, R>,
 
     /// Number of known living cells in the first generation.
-    pub cell_count: Cell<u32>,
+    pub(crate) cell_count: Cell<u32>,
 }
 
-impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
+impl<'a, R: Rule> World<'a, R> {
     /// Create a new world.
+    ///
+    /// The pattern has size `(width, height, period)`
+    /// and symmetry `symmetry`.
+    /// In rules that contain `B0`, cells outside the search range are
+    /// considered `Dead` in even generations, `Alive` in odd generations.
+    /// In other rules, all cells outside the search range are `Dead`.
+    ///
+    /// In a period, the pattern would transforms according to `transform`,
+    /// and translates `(dx, dy)`.
+    /// The transformation is applied _before_ the translation.
     pub fn new(
         (width, height, period): Coord,
         dx: isize,
@@ -553,7 +563,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
     }
 
     /// Finds a cell by its coordinates. Returns a reference.
-    fn find_cell(&self, coord: Coord) -> Option<&LifeCell<'a, D>> {
+    fn find_cell(&self, coord: Coord) -> Option<&LifeCell<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = if self.column_first {
@@ -568,7 +578,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
     }
 
     /// Finds a cell by its coordinates. Returns a mutable reference.
-    fn find_cell_mut(&mut self, coord: Coord) -> Option<&mut LifeCell<'a, D>> {
+    fn find_cell_mut(&mut self, coord: Coord) -> Option<&mut LifeCell<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = if self.column_first {
@@ -584,10 +594,10 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
 
     /// Sets the `state` and `free` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub fn set_cell(&self, cell: &LifeCell<D>, state: Option<State>, free: bool) {
+    pub(crate) fn set_cell(&self, cell: &LifeCell<R>, state: Option<State>, free: bool) {
         let old_state = cell.state.replace(state);
         cell.free.set(free);
-        D::update_desc(&cell, old_state, state);
+        R::update_desc(&cell, old_state, state);
         if cell.first_gen {
             match (state, old_state) {
                 (Some(Alive), Some(Alive)) => (),
@@ -603,7 +613,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
     /// * **Dead** cells are represented by `.`;
     /// * **Living** cells are represented by `O`;
     /// * **Unknown** cells are represented by `?`.
-    pub fn display_gen(&self, t: isize) -> String {
+    pub(crate) fn display_gen(&self, t: isize) -> String {
         let mut str = String::new();
         let t = t % self.period;
         for y in 0..self.height {
@@ -624,26 +634,20 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> World<'a, D, R> {
     /// Get a reference to an unknown cell.
     ///
     /// It always picks the first unknown cell according to the search order.
-    pub fn get_unknown(&self) -> Option<&LifeCell<'a, D>> {
+    pub(crate) fn get_unknown(&self) -> Option<&LifeCell<'a, R>> {
         self.cells.iter().find(|cell| cell.state.get().is_none())
     }
 
     /// Tests whether the world is nonempty,
     /// and whether the minimal period of the pattern equals to the given period.
-    pub fn nontrivial(&self) -> bool {
-        let nonzero = self
-            .cells
-            .iter()
-            .step_by(self.period as usize)
-            .any(|c| c.state.get() != Some(Dead));
-        nonzero
-            && (self.period == 1
-                || (1..self.period).all(|t| {
-                    self.period % t != 0
-                        || self
-                            .cells
-                            .chunks(self.period as usize)
-                            .any(|c| c[0].state.get() != c[t as usize].state.get())
-                }))
+    pub(crate) fn nontrivial(&self) -> bool {
+        self.cell_count.get() > 0
+            && (1..self.period).all(|t| {
+                self.period % t != 0
+                    || self
+                        .cells
+                        .chunks(self.period as usize)
+                        .any(|c| c[0].state.get() != c[t as usize].state.get())
+            })
     }
 }

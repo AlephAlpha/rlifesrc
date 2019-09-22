@@ -1,6 +1,5 @@
 use rlifesrc_lib::{
-    life::{self, ParseLife},
-    ntlife::{self, ParseNtLife},
+    rules::{Life, NtLife},
     NewState::{self, Choose},
     Search,
     State::Alive,
@@ -8,12 +7,11 @@ use rlifesrc_lib::{
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use yew::services::{Task, TimeoutService};
-use yew::worker::*;
-use yew::Callback;
-
-// 这部份的很多写法是照抄 yew 自带的范例
-// https://github.com/yewstack/yew
+use yew::{
+    services::{Task, TimeoutService},
+    worker::*,
+    Callback,
+};
 
 const VIEW_FREQ: u32 = 20000;
 
@@ -133,7 +131,7 @@ impl Agent for Worker {
 
     fn create(link: AgentLink<Self>) -> Self {
         let data: Data = Default::default();
-        let rule = life::Life::parse_rule(&data.rule_string).unwrap();
+        let rule = Life::parse_rule(&data.rule_string).unwrap();
         let world = World::new(
             (data.width, data.height, data.period),
             data.dx,
@@ -181,7 +179,7 @@ impl Agent for Worker {
                 self.job.stop();
                 self.status = Status::Paused;
                 let dimensions = (data.width, data.height, data.period);
-                if let Ok(rule) = life::Life::parse_rule(&data.rule_string) {
+                if let Ok(rule) = Life::parse_rule(&data.rule_string) {
                     let world = World::new(
                         dimensions,
                         data.dx,
@@ -193,7 +191,7 @@ impl Agent for Worker {
                     );
                     self.search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
                     self.update_world(id, 0);
-                } else if let Ok(rule) = ntlife::Life::parse_rule(&data.rule_string) {
+                } else if let Ok(rule) = NtLife::parse_rule(&data.rule_string) {
                     let world = World::new(
                         dimensions,
                         data.dx,

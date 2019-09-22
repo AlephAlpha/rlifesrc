@@ -2,10 +2,10 @@
 
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
-    rules::{Desc, Rule},
+    rules::Rule,
     world::World,
 };
-pub use ca_rules::ParseLife;
+use ca_rules::ParseLife;
 
 #[derive(Clone, Copy)]
 /// The neighborhood descriptor.
@@ -17,36 +17,6 @@ pub use ca_rules::ParseLife;
 /// For example, if a cell has 4 dead neighbors, 3 living neighbors,
 /// 1 unknown neighbors, the the neighborhood descriptor is `0x43`.
 pub struct NbhdDesc(u8);
-
-impl Desc for NbhdDesc {
-    fn new(state: Option<State>) -> Self {
-        match state {
-            Some(Dead) => NbhdDesc(0x80),
-            Some(Alive) => NbhdDesc(0x08),
-            None => NbhdDesc(0x00),
-        }
-    }
-
-    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
-        let old_state_num = match old_state {
-            Some(Dead) => 0x10,
-            Some(Alive) => 0x01,
-            None => 0x00,
-        };
-        let state_num = match state {
-            Some(Dead) => 0x10,
-            Some(Alive) => 0x01,
-            None => 0x00,
-        };
-        for &neigh in cell.nbhd.iter() {
-            let neigh = neigh.unwrap();
-            let mut desc = neigh.desc.get();
-            desc.0 -= old_state_num;
-            desc.0 += state_num;
-            neigh.desc.set(desc);
-        }
-    }
-}
 
 /// A struct to store the results of `transition` and `implication`.
 #[derive(Clone, Copy, Default)]
@@ -246,6 +216,10 @@ impl Life {
             None => implication.none,
         }
     }
+
+    pub fn parse_rule(input: &str) -> Result<Self, String> {
+        ParseLife::parse_rule(input).map_err(|e| e.to_string())
+    }
 }
 
 impl Rule for Life {
@@ -253,6 +227,33 @@ impl Rule for Life {
 
     fn b0(&self) -> bool {
         self.b0
+    }
+    fn new_desc(state: Option<State>) -> Self::Desc {
+        match state {
+            Some(Dead) => NbhdDesc(0x80),
+            Some(Alive) => NbhdDesc(0x08),
+            None => NbhdDesc(0x00),
+        }
+    }
+
+    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+        let old_state_num = match old_state {
+            Some(Dead) => 0x10,
+            Some(Alive) => 0x01,
+            None => 0x00,
+        };
+        let state_num = match state {
+            Some(Dead) => 0x10,
+            Some(Alive) => 0x01,
+            None => 0x00,
+        };
+        for &neigh in cell.nbhd.iter() {
+            let neigh = neigh.unwrap();
+            let mut desc = neigh.desc.get();
+            desc.0 -= old_state_num;
+            desc.0 += state_num;
+            neigh.desc.set(desc);
+        }
     }
 
     fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {
@@ -275,12 +276,12 @@ impl Rule for Life {
 
     fn consistify_nbhd<'a>(
         &self,
-        cell: &LifeCell<'a, NbhdDesc>,
-        world: &World<'a, NbhdDesc, Self>,
-        desc: NbhdDesc,
+        cell: &LifeCell<'a, Self>,
+        world: &World<'a, Self>,
+        desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        stack: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
+        stack: &mut Vec<&'a LifeCell<'a, Self>>,
     ) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
             for &neigh in cell.nbhd.iter() {
@@ -298,6 +299,6 @@ impl Rule for Life {
 /// A parser for the rule.
 impl ParseLife for Life {
     fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
-        Life::new(b, s)
+        Self::new(b, s)
     }
 }

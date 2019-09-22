@@ -12,9 +12,6 @@ use yew::{
     *,
 };
 
-// 这部份的很多写法是照抄 yew 自带的范例
-// https://github.com/yewstack/yew
-
 pub struct Model {
     data: Data,
     status: Status,

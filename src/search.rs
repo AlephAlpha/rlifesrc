@@ -2,7 +2,7 @@
 
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
-    rules::{Desc, Rule},
+    rules::Rule,
     world::World,
 };
 use NewState::{Choose, Random, Smart};
@@ -43,9 +43,9 @@ pub enum NewState {
 ///
 /// In addition to the world itself,
 /// we need to record some other information during the search.
-pub struct Search<'a, D: Desc, R: 'a + Rule<Desc = D>> {
+pub struct Search<'a, R: Rule> {
     /// The world.
-    pub world: World<'a, D, R>,
+    pub world: World<'a, R>,
     /// How to choose a state for an unknown cell.
     new_state: NewState,
     /// A stack to records the cells whose values are set during the search.
@@ -53,7 +53,7 @@ pub struct Search<'a, D: Desc, R: 'a + Rule<Desc = D>> {
     /// The cells in this table always have known states.
     ///
     /// It is used in the backtracking.
-    stack: Vec<&'a LifeCell<'a, D>>,
+    stack: Vec<&'a LifeCell<'a, R>>,
     /// The position in the `stack` of the next cell to be examined.
     ///
     /// See `proceed` for details.
@@ -64,9 +64,9 @@ pub struct Search<'a, D: Desc, R: 'a + Rule<Desc = D>> {
     max_cell_count: Option<u32>,
 }
 
-impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
+impl<'a, R: Rule> Search<'a, R> {
     /// Construct a new search.
-    pub fn new(world: World<'a, D, R>, new_state: NewState, max_cell_count: Option<u32>) -> Self {
+    pub fn new(world: World<'a, R>, new_state: NewState, max_cell_count: Option<u32>) -> Self {
         let size = (world.width * world.height * world.period) as usize;
         let stack = Vec::with_capacity(size);
         Search {
@@ -87,7 +87,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
-    fn consistify(&mut self, cell: &'a LifeCell<'a, D>) -> bool {
+    fn consistify(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
         let succ = cell.succ.unwrap();
         let state = cell.state.get();
         let desc = cell.desc.get();
@@ -132,7 +132,7 @@ impl<'a, D: Desc, R: 'a + Rule<Desc = D>> Search<'a, D, R> {
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
-    fn consistify10(&mut self, cell: &'a LifeCell<'a, D>) -> bool {
+    fn consistify10(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
         self.consistify(cell) && {
             let pred = cell.pred.unwrap();
             self.consistify(pred) && {
@@ -300,7 +300,7 @@ pub trait TraitSearch {
 }
 
 /// The `TraitSearch` trait is implemented for every `Search`.
-impl<'a, D: Desc, R: Rule<Desc = D>> TraitSearch for Search<'a, D, R> {
+impl<'a, R: Rule> TraitSearch for Search<'a, R> {
     fn search(&mut self, max_step: Option<u32>) -> Status {
         self.search(max_step)
     }

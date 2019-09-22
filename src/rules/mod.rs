@@ -1,37 +1,36 @@
 //! Cellular automata rules.
 
-pub mod life;
-pub mod ntlife;
+mod life;
+mod ntlife;
 
 use crate::{
     cells::{LifeCell, State},
     world::World,
 };
-
-/// A trait for “neighborhood descriptors”.
-///
-/// It describes the states of the neighbors of a cell,
-/// and is used to determine the state of the cell in the next generation.
-pub trait Desc: Copy {
-    /// Generates a neighborhood descriptor which says that all neighboring
-    /// cells have states `state`.
-    fn new(state: Option<State>) -> Self;
-
-    /// Updates the neighborhood descriptors of all neighbors when the state
-    /// of one cell is changed.
-    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>);
-}
+pub use life::Life;
+pub use ntlife::NtLife;
 
 /// A cellular automaton rule.
 pub trait Rule: Sized {
     /// The type of neighborhood descriptor of the rule.
-    type Desc: Desc;
+    ///
+    /// It describes the states of the neighbors of a cell,
+    /// and is used to determine the state of the cell in the next generation.
+    type Desc: Copy;
 
     /// Whether the rule contains `B0`.
     ///
     /// In other words, whether a cell would become `alive` in the next
     /// generation, if all its neighbors in this generation are dead.
     fn b0(&self) -> bool;
+
+    /// Generates a neighborhood descriptor which says that all neighboring
+    /// cells have states `state`.
+    fn new_desc(state: Option<State>) -> Self::Desc;
+
+    /// Updates the neighborhood descriptors of all neighbors when the state
+    /// of one cell is changed.
+    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>);
 
     /// Given the states of a cell and its neighborhood descriptor,
     /// deduces the state of the cell in the next generation.
@@ -48,11 +47,11 @@ pub trait Rule: Sized {
     /// and push a reference to each deduced cell into the `stack`.
     fn consistify_nbhd<'a>(
         &self,
-        cell: &LifeCell<'a, Self::Desc>,
-        world: &World<'a, Self::Desc, Self>,
+        cell: &LifeCell<'a, Self>,
+        world: &World<'a, Self>,
         desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        stack: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
+        stack: &mut Vec<&'a LifeCell<'a, Self>>,
     );
 }

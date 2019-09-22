@@ -2,10 +2,10 @@
 
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
-    rules::{Desc, Rule},
+    rules::Rule,
     world::World,
 };
-pub use ca_rules::ParseNtLife;
+use ca_rules::ParseNtLife;
 
 #[derive(Clone, Copy, Default)]
 /// The neighborhood descriptor.
@@ -23,32 +23,6 @@ pub use ca_rules::ParseNtLife;
 /// ```
 pub struct NbhdDesc(u16);
 
-impl Desc for NbhdDesc {
-    fn new(state: Option<State>) -> Self {
-        match state {
-            Some(Dead) => NbhdDesc(0xff00),
-            Some(Alive) => NbhdDesc(0x00ff),
-            None => NbhdDesc(0x0000),
-        }
-    }
-
-    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
-        let change_num = match (state, old_state) {
-            (Some(Dead), Some(Alive)) => 0x0101,
-            (Some(Alive), Some(Dead)) => 0x0101,
-            (Some(Dead), None) | (None, Some(Dead)) => 0x0100,
-            (Some(Alive), None) | (None, Some(Alive)) => 0x0001,
-            _ => 0x0000,
-        };
-        for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
-            let neigh = neigh.unwrap();
-            let mut desc = neigh.desc.get();
-            desc.0 ^= change_num << i;
-            neigh.desc.set(desc);
-        }
-    }
-}
-
 /// A struct to store the results of `transition` and `implication`.
 #[derive(Clone, Copy, Default)]
 struct Implication<T> {
@@ -59,16 +33,21 @@ struct Implication<T> {
 
 /// Non-totalistic life-like rules.
 ///
+/// This includes any rule that can be converted to a non-totalistic
+/// life-like rule: isotropic non-totalistic rules,
+/// non-isotropic rules, hexagonal rules, rules with von Neumann
+/// neighborhoods, etc.
+///
 /// The struct will not store the definition of the rule itself,
 /// but the results of `transition` and `implication`.
-pub struct Life {
+pub struct NtLife {
     b0: bool,
     trans_table: Box<[Implication<Option<State>>; 65536]>,
     impl_table: Box<[Option<State>; 65536 * 2]>,
     impl_nbhd_table: Box<[Implication<NbhdDesc>; 65536 * 2]>,
 }
 
-impl Life {
+impl NtLife {
     /// Constructs a new rule from the `b` and `s` data.
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
@@ -77,7 +56,7 @@ impl Life {
         let impl_table = Self::init_impl_table(&trans_table);
         let impl_nbhd_table = Self::init_impl_nbhd_table(&trans_table);
 
-        Life {
+        NtLife {
             b0,
             trans_table,
             impl_table,
@@ -258,13 +237,41 @@ impl Life {
             None => implication.none,
         }
     }
+
+    pub fn parse_rule(input: &str) -> Result<Self, String> {
+        ParseNtLife::parse_rule(input).map_err(|e| e.to_string())
+    }
 }
 
-impl Rule for Life {
+impl Rule for NtLife {
     type Desc = NbhdDesc;
 
     fn b0(&self) -> bool {
         self.b0
+    }
+
+    fn new_desc(state: Option<State>) -> Self::Desc {
+        match state {
+            Some(Dead) => NbhdDesc(0xff00),
+            Some(Alive) => NbhdDesc(0x00ff),
+            None => NbhdDesc(0x0000),
+        }
+    }
+
+    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+        let change_num = match (state, old_state) {
+            (Some(Dead), Some(Alive)) => 0x0101,
+            (Some(Alive), Some(Dead)) => 0x0101,
+            (Some(Dead), None) | (None, Some(Dead)) => 0x0100,
+            (Some(Alive), None) | (None, Some(Alive)) => 0x0001,
+            _ => 0x0000,
+        };
+        for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
+            let neigh = neigh.unwrap();
+            let mut desc = neigh.desc.get();
+            desc.0 ^= change_num << i;
+            neigh.desc.set(desc);
+        }
     }
 
     fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {
@@ -287,12 +294,12 @@ impl Rule for Life {
 
     fn consistify_nbhd<'a>(
         &self,
-        cell: &LifeCell<'a, NbhdDesc>,
-        world: &World<'a, NbhdDesc, Self>,
-        desc: NbhdDesc,
+        cell: &LifeCell<'a, Self>,
+        world: &World<'a, Self>,
+        desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        stack: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
+        stack: &mut Vec<&'a LifeCell<'a, Self>>,
     ) {
         let nbhd_states = self.implication_nbhd(state, desc, succ_state).0;
         if nbhd_states != 0 {
@@ -312,8 +319,8 @@ impl Rule for Life {
 }
 
 /// A parser for the rule.
-impl ParseNtLife for Life {
+impl ParseNtLife for NtLife {
     fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
-        Life::new(b, s)
+        Self::new(b, s)
     }
 }

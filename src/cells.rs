@@ -1,6 +1,6 @@
 //! Cells in the cellular automaton.
 
-use crate::rules::Desc;
+use crate::rules::Rule;
 use rand::{
     distributions::{Distribution, Standard},
     Rng,
@@ -38,7 +38,7 @@ impl Distribution<State> for Standard {
 ///
 /// The name `LifeCell` is chosen to avoid ambiguity with
 /// [`std::cell::Cell`](https://doc.rust-lang.org/std/cell/struct.Cell.html).
-pub struct LifeCell<'a, D: Desc> {
+pub struct LifeCell<'a, R: Rule> {
     /// The state of the cell.
     ///
     /// `None` means that the state of the cell is unknown.
@@ -47,7 +47,7 @@ pub struct LifeCell<'a, D: Desc> {
     /// The “neighborhood descriptors” of the cell.
     ///
     /// It describes the states of the neighboring cells.
-    pub desc: Cell<D>,
+    pub desc: Cell<R::Desc>,
 
     /// Whether the decision of the state depends on other cells.
     ///
@@ -60,14 +60,14 @@ pub struct LifeCell<'a, D: Desc> {
     pub free: Cell<bool>,
 
     /// The cell in the last generation at the same position.
-    pub pred: Option<&'a LifeCell<'a, D>>,
+    pub pred: Option<&'a LifeCell<'a, R>>,
     /// The cell in the next generation at the same position.
-    pub succ: Option<&'a LifeCell<'a, D>>,
+    pub succ: Option<&'a LifeCell<'a, R>>,
     /// The eight cells in the neighborhood.
-    pub nbhd: [Option<&'a LifeCell<'a, D>>; 8],
+    pub nbhd: [Option<&'a LifeCell<'a, R>>; 8],
     /// The cells in the same generation that must has the same state
     /// with this cell because of the symmetry.
-    pub sym: Vec<&'a LifeCell<'a, D>>,
+    pub sym: Vec<&'a LifeCell<'a, R>>,
     /// Whether the cell is in the first generation.
     pub first_gen: bool,
     /// Whether the cell is on the first row or column.
@@ -81,11 +81,11 @@ pub struct LifeCell<'a, D: Desc> {
 ///
 /// All references to other cells are `None`.
 /// `free`, `first_gen` and `first_col` are set to `false`.
-impl<'a, D: Desc> Default for LifeCell<'a, D> {
+impl<'a, R: Rule> Default for LifeCell<'a, R> {
     fn default() -> Self {
         LifeCell {
             state: Cell::new(Some(Dead)),
-            desc: Cell::new(D::new(Some(Dead))),
+            desc: Cell::new(R::new_desc(Some(Dead))),
             free: Cell::new(false),
             pred: Default::default(),
             succ: Default::default(),
