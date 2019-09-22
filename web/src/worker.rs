@@ -1,7 +1,11 @@
-use rlifesrc_lib::rules::{isotropic, life, ParseLife, ParseNtLife};
-use rlifesrc_lib::NewState::Choose;
-use rlifesrc_lib::State::Alive;
-use rlifesrc_lib::{NewState, Search, Status, Symmetry, TraitSearch, Transform, World};
+use rlifesrc_lib::{
+    life::{self, ParseLife},
+    ntlife::{self, ParseNtLife},
+    NewState::{self, Choose},
+    Search,
+    State::Alive,
+    Status, Symmetry, TraitSearch, Transform, World,
+};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::services::{Task, TimeoutService};
@@ -189,7 +193,7 @@ impl Agent for Worker {
                     );
                     self.search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
                     self.update_world(id, 0);
-                } else if let Ok(rule) = isotropic::Life::parse_rule(&data.rule_string) {
+                } else if let Ok(rule) = ntlife::Life::parse_rule(&data.rule_string) {
                     let world = World::new(
                         dimensions,
                         data.dx,

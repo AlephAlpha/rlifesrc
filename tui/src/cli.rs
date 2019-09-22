@@ -1,8 +1,11 @@
 use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
-use rlifesrc_lib::rules::{isotropic, life, ParseLife, ParseNtLife};
-use rlifesrc_lib::NewState::{Choose, Random, Smart};
-use rlifesrc_lib::State::{Alive, Dead};
+use rlifesrc_lib::{
+    life::{self, ParseLife},
+    ntlife::{self, ParseNtLife},
+    NewState::{Choose, Random, Smart},
+    State::{Alive, Dead},
+};
 use rlifesrc_lib::{Search, Status, Symmetry, TraitSearch, Transform, World};
 
 fn is_positive(s: &str) -> bool {
@@ -121,7 +124,7 @@ pub fn parse_args() -> Option<Args> {
                 .takes_value(true)
                 .default_value("B3/S23")
                 .validator(|d| {
-                    isotropic::Life::parse_rule(&d)
+                    ntlife::Life::parse_rule(&d)
                         .map(|_| ())
                         .map_err(|e| e.to_string())
                 }),
@@ -258,7 +261,7 @@ pub fn parse_args() -> Option<Args> {
             no_tui,
             reset,
         })
-    } else if let Ok(rule) = isotropic::Life::parse_rule(rule_string) {
+    } else if let Ok(rule) = ntlife::Life::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
         let search = Box::new(Search::new(world, new_state, max_cell_count));
         Some(Args {

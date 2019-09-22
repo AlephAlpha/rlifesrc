@@ -1,12 +1,21 @@
-use super::super::world::*;
-use ca_rules::ParseLife;
+//! Totalistic life-like rules.
+
+use crate::{
+    cells::{Alive, Dead, LifeCell, State},
+    rules::{Desc, Rule},
+    world::World,
+};
+pub use ca_rules::ParseLife;
 
 #[derive(Clone, Copy)]
-/// 邻域的细胞统计
+/// The neighborhood descriptor.
 ///
-/// 由于死细胞和活细胞的数量都不超过 8，可以一起放到一个字节中。
+/// It counts the number of dead cells and living cells in the neighborhood,
+/// write them as two 4-bit integers, and concatenate these two integers
+/// into a `u8`.
 ///
-/// 0x01 代表活，0x10 代表死。
+/// For example, if a cell has 4 dead neighbors, 3 living neighbors,
+/// 1 unknown neighbors, the the neighborhood descriptor is `0x43`.
 pub struct NbhdDesc(u8);
 
 impl Desc for NbhdDesc {
@@ -18,7 +27,7 @@ impl Desc for NbhdDesc {
         }
     }
 
-    fn set_nbhd(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
         let old_state_num = match old_state {
             Some(Dead) => 0x10,
             Some(Alive) => 0x01,
@@ -39,7 +48,7 @@ impl Desc for NbhdDesc {
     }
 }
 
-/// 用一个结构体来放 `transition` 和 `implication` 的结果
+/// A struct to store the results of `transition` and `implication`.
 #[derive(Clone, Copy, Default)]
 struct Implication {
     dead: Option<State>,
@@ -47,9 +56,10 @@ struct Implication {
     none: Option<State>,
 }
 
-/// Life-like 的规则
+/// Totalistic life-like rules.
 ///
-/// 不提供规则本身的数据，只保存 `transition` 和 `implication` 的结果。
+/// The struct will not store the definition of the rule itself,
+/// but the results of `transition` and `implication`.
 pub struct Life {
     b0: bool,
     trans_table: [Implication; 256],
@@ -58,12 +68,13 @@ pub struct Life {
 }
 
 impl Life {
+    /// Constructs a new rule from the `b` and `s` data.
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
 
         let trans_table = Self::init_trans_table(b, s);
         let impl_table = Self::init_impl_table(&trans_table);
-        let impl_nbhd_table = Self::init_impl_trans_table(&trans_table);
+        let impl_nbhd_table = Self::init_impl_nbhd_table(&trans_table);
 
         Life {
             b0,
@@ -73,10 +84,12 @@ impl Life {
         }
     }
 
+    /// Generates the transition table.
     fn init_trans_table(b: Vec<u8>, s: Vec<u8>) -> [Implication; 256] {
         let mut trans_table: [Implication; 256] = [Default::default(); 256];
 
-        // 先把 trans_table 中没有未知细胞的地方填上
+        // Fills in the positions of the neighborhood descriptors
+        // that have no unknown neighbors.
         for alives in 0..=8 {
             let nbhd = ((8 - alives) << 4) | alives;
             let alives = alives as u8;
@@ -99,7 +112,7 @@ impl Life {
             };
         }
 
-        // 然后根据未知细胞的情况，一个一个来
+        // Fills in the other positions.
         for unknowns in 1..=8 {
             for alives in 0..=8 - unknowns {
                 let nbhd = ((8 - alives - unknowns) << 4) | alives;
@@ -122,6 +135,7 @@ impl Life {
         trans_table
     }
 
+    /// Generates the implication table.
     fn init_impl_table(trans_table: &[Implication; 256]) -> [Option<State>; 512] {
         let mut impl_table = [Default::default(); 512];
 
@@ -150,7 +164,8 @@ impl Life {
         impl_table
     }
 
-    fn init_impl_trans_table(trans_table: &[Implication; 256]) -> [Implication; 512] {
+    /// Generates the neighborhood implication table.
+    fn init_impl_nbhd_table(trans_table: &[Implication; 256]) -> [Implication; 512] {
         let mut impl_nbhd_table: [Implication; 512] = [Default::default(); 512];
 
         for unknowns in 1..=8 {
@@ -211,6 +226,8 @@ impl Life {
         impl_nbhd_table
     }
 
+    /// Implicates states of some neighbors using the
+    /// neighborhood implication table.
     fn implication_nbhd(
         &self,
         state: Option<State>,
@@ -263,14 +280,14 @@ impl Rule for Life {
         desc: NbhdDesc,
         state: Option<State>,
         succ_state: State,
-        set_table: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
+        stack: &mut Vec<&'a LifeCell<'a, Self::Desc>>,
     ) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
             for &neigh in cell.nbhd.iter() {
                 if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
                         world.set_cell(neigh, Some(state), false);
-                        set_table.push(neigh);
+                        stack.push(neigh);
                     }
                 }
             }
@@ -278,6 +295,7 @@ impl Rule for Life {
     }
 }
 
+/// A parser for the rule.
 impl ParseLife for Life {
     fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
         Life::new(b, s)

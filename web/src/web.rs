@@ -1,12 +1,16 @@
 use crate::worker::{Data, Request, Response, Worker};
-use rlifesrc_lib::NewState::{Choose, Random, Smart};
-use rlifesrc_lib::State::{Alive, Dead};
-use rlifesrc_lib::{NewState, Status, Symmetry, Transform};
+use rlifesrc_lib::{
+    NewState::{self, Choose, Random, Smart},
+    State::{Alive, Dead},
+    Status, Symmetry, Transform,
+};
 use std::time::Duration;
-use yew::html;
-use yew::html::ChangeData;
-use yew::services::{DialogService, IntervalService, Task};
-use yew::*;
+use yew::{
+    html,
+    html::ChangeData,
+    services::{DialogService, IntervalService, Task},
+    *,
+};
 
 // 这部份的很多写法是照抄 yew 自带的范例
 // https://github.com/yewstack/yew
@@ -540,8 +544,8 @@ impl Model {
                                 "Rotate 90°" => Msg::SetTrans(Transform::Rotate90),
                                 "Rotate 180°" => Msg::SetTrans(Transform::Rotate180),
                                 "Rotate 270°" => Msg::SetTrans(Transform::Rotate270),
-                                "Flip |" => Msg::SetTrans(Transform::FlipRow),
-                                "Flip -" => Msg::SetTrans(Transform::FlipColumn),
+                                "Flip -" => Msg::SetTrans(Transform::FlipRow),
+                                "Flip |" => Msg::SetTrans(Transform::FlipCol),
                                 "Flip \\" => Msg::SetTrans(Transform::FlipDiag),
                                 "Flip /" => Msg::SetTrans(Transform::FlipAntidiag),
                                 _ => Msg::None,
@@ -589,8 +593,8 @@ impl Model {
                                 "C1" => Msg::SetSym(Symmetry::C1),
                                 "C2" => Msg::SetSym(Symmetry::C2),
                                 "C4" => Msg::SetSym(Symmetry::C4),
-                                "D2|" => Msg::SetSym(Symmetry::D2Row),
-                                "D2-" => Msg::SetSym(Symmetry::D2Column),
+                                "D2-" => Msg::SetSym(Symmetry::D2Row),
+                                "D2|" => Msg::SetSym(Symmetry::D2Col),
                                 "D2\\" => Msg::SetSym(Symmetry::D2Diag),
                                 "D2/" => Msg::SetSym(Symmetry::D2Antidiag),
                                 "D4+" => Msg::SetSym(Symmetry::D4Ortho),
