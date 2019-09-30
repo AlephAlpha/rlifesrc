@@ -640,17 +640,6 @@ impl<'a, R: Rule> World<'a, R> {
             .copied()
     }
 
-    /// Get the index and a references of the first unknown cell after
-    /// the `i`-th cell in the `search_list`.
-    pub(crate) fn get_unknown_after(&self, i: usize) -> Option<(usize, &'a LifeCell<'a, R>)> {
-        self.search_list
-            .iter()
-            .copied()
-            .enumerate()
-            .skip(i)
-            .find(|(_, cell)| cell.state.get().is_none())
-    }
-
     /// Tests whether the world is nonempty,
     /// and whether the minimal period of the pattern equals to the given period.
     pub(crate) fn nontrivial(&self) -> bool {
