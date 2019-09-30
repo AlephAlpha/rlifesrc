@@ -1,6 +1,6 @@
 use crate::worker::{Data, Request, Response, Worker};
 use rlifesrc_lib::{
-    NewState::{self, Choose, Random, Smart},
+    NewState::{self, Choose, Random, Stupid},
     State::{Alive, Dead},
     Status, Symmetry, Transform,
 };
@@ -666,7 +666,7 @@ impl Model {
             <div class = "setting">
                 <label for = "set_choose">
                     <abbr title = "How to choose a state for unknown cells. \
-                        &quot;Smart&quot; means choosing a alive for cells in the first \
+                        &quot;Stupid&quot; means choosing a alive for cells in the first \
                         row/column, and dead for other cells.">
                     { "Choose" }
                     </abbr>
@@ -680,7 +680,7 @@ impl Model {
                                 "Dead" => Msg::SetChoose(Choose(Dead)),
                                 "Alive" => Msg::SetChoose(Choose(Alive)),
                                 "Random" => Msg::SetChoose(Random),
-                                "Smart" => Msg::SetChoose(Smart),
+                                "Stupid" => Msg::SetChoose(Stupid),
                                 _ => Msg::None,
                             }
                         } else {
@@ -691,7 +691,7 @@ impl Model {
                     <option> { "Alive" } </option>
                     <option> { "Dead" } </option>
                     <option> { "Random" } </option>
-                    <option> { "Smart" } </option>
+                    <option> { "Stupid" } </option>
                 </select>
             </div>
         }

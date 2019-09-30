@@ -5,7 +5,8 @@ use crate::{
     rules::Rule,
     world::World,
 };
-use NewState::{Choose, Random, Smart};
+use std::cmp::Ordering;
+use NewState::{Choose, Random, Stupid};
 
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
@@ -35,8 +36,14 @@ pub enum NewState {
     /// Chooses `Alive` for cells on the first row / column,
     /// and `Dead` for other cells.
     ///
-    /// It is not smart at all, but I can't find a better name.
-    Smart,
+    /// It is not smart at all, so I call it Stupid.
+    Stupid,
+}
+
+#[derive(Clone, Copy, Default, Debug, PartialEq)]
+pub struct SmartConfig {
+    pub threshold: Option<usize>,
+    pub window: usize,
 }
 
 /// The search.
@@ -58,10 +65,13 @@ pub struct Search<'a, R: Rule> {
     ///
     /// See `proceed` for details.
     next_set: usize,
-    /// The number of living cells must not exceed this number.
+    /// The number of living cells in the 0th generation must not exceed
+    /// this number.
     ///
     /// `None` means that there is no limit for the cell count.
     max_cell_count: Option<u32>,
+    /// Configuration for smart mode.
+    smart: Option<SmartConfig>,
 }
 
 impl<'a, R: Rule> Search<'a, R> {
@@ -69,12 +79,18 @@ impl<'a, R: Rule> Search<'a, R> {
     pub fn new(world: World<'a, R>, new_state: NewState, max_cell_count: Option<u32>) -> Self {
         let size = (world.width * world.height * world.period) as usize;
         let stack = Vec::with_capacity(size);
+        // let smart = Some(SmartConfig {
+        //     threshold: Some(4),
+        //     window: 50,
+        // });
+        let smart = None;
         Search {
             world,
             new_state,
             stack,
             next_set: 0,
             max_cell_count,
+            smart,
         }
     }
 
@@ -151,7 +167,7 @@ impl<'a, R: Rule> Search<'a, R> {
         while self.next_set < self.stack.len() {
             // Tests if the number of living cells exceeds the `max_cell_count`.
             if let Some(max) = self.max_cell_count {
-                if self.world.cell_count.get() > max {
+                if self.world.gen0_cell_count.get() > max {
                     return false;
                 }
             }
@@ -225,6 +241,158 @@ impl<'a, R: Rule> Search<'a, R> {
         }
     }
 
+    /// Get the heuristic for smart mode.
+    ///
+    /// Given a unknown cell, tries to set it to both possible state,
+    /// tries to proceed once, counts the number of cell deduced during
+    /// the process, and goes back to the time before the
+    /// cell is set, and returns the counts.
+    ///
+    /// `state` is the first state to be tried.
+    ///
+    /// Returns the counts if both processes succeed.
+    /// Returns `None` if a conflict is found.
+    ///
+    /// The `cell` here must be unknown.
+    fn get_smart_numbers(
+        &mut self,
+        cell: &'a LifeCell<'a, R>,
+        state: State,
+    ) -> Option<(usize, usize)> {
+        let set_cells = self.stack.len();
+
+        self.world.set_cell(cell, Some(state), true);
+        self.stack.push(cell);
+        if self.proceed() {
+            let len0 = self.stack.len() - set_cells;
+            self.backup();
+            cell.free.set(true);
+            if self.proceed() {
+                let len1 = self.stack.len() - set_cells;
+                self.backup();
+                self.world.set_cell(cell, None, true);
+                self.stack.pop();
+                match state {
+                    Dead => Some((len0, len1)),
+                    Alive => Some((len1, len0)),
+                }
+            } else {
+                self.backup();
+                None
+            }
+        } else {
+            self.backup();
+            None
+        }
+    }
+
+    /// Chooses an unknown cell and assigns a state for it. Non-smart version.
+    fn decide_non_smart(&mut self) -> bool {
+        if let Some(cell) = self.world.get_unknown() {
+            let state = match self.new_state {
+                Choose(state) => state,
+                Random => rand::random(),
+                Stupid => {
+                    if cell.first_col {
+                        Alive
+                    } else {
+                        Dead
+                    }
+                }
+            };
+            self.world.set_cell(cell, Some(state), true);
+            self.stack.push(cell);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Chooses an unknown cell and assigns a state for it. Smart version.
+    fn decide_smart(&mut self, smart: SmartConfig) -> bool {
+        let mut i = 0;
+        let mut window = smart.window;
+        let mut max = 0;
+        let mut best_len0 = 1;
+        let mut best_len1 = 1;
+        let mut best_cell = None;
+        let mut best_state = None;
+
+        while let Some((j, cell)) = self.world.get_unknown_after(i) {
+            if window > 0 && (smart.threshold.is_none() || max < smart.threshold.unwrap()) {
+                let state = match self.new_state {
+                    Choose(state) => state,
+                    Random => rand::random(),
+                    Stupid => {
+                        if cell.first_col {
+                            Alive
+                        } else {
+                            Dead
+                        }
+                    }
+                };
+
+                if let Some((len0, len1)) = self.get_smart_numbers(cell, state) {
+                    let state = match len0.cmp(&len1) {
+                        Ordering::Greater => Dead,
+                        Ordering::Less => Alive,
+                        Ordering::Equal => state,
+                    };
+
+                    let n0 = len0 + len1 + best_len0;
+                    let n1 = len0 + len1 + best_len1;
+                    let (a0, a1) = match n0.cmp(&n1) {
+                        Ordering::Greater => (n0 + 1, n1 + 1),
+                        Ordering::Less => (n1 + 1, n0 + 1),
+                        Ordering::Equal => (n0 + 2, 0),
+                    };
+
+                    let m0 = max + len0;
+                    let m1 = max + len1;
+                    let (b0, b1) = match m0.cmp(&m1) {
+                        Ordering::Greater => (m0 + 1, m1 + 1),
+                        Ordering::Less => (m1 + 1, m0 + 1),
+                        Ordering::Equal => (m0 + 2, 0),
+                    };
+
+                    if a0 > b0 || (a0 == b0 && a1 > b1) {
+                        best_cell = Some(cell);
+                        best_state = Some(state);
+                        best_len0 = len0;
+                        best_len1 = len1;
+                        max = len0 + len1;
+                    }
+                } else {
+                    return true;
+                }
+                i = j + 1;
+                window -= 1;
+            }
+        }
+
+        if let Some(cell) = best_cell {
+            self.world.set_cell(cell, best_state, true);
+            self.stack.push(cell);
+            true
+        } else {
+            self.decide_non_smart()
+        }
+    }
+
+    /// Makes a decision.
+    ///
+    /// Chooses an unknown cell, assigns a state for it,
+    /// and push a reference to it to the `stack`.
+    ///
+    /// Returns `false` is there is no unknown cell.
+    fn decide(&mut self) -> bool {
+        if let Some(smart) = self.smart {
+            self.decide_smart(smart)
+        } else {
+            self.decide_non_smart()
+        }
+    }
+
     /// The search function.
     ///
     /// Returns `Found` if a result is found,
@@ -233,40 +401,23 @@ impl<'a, R: Rule> Search<'a, R> {
     /// and no results are found.
     pub fn search(&mut self, max_step: Option<u32>) -> Status {
         let mut step_count = 0;
-        if self.world.get_unknown().is_none() && !self.backup() {
+        let unknown = self.world.get_unknown();
+        if unknown.is_none() && !self.backup() {
             return Status::None;
         }
         while self.go(&mut step_count) {
-            if let Some(cell) = self.world.get_unknown() {
-                let state = match self.new_state {
-                    Choose(state) => state,
-                    Random => rand::random(),
-                    Smart => {
-                        if cell.first_col {
-                            Alive
-                        } else {
-                            Dead
-                        }
-                    }
-                };
-                self.world.set_cell(cell, Some(state), true);
-
-                // `stack` requires the lifetime of `cell` to be as long as `'a`,
-                // so we have to use `unsafe`.
-                unsafe {
-                    let cell: *const LifeCell<_> = cell;
-                    self.stack.push(cell.as_ref().unwrap());
+            if !self.decide() {
+                if self.world.nontrivial() {
+                    return Status::Found;
+                } else if !self.backup() {
+                    return Status::None;
                 }
+            }
 
-                if let Some(max) = max_step {
-                    if step_count > max {
-                        return Status::Searching;
-                    }
+            if let Some(max) = max_step {
+                if step_count > max {
+                    return Status::Searching;
                 }
-            } else if self.world.nontrivial() {
-                return Status::Found;
-            } else if !self.backup() {
-                return Status::None;
             }
         }
         Status::None
@@ -296,7 +447,7 @@ pub trait TraitSearch {
     fn period(&self) -> isize;
 
     /// Number of known living cells in the first generation.
-    fn cell_count(&self) -> u32;
+    fn gen0_cell_count(&self) -> u32;
 }
 
 /// The `TraitSearch` trait is implemented for every `Search`.
@@ -313,7 +464,7 @@ impl<'a, R: Rule> TraitSearch for Search<'a, R> {
         self.world.period
     }
 
-    fn cell_count(&self) -> u32 {
-        self.world.cell_count.get()
+    fn gen0_cell_count(&self) -> u32 {
+        self.world.gen0_cell_count.get()
     }
 }

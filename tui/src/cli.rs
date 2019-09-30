@@ -2,7 +2,7 @@ use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
     rules::{Life, NtLife},
-    NewState::{Choose, Random, Smart},
+    NewState::{Choose, Random, Stupid},
     State::{Alive, Dead},
 };
 use rlifesrc_lib::{Search, Status, Symmetry, TraitSearch, Transform, World};
@@ -142,7 +142,7 @@ pub fn parse_args() -> Option<Args> {
                 .help("How to choose a state for unknown cells")
                 .long_help(
                     "How to choose a state for unknown cells\n\
-                     \"Smart\" means choosing alive for cells in the first\
+                     \"Stupid\" means choosing alive for cells in the first\
                      row/column,\nand dead for other cells.\n",
                 )
                 .short("c")
@@ -236,7 +236,7 @@ pub fn parse_args() -> Option<Args> {
         "dead" | "d" => Choose(Dead),
         "alive" | "a" => Choose(Alive),
         "random" | "r" => Random,
-        "smart" | "s" => Smart,
+        "stupid" | "s" => Stupid,
         _ => Choose(Dead),
     };
     let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();

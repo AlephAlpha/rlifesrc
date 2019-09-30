@@ -13,20 +13,6 @@ use std::{
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
 
-impl<'a, R: Rule> LifeCell<'a, R> {
-    /// Generate a new cell with state `state`, such that its neighborhood
-    /// descriptor says that all neighboring cells also have the same state.
-    ///
-    /// `first_gen` and `first_col` are set to `false`.
-    fn new(state: State) -> Self {
-        LifeCell {
-            state: Cell::new(Some(state)),
-            desc: Cell::new(R::new_desc(Some(state))),
-            ..Default::default()
-        }
-    }
-}
-
 /// Transformations. Rotations and reflections.
 ///
 /// 8 different values corresponds to 8 elements of the dihedral group
@@ -290,8 +276,6 @@ pub struct World<'a, R: Rule> {
     /// The vector will not be moved after it is created.
     /// All the cells will live throughout the lifetime of the world.
     // So the unsafe code below is actually safe.
-    //
-    // TODO: wrap it with a `std::pin::Pin`.
     cells: Vec<LifeCell<'a, R>>,
 
     /// A shared dead cell outside the search range.
@@ -300,8 +284,13 @@ pub struct World<'a, R: Rule> {
     /// its `succ` would be this `dead_cell`.
     dead_cell: LifeCell<'a, R>,
 
+    /// A list of references of cells sorted by the search order.search
+    ///
+    /// Used to find unknown cells.
+    pub(crate) search_list: Vec<&'a LifeCell<'a, R>>,
+
     /// Number of known living cells in the first generation.
-    pub(crate) cell_count: Cell<u32>,
+    pub(crate) gen0_cell_count: Cell<u32>,
 }
 
 impl<'a, R: Rule> World<'a, R> {
@@ -366,8 +355,9 @@ impl<'a, R: Rule> World<'a, R> {
         }
 
         let dead_cell = LifeCell::default();
+        let search_list = Vec::new();
 
-        let cell_count = Cell::new(0);
+        let gen0_cell_count = Cell::new(0);
 
         let mut world = World {
             width,
@@ -377,7 +367,8 @@ impl<'a, R: Rule> World<'a, R> {
             column_first,
             cells,
             dead_cell,
-            cell_count,
+            search_list,
+            gen0_cell_count,
         };
 
         // Initializes the world.
@@ -410,10 +401,9 @@ impl<'a, R: Rule> World<'a, R> {
                     let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
                     for (i, (nx, ny)) in neighbors.iter().enumerate() {
                         if let Some(neigh) = self.find_cell((x + nx, y + ny, t)) {
-                            let neigh: *const _ = neigh;
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.nbhd[i] = neigh.as_ref();
+                                cell.nbhd[i] = self.lift(neigh);
                             }
                         }
                     }
@@ -445,10 +435,10 @@ impl<'a, R: Rule> World<'a, R> {
                     // If that cell is out of the search range,
                     // then sets the state of the current cell to `default`.
                     if t != 0 {
-                        let pred: *const _ = self.find_cell((x, y, t - 1)).unwrap();
+                        let pred = self.find_cell((x, y, t - 1)).unwrap();
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.pred = pred.as_ref();
+                            cell.pred = self.lift(pred);
                         }
                     } else {
                         let (new_x, new_y) = match transform {
@@ -463,10 +453,9 @@ impl<'a, R: Rule> World<'a, R> {
                         };
                         let pred = self.find_cell((new_x - dx, new_y - dy, self.period - 1));
                         if let Some(pred) = pred {
-                            let pred: *const _ = pred;
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.pred = pred.as_ref();
+                                cell.pred = self.lift(pred);
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             self.set_cell(cell, Some(default), false);
@@ -478,12 +467,13 @@ impl<'a, R: Rule> World<'a, R> {
                     // If that cell is out of the search range,
                     // then sets it to `dead_cell`.
                     if t != self.period - 1 {
-                        let succ: *const _ = self.find_cell((x, y, t + 1)).unwrap();
+                        let succ = self.find_cell((x, y, t + 1)).unwrap();
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.succ = succ.as_ref();
+                            cell.succ = self.lift(succ);
                         }
                     } else {
+                        let (x, y) = (x + dx, y + dy);
                         let (new_x, new_y) = match transform {
                             Transform::Id => (x, y),
                             Transform::Rotate90 => (y, self.width - 1 - x),
@@ -494,15 +484,11 @@ impl<'a, R: Rule> World<'a, R> {
                             Transform::FlipDiag => (y, x),
                             Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
                         };
-                        let succ = self.find_cell((new_x + dx, new_y + dy, 0));
-                        let succ: *const _ = if let Some(succ) = succ {
-                            succ
-                        } else {
-                            &self.dead_cell
-                        };
+                        let succ = self.find_cell((new_x, new_y, 0));
+                        let succ = succ.unwrap_or(&self.dead_cell);
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.succ = succ.as_ref();
+                            cell.succ = self.lift(succ);
                         }
                     }
 
@@ -548,18 +534,33 @@ impl<'a, R: Rule> World<'a, R> {
                             && 0 <= coord.1
                             && coord.1 < self.height
                         {
-                            let sym: *const _ = self.find_cell(coord).unwrap();
+                            let sym = self.find_cell(coord).unwrap();
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.sym.push(sym.as_ref().unwrap());
+                                cell.sym.push(self.lift(sym).unwrap());
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             self.set_cell(cell, Some(default), false);
                         }
                     }
+
+                    // Sets the next cell in the search order.
+                    if cell.state.get().is_none() && cell.free.get() {
+                        let cell = unsafe { self.lift(cell).unwrap() };
+                        self.search_list.push(cell);
+                    }
                 }
             }
         }
+    }
+
+    /// Lift the lifetime of a reference to a cell to `'a`.
+    ///
+    /// Only safe to use after the creation of the world,
+    /// and only when the cell is in the world.
+    unsafe fn lift(&self, cell: &LifeCell<'a, R>) -> Option<&'a LifeCell<'a, R>> {
+        let cell_ptr: *const _ = cell;
+        cell_ptr.as_ref()
     }
 
     /// Finds a cell by its coordinates. Returns a reference.
@@ -601,8 +602,8 @@ impl<'a, R: Rule> World<'a, R> {
         if cell.first_gen {
             match (state, old_state) {
                 (Some(Alive), Some(Alive)) => (),
-                (Some(Alive), _) => self.cell_count.set(self.cell_count.get() + 1),
-                (_, Some(Alive)) => self.cell_count.set(self.cell_count.get() - 1),
+                (Some(Alive), _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
+                (_, Some(Alive)) => self.gen0_cell_count.set(self.gen0_cell_count.get() - 1),
                 _ => (),
             }
         }
@@ -631,17 +632,29 @@ impl<'a, R: Rule> World<'a, R> {
         str
     }
 
-    /// Get a reference to an unknown cell.
-    ///
-    /// It always picks the first unknown cell according to the search order.
-    pub(crate) fn get_unknown(&self) -> Option<&LifeCell<'a, R>> {
-        self.cells.iter().find(|cell| cell.state.get().is_none())
+    /// Get a references to the first unknown cell in the `search_list`.
+    pub(crate) fn get_unknown(&self) -> Option<&'a LifeCell<'a, R>> {
+        self.search_list
+            .iter()
+            .find(|cell| cell.state.get().is_none())
+            .copied()
+    }
+
+    /// Get the index and a references of the first unknown cell after
+    /// the `i`-th cell in the `search_list`.
+    pub(crate) fn get_unknown_after(&self, i: usize) -> Option<(usize, &'a LifeCell<'a, R>)> {
+        self.search_list
+            .iter()
+            .copied()
+            .enumerate()
+            .skip(i)
+            .find(|(_, cell)| cell.state.get().is_none())
     }
 
     /// Tests whether the world is nonempty,
     /// and whether the minimal period of the pattern equals to the given period.
     pub(crate) fn nontrivial(&self) -> bool {
-        self.cell_count.get() > 0
+        self.gen0_cell_count.get() > 0
             && (1..self.period).all(|t| {
                 self.period % t != 0
                     || self

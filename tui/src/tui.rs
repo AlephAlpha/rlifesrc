@@ -62,7 +62,7 @@ impl SearchWindow {
         self.top_bar.mvprintw(
             0,
             0,
-            format!("Gen: {}  Cells: {}", self.gen, search.cell_count()),
+            format!("Gen: {}  Cells: {}", self.gen, search.gen0_cell_count()),
         );
         match self.status {
             Status::Searching => 1,
