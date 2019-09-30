@@ -1,6 +1,6 @@
 use crate::worker::{Data, Request, Response, Worker};
 use rlifesrc_lib::{
-    NewState::{self, Choose, Random, Stupid},
+    NewState::{self, Choose, Random},
     State::{Alive, Dead},
     Status, Symmetry, Transform,
 };
@@ -39,6 +39,7 @@ pub enum Msg {
     SetOrder(Option<bool>),
     SetChoose(NewState),
     SetMax(Option<u32>),
+    SetFront,
     Reset,
     DataReceived(Response),
     None,
@@ -88,14 +89,13 @@ impl Component for Model {
         let worker = Worker::bridge(callback);
 
         let world = String::from(
-            "??????????????????????????\n\
-             ??????????????????????????\n\
-             ??????????????????????????\n\
-             ??????????????????????????\n\
-             ??????????????????????????\n\
-             ??????????????????????????\n\
-             ??????????????????????????\n\
-             ??????????????????????????",
+            "???????\n\
+             ???????\n\
+             ???????\n\
+             ???????\n\
+             ???????\n\
+             ???????\n\
+             ???????",
         );
         let period = data.period;
 
@@ -166,6 +166,9 @@ impl Component for Model {
             Msg::SetMax(max_cell_count) => {
                 self.data.max_cell_count = max_cell_count;
             }
+            Msg::SetFront => {
+                self.data.non_empty_front ^= true;
+            }
             Msg::Reset => {
                 self.gen = 0;
                 self.period = self.data.period;
@@ -234,6 +237,7 @@ impl Renderable<Model> for Model {
                         { self.set_trans() }
                         { self.set_sym() }
                         { self.set_max() }
+                        { self.set_front() }
                         { self.set_order() }
                         { self.set_choose() }
                     </div>
@@ -522,6 +526,25 @@ impl Model {
         }
     }
 
+    fn set_front(&self) -> Html<Self> {
+        html! {
+            <div class = "setting">
+                <label for = "set_front">
+                    <abbr title = "Force the first row or column to be nonempty.">
+                    { "Front" }
+                    </abbr>
+                    { ":" }
+                </label>
+                <input
+                    id = "set_front",
+                    type = "checkbox",
+                    checked = self.data.non_empty_front,
+                    onclick = |_| Msg::SetFront
+                />
+            </div>
+        }
+    }
+
     fn set_trans(&self) -> Html<Self> {
         html! {
             <div class = "setting">
@@ -665,9 +688,7 @@ impl Model {
         html! {
             <div class = "setting">
                 <label for = "set_choose">
-                    <abbr title = "How to choose a state for unknown cells. \
-                        &quot;Stupid&quot; means choosing a alive for cells in the first \
-                        row/column, and dead for other cells.">
+                    <abbr title = "How to choose a state for unknown cells.">
                     { "Choose" }
                     </abbr>
                     { ":" }
@@ -680,7 +701,6 @@ impl Model {
                                 "Dead" => Msg::SetChoose(Choose(Dead)),
                                 "Alive" => Msg::SetChoose(Choose(Alive)),
                                 "Random" => Msg::SetChoose(Random),
-                                "Stupid" => Msg::SetChoose(Stupid),
                                 _ => Msg::None,
                             }
                         } else {
@@ -691,7 +711,6 @@ impl Model {
                     <option> { "Alive" } </option>
                     <option> { "Dead" } </option>
                     <option> { "Random" } </option>
-                    <option> { "Stupid" } </option>
                 </select>
             </div>
         }

@@ -1,9 +1,7 @@
 use rlifesrc_lib::{
     rules::{Life, NtLife},
     NewState::{self, Choose},
-    Search,
-    State::Alive,
-    Status, Symmetry, TraitSearch, Transform, World,
+    Search, State, Status, Symmetry, TraitSearch, Transform, World,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -27,22 +25,24 @@ pub struct Data {
     pub column_first: Option<bool>,
     pub new_state: NewState,
     pub max_cell_count: Option<u32>,
+    pub non_empty_front: bool,
     pub rule_string: String,
 }
 
 impl Default for Data {
     fn default() -> Self {
         Data {
-            width: 26,
-            height: 8,
-            period: 4,
+            width: 7,
+            height: 7,
+            period: 3,
             dx: 0,
-            dy: 1,
+            dy: 0,
             transform: Transform::Id,
             symmetry: Symmetry::C1,
             column_first: None,
-            new_state: Choose(Alive),
+            new_state: Choose(State::Dead),
             max_cell_count: None,
+            non_empty_front: true,
             rule_string: String::from("B3/S23"),
         }
     }
@@ -141,7 +141,12 @@ impl Agent for Worker {
             rule,
             data.column_first,
         );
-        let search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
+        let search = Box::new(Search::new(
+            world,
+            data.new_state,
+            data.max_cell_count,
+            data.non_empty_front,
+        ));
 
         let status = Status::Paused;
         let job = Job::new(&link);
@@ -189,7 +194,12 @@ impl Agent for Worker {
                         rule,
                         data.column_first,
                     );
-                    self.search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
+                    self.search = Box::new(Search::new(
+                        world,
+                        data.new_state,
+                        data.max_cell_count,
+                        data.non_empty_front,
+                    ));
                     self.update_world(id, 0);
                 } else if let Ok(rule) = NtLife::parse_rule(&data.rule_string) {
                     let world = World::new(
@@ -201,7 +211,12 @@ impl Agent for Worker {
                         rule,
                         data.column_first,
                     );
-                    self.search = Box::new(Search::new(world, data.new_state, data.max_cell_count));
+                    self.search = Box::new(Search::new(
+                        world,
+                        data.new_state,
+                        data.max_cell_count,
+                        data.non_empty_front,
+                    ));
                     self.update_world(id, 0);
                 } else {
                     self.link.response(id, Response::InvalidRule);

@@ -291,6 +291,9 @@ pub struct World<'a, R: Rule> {
 
     /// Number of known living cells in the first generation.
     pub(crate) gen0_cell_count: Cell<u32>,
+
+    /// Number of unknown or living cells in the first generation.
+    pub(crate) front_cell_count: Cell<u32>,
 }
 
 impl<'a, R: Rule> World<'a, R> {
@@ -344,10 +347,10 @@ impl<'a, R: Rule> World<'a, R> {
                     let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
                     let mut cell = LifeCell::new(state);
                     if t == 0 {
-                        cell.first_gen = true;
+                        cell.is_gen0 = true;
                     }
                     if x == 0 {
-                        cell.first_col = true;
+                        cell.is_front = true;
                     }
                     cells.push(cell);
                 }
@@ -358,6 +361,7 @@ impl<'a, R: Rule> World<'a, R> {
         let search_list = Vec::new();
 
         let gen0_cell_count = Cell::new(0);
+        let front_cell_count = Cell::new(0);
 
         let mut world = World {
             width,
@@ -369,6 +373,7 @@ impl<'a, R: Rule> World<'a, R> {
             dead_cell,
             search_list,
             gen0_cell_count,
+            front_cell_count,
         };
 
         // Initializes the world.
@@ -599,11 +604,19 @@ impl<'a, R: Rule> World<'a, R> {
         let old_state = cell.state.replace(state);
         cell.free.set(free);
         R::update_desc(&cell, old_state, state);
-        if cell.first_gen {
+        if cell.is_gen0 {
             match (state, old_state) {
                 (Some(Alive), Some(Alive)) => (),
                 (Some(Alive), _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
                 (_, Some(Alive)) => self.gen0_cell_count.set(self.gen0_cell_count.get() - 1),
+                _ => (),
+            }
+        }
+        if cell.is_front {
+            match (state, old_state) {
+                (Some(Dead), Some(Dead)) => (),
+                (Some(Dead), _) => self.front_cell_count.set(self.front_cell_count.get() - 1),
+                (_, Some(Dead)) => self.front_cell_count.set(self.front_cell_count.get() + 1),
                 _ => (),
             }
         }

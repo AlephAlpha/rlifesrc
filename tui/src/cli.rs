@@ -2,7 +2,7 @@ use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
     rules::{Life, NtLife},
-    NewState::{Choose, Random, Stupid},
+    NewState::{Choose, Random},
     State::{Alive, Dead},
 };
 use rlifesrc_lib::{Search, Status, Symmetry, TraitSearch, Transform, World};
@@ -139,17 +139,12 @@ pub fn parse_args() -> Option<Args> {
         )
         .arg(
             Arg::with_name("CHOOSE")
-                .help("How to choose a state for unknown cells")
-                .long_help(
-                    "How to choose a state for unknown cells\n\
-                     \"Stupid\" means choosing alive for cells in the first\
-                     row/column,\nand dead for other cells.\n",
-                )
+                .help("How to choose a state for unknown cells\n")
                 .short("c")
                 .long("choose")
                 .takes_value(true)
-                .possible_values(&["dead", "alive", "random", "smart", "d", "a", "r", "s"])
-                .default_value("dead"),
+                .possible_values(&["dead", "alive", "random", "d", "a", "r"])
+                .default_value("alive"),
         )
         .arg(
             Arg::with_name("MAX")
@@ -163,6 +158,12 @@ pub fn parse_args() -> Option<Args> {
                 .takes_value(true)
                 .default_value("0")
                 .validator(|d| d.parse::<u32>().map(|_| ()).map_err(|e| e.to_string())),
+        )
+        .arg(
+            Arg::with_name("FRONT")
+                .help("Force the first row or column to be nonempty")
+                .short("f")
+                .long("front"),
         )
         .arg(
             Arg::with_name("ALL")
@@ -236,7 +237,6 @@ pub fn parse_args() -> Option<Args> {
         "dead" | "d" => Choose(Dead),
         "alive" | "a" => Choose(Alive),
         "random" | "r" => Random,
-        "stupid" | "s" => Stupid,
         _ => Choose(Dead),
     };
     let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
@@ -244,12 +244,18 @@ pub fn parse_args() -> Option<Args> {
         0 => None,
         i => Some(i),
     };
+    let non_empty_front = matches.is_present("FRONT");
 
     let rule_string = &matches.value_of("RULE").unwrap();
 
     if let Ok(rule) = Life::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
-        let search = Box::new(Search::new(world, new_state, max_cell_count));
+        let search = Box::new(Search::new(
+            world,
+            new_state,
+            max_cell_count,
+            non_empty_front,
+        ));
         Some(Args {
             search,
             all,
@@ -258,7 +264,12 @@ pub fn parse_args() -> Option<Args> {
         })
     } else if let Ok(rule) = NtLife::parse_rule(rule_string) {
         let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
-        let search = Box::new(Search::new(world, new_state, max_cell_count));
+        let search = Box::new(Search::new(
+            world,
+            new_state,
+            max_cell_count,
+            non_empty_front,
+        ));
         Some(Args {
             search,
             all,

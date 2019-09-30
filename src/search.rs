@@ -5,7 +5,7 @@ use crate::{
     rules::Rule,
     world::World,
 };
-use NewState::{Choose, Random, Stupid};
+use NewState::{Choose, Random};
 
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
@@ -32,11 +32,6 @@ pub enum NewState {
     Choose(State),
     /// Random. The probability of either state is 1/2.
     Random,
-    /// Chooses `Alive` for cells on the first row / column,
-    /// and `Dead` for other cells.
-    ///
-    /// It is not smart at all, so I call it Stupid.
-    Stupid,
 }
 
 /// The search.
@@ -63,11 +58,18 @@ pub struct Search<'a, R: Rule> {
     ///
     /// `None` means that there is no limit for the cell count.
     max_cell_count: Option<u32>,
+    /// Whether to force the first row/column to be nonempty.
+    non_empty_front: bool,
 }
 
 impl<'a, R: Rule> Search<'a, R> {
     /// Construct a new search.
-    pub fn new(world: World<'a, R>, new_state: NewState, max_cell_count: Option<u32>) -> Self {
+    pub fn new(
+        world: World<'a, R>,
+        new_state: NewState,
+        max_cell_count: Option<u32>,
+        non_empty_front: bool,
+    ) -> Self {
         let size = (world.width * world.height * world.period) as usize;
         let stack = Vec::with_capacity(size);
         Search {
@@ -76,6 +78,7 @@ impl<'a, R: Rule> Search<'a, R> {
             stack,
             next_set: 0,
             max_cell_count,
+            non_empty_front,
         }
     }
 
@@ -155,6 +158,11 @@ impl<'a, R: Rule> Search<'a, R> {
                 if self.world.gen0_cell_count.get() > max {
                     return false;
                 }
+            }
+
+            // Tests if the first row / column is empty.
+            if self.non_empty_front && self.world.front_cell_count.get() == 0 {
+                return false;
             }
 
             let cell = self.stack[self.next_set];
@@ -237,13 +245,6 @@ impl<'a, R: Rule> Search<'a, R> {
             let state = match self.new_state {
                 Choose(state) => state,
                 Random => rand::random(),
-                Stupid => {
-                    if cell.first_col {
-                        Alive
-                    } else {
-                        Dead
-                    }
-                }
             };
             self.world.set_cell(cell, Some(state), true);
             self.stack.push(cell);

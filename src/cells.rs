@@ -70,11 +70,11 @@ pub struct LifeCell<'a, R: Rule> {
     pub(crate) sym: Vec<&'a LifeCell<'a, R>>,
 
     /// Whether the cell is in the first generation.
-    pub(crate) first_gen: bool,
+    pub(crate) is_gen0: bool,
     /// Whether the cell is on the first row or column.
     ///
     /// Here the choice of row or column depends on the search order.
-    pub(crate) first_col: bool,
+    pub(crate) is_front: bool,
 }
 
 impl<'a, R: Rule> LifeCell<'a, R> {
@@ -106,8 +106,8 @@ impl<'a, R: Rule> Default for LifeCell<'a, R> {
             succ: Default::default(),
             nbhd: Default::default(),
             sym: Default::default(),
-            first_gen: false,
-            first_col: false,
+            is_gen0: false,
+            is_front: false,
         }
     }
 }
