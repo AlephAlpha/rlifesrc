@@ -319,6 +319,8 @@ impl<'a, R: Rule> Search<'a, R> {
         let mut best_state = None;
 
         while let Some((j, cell)) = self.world.get_unknown_after(i) {
+            i = j + 1;
+            window -= 1;
             if window > 0 && (smart.threshold.is_none() || max < smart.threshold.unwrap()) {
                 let state = match self.new_state {
                     Choose(state) => state,
@@ -339,20 +341,20 @@ impl<'a, R: Rule> Search<'a, R> {
                         Ordering::Equal => state,
                     };
 
-                    let n0 = len0 + len1 + best_len0;
-                    let n1 = len0 + len1 + best_len1;
+                    let n0 = (len0 + len1 + best_len0) as isize;
+                    let n1 = (len0 + len1 + best_len1) as isize;
                     let (a0, a1) = match n0.cmp(&n1) {
-                        Ordering::Greater => (n0 + 1, n1 + 1),
-                        Ordering::Less => (n1 + 1, n0 + 1),
-                        Ordering::Equal => (n0 + 2, 0),
+                        Ordering::Greater => (n0, n1),
+                        Ordering::Less => (n1, n0),
+                        Ordering::Equal => (n0 + 1, -1),
                     };
 
-                    let m0 = max + len0;
-                    let m1 = max + len1;
+                    let m0 = (max + len0) as isize;
+                    let m1 = (max + len1) as isize;
                     let (b0, b1) = match m0.cmp(&m1) {
-                        Ordering::Greater => (m0 + 1, m1 + 1),
-                        Ordering::Less => (m1 + 1, m0 + 1),
-                        Ordering::Equal => (m0 + 2, 0),
+                        Ordering::Greater => (m0, m1),
+                        Ordering::Less => (m1, m0),
+                        Ordering::Equal => (m0 + 1, -1),
                     };
 
                     if a0 > b0 || (a0 == b0 && a1 > b1) {
@@ -365,8 +367,8 @@ impl<'a, R: Rule> Search<'a, R> {
                 } else {
                     return true;
                 }
-                i = j + 1;
-                window -= 1;
+            } else {
+                break;
             }
         }
 
