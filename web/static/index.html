@@ -3,10 +3,61 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="styles.css">
-    <title>rlifesrc - A Game of Life pattern searcher written in Rust.</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rust Life Search - A Game of Life pattern searcher written in Rust.</title>
+    <link href="fontawesome/css/all.min.css" rel="stylesheet" type="text/css" />
+    <link href="mui/css/mui.min.css" rel="stylesheet" type="text/css" />
+    <script src="mui/js/mui.min.js"></script>
+    <style>
+        body {
+            background-color: #eee;
+        }
+
+        #appbar {
+            background-color: #222;
+        }
+
+        #appbar table {
+            width: 100%;
+        }
+
+        #title {
+            margin-right: 10px;
+        }
+
+        #appbar .fab {
+            color: #fff;
+        }
+
+        main {
+            margin-top: 20px;
+        }
+
+        .btn-tiny {
+            margin-left: 4px;
+            padding: 0 4px;
+        }
+
+        .btn-tiny+.btn-tiny {
+            margin-left: 0;
+        }
+
+        #world {
+            background-color: #eee;
+            font-family: "Liberation Mono", Consolas, monospace;
+            font-size: 1rem;
+            line-height: 1rem;
+            letter-spacing: 2px;
+            max-height: 400px;
+            overflow: auto;
+            padding: 5px;
+        }
+
+        #buttons .fas {
+            margin-right: 5px;
+        }
+    </style>
 </head>
 
 <body>

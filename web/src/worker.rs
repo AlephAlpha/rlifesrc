@@ -14,7 +14,7 @@ use yew::{
 const VIEW_FREQ: u32 = 20000;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Data {
+pub struct Config {
     pub width: isize,
     pub height: isize,
     pub period: isize,
@@ -29,18 +29,18 @@ pub struct Data {
     pub rule_string: String,
 }
 
-impl Default for Data {
+impl Default for Config {
     fn default() -> Self {
-        Data {
-            width: 7,
-            height: 7,
-            period: 3,
+        Config {
+            width: 26,
+            height: 8,
+            period: 4,
             dx: 0,
-            dy: 0,
+            dy: 1,
             transform: Transform::Id,
             symmetry: Symmetry::C1,
             column_first: None,
-            new_state: Choose(State::Dead),
+            new_state: Choose(State::Alive),
             max_cell_count: None,
             non_empty_front: true,
             rule_string: String::from("B3/S23"),
@@ -91,7 +91,7 @@ pub struct Worker {
 pub enum Request {
     Start,
     Pause,
-    SetWorld(Data),
+    SetWorld(Config),
     DisplayGen(isize),
 }
 
@@ -130,22 +130,22 @@ impl Agent for Worker {
     type Output = Response;
 
     fn create(link: AgentLink<Self>) -> Self {
-        let data: Data = Default::default();
-        let rule = Life::parse_rule(&data.rule_string).unwrap();
+        let config: Config = Default::default();
+        let rule = Life::parse_rule(&config.rule_string).unwrap();
         let world = World::new(
-            (data.width, data.height, data.period),
-            data.dx,
-            data.dy,
-            data.transform,
-            data.symmetry,
+            (config.width, config.height, config.period),
+            config.dx,
+            config.dy,
+            config.transform,
+            config.symmetry,
             rule,
-            data.column_first,
+            config.column_first,
         );
         let search = Box::new(Search::new(
             world,
-            data.new_state,
-            data.max_cell_count,
-            data.non_empty_front,
+            config.new_state,
+            config.max_cell_count,
+            config.non_empty_front,
         ));
 
         let status = Status::Paused;
@@ -180,42 +180,42 @@ impl Agent for Worker {
                 self.status = Status::Paused;
                 self.update_status(id);
             }
-            Request::SetWorld(data) => {
+            Request::SetWorld(config) => {
                 self.job.stop();
                 self.status = Status::Paused;
-                let dimensions = (data.width, data.height, data.period);
-                if let Ok(rule) = Life::parse_rule(&data.rule_string) {
+                let dimensions = (config.width, config.height, config.period);
+                if let Ok(rule) = Life::parse_rule(&config.rule_string) {
                     let world = World::new(
                         dimensions,
-                        data.dx,
-                        data.dy,
-                        data.transform,
-                        data.symmetry,
+                        config.dx,
+                        config.dy,
+                        config.transform,
+                        config.symmetry,
                         rule,
-                        data.column_first,
+                        config.column_first,
                     );
                     self.search = Box::new(Search::new(
                         world,
-                        data.new_state,
-                        data.max_cell_count,
-                        data.non_empty_front,
+                        config.new_state,
+                        config.max_cell_count,
+                        config.non_empty_front,
                     ));
                     self.update_world(id, 0);
-                } else if let Ok(rule) = NtLife::parse_rule(&data.rule_string) {
+                } else if let Ok(rule) = NtLife::parse_rule(&config.rule_string) {
                     let world = World::new(
                         dimensions,
-                        data.dx,
-                        data.dy,
-                        data.transform,
-                        data.symmetry,
+                        config.dx,
+                        config.dy,
+                        config.transform,
+                        config.symmetry,
                         rule,
-                        data.column_first,
+                        config.column_first,
                     );
                     self.search = Box::new(Search::new(
                         world,
-                        data.new_state,
-                        data.max_cell_count,
-                        data.non_empty_front,
+                        config.new_state,
+                        config.max_cell_count,
+                        config.non_empty_front,
                     ));
                     self.update_world(id, 0);
                 } else {

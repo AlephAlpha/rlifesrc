@@ -1,4 +1,4 @@
-use crate::worker::{Data, Request, Response, Worker};
+use crate::worker::{Config, Request, Response, Worker};
 use rlifesrc_lib::{
     NewState::{self, Choose, Random},
     State::{Alive, Dead},
@@ -13,7 +13,7 @@ use yew::{
 };
 
 pub struct Model {
-    data: Data,
+    config: Config,
     status: Status,
     gen: isize,
     cells: u32,
@@ -27,7 +27,8 @@ pub enum Msg {
     Tick,
     Start,
     Pause,
-    SetGen(isize),
+    IncGen,
+    DecGen,
     SetWidth(isize),
     SetHeight(isize),
     SetPeriod(isize),
@@ -82,25 +83,26 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let data: Data = Default::default();
+        let config: Config = Default::default();
         let status = Status::Paused;
         let job = Job::new(&mut link);
         let callback = link.send_back(Msg::DataReceived);
         let worker = Worker::bridge(callback);
 
         let world = String::from(
-            "???????\n\
-             ???????\n\
-             ???????\n\
-             ???????\n\
-             ???????\n\
-             ???????\n\
-             ???????",
+            "??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????\n\
+             ??????????????????????????",
         );
-        let period = data.period;
+        let period = config.period;
 
         Model {
-            data,
+            config,
             status,
             gen: 0,
             cells: 0,
@@ -123,56 +125,60 @@ impl Component for Model {
             Msg::Pause => {
                 self.worker.send(Request::Pause);
             }
-            Msg::SetGen(gen) => {
-                self.gen = gen;
+            Msg::IncGen => {
+                self.gen += 1;
+                self.worker.send(Request::DisplayGen(self.gen));
+            }
+            Msg::DecGen => {
+                self.gen -= 1;
                 self.worker.send(Request::DisplayGen(self.gen));
             }
             Msg::SetWidth(width) => {
-                self.data.width = width;
-                if self.data.transform.square_world() || self.data.symmetry.square_world() {
-                    self.data.height = width;
+                self.config.width = width;
+                if self.config.transform.square_world() || self.config.symmetry.square_world() {
+                    self.config.height = width;
                 }
             }
             Msg::SetHeight(height) => {
-                self.data.height = height;
-                if self.data.transform.square_world() || self.data.symmetry.square_world() {
-                    self.data.width = height;
+                self.config.height = height;
+                if self.config.transform.square_world() || self.config.symmetry.square_world() {
+                    self.config.width = height;
                 }
             }
             Msg::SetPeriod(period) => {
-                self.data.period = period;
+                self.config.period = period;
             }
             Msg::SetDx(dx) => {
-                self.data.dx = dx;
+                self.config.dx = dx;
             }
             Msg::SetDy(dy) => {
-                self.data.dy = dy;
+                self.config.dy = dy;
             }
             Msg::SetTrans(transform) => {
-                self.data.transform = transform;
+                self.config.transform = transform;
             }
             Msg::SetSym(symmetry) => {
-                self.data.symmetry = symmetry;
+                self.config.symmetry = symmetry;
             }
             Msg::SetRule(rule_string) => {
-                self.data.rule_string = rule_string;
+                self.config.rule_string = rule_string;
             }
             Msg::SetOrder(column_first) => {
-                self.data.column_first = column_first;
+                self.config.column_first = column_first;
             }
             Msg::SetChoose(new_state) => {
-                self.data.new_state = new_state;
+                self.config.new_state = new_state;
             }
             Msg::SetMax(max_cell_count) => {
-                self.data.max_cell_count = max_cell_count;
+                self.config.max_cell_count = max_cell_count;
             }
             Msg::SetFront => {
-                self.data.non_empty_front ^= true;
+                self.config.non_empty_front ^= true;
             }
             Msg::Reset => {
                 self.gen = 0;
-                self.period = self.data.period;
-                self.worker.send(Request::SetWorld(self.data.clone()));
+                self.period = self.config.period;
+                self.worker.send(Request::SetWorld(self.config.clone()));
             }
             Msg::DataReceived(response) => match response {
                 Response::UpdateWorld((world, cells)) => {
@@ -205,52 +211,62 @@ impl Component for Model {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         html! {
-            <div id = "rlifesrc">
-                <header>
-                    <h1>
-                        <a
-                            href = "https://github.com/AlephAlpha/rlifesrc/"
-                            title = "Fork me on GitHub"
-                        >
-                            { "rlifesrc" }
-                        </a>
-                    </h1>
-                    <span id = "subheading">
-                        { "A Game of Life pattern searcher written in Rust. " }
-                    </span>
-                </header>
-                <main>
-                    <div id = "world">
-                        { self.data() }
-                        { self.world() }
-                        { self.status() }
-                    </div>
-                    <div id = "settings">
-                        { self.buttons() }
-                        { self.set_gen() }
-                        { self.set_rule() }
-                        { self.set_width() }
-                        { self.set_height() }
-                        { self.set_period() }
-                        { self.set_dx() }
-                        { self.set_dy() }
-                        { self.set_trans() }
-                        { self.set_sym() }
-                        { self.set_max() }
-                        { self.set_front() }
-                        { self.set_order() }
-                        { self.set_choose() }
-                    </div>
-                </main>
+            <div id="rlifesrc">
+                { self.header() }
+                { self.main() }
             </div>
         }
     }
 }
 
 impl Model {
+    fn header(&self) -> Html<Self> {
+        html! {
+            <header id="appbar" class="mui-appbar mui--z1">
+                <table class="mui-container-fluid">
+                    <tr class="mui--appbar-height">
+                        <td>
+                            <span id="title" class="mui--text-headline">
+                                { "Rust Life Search" }
+                            </span>
+                            <span class="mui--text-subhead mui--hidden-xs">
+                                { "A Game of Life pattern searcher written in Rust." }
+                            </span>
+                        </td>
+                        <td class="mui--text-right">
+                            <a href="https://github.com/AlephAlpha/rlifesrc/"
+                                class="mui--text-headline">
+                                <i class="fab fa-github"></i>
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+            </header>
+        }
+    }
+
+    fn main(&self) -> Html<Self> {
+        html! {
+            <main class="mui-container-fluid">
+                <div class="mui-row">
+                    <div class="mui-col-sm-10 mui-col-sm-offset-1 mui-col-lg-8 mui-col-lg-offset-2">
+                        <div class="mui-panel">
+                            { self.data() }
+                            { self.world() }
+                            { self.buttons() }
+                        </div>
+                        <div class="mui-panel">
+                            { self.settings() }
+                        </div>
+                    </div>
+                </div>
+            </main>
+        }
+    }
+
     fn world(&self) -> Html<Self> {
         html! {
-            <pre>
+            <pre id="world">
                 { self.world.clone() }
             </pre>
         }
@@ -258,258 +274,256 @@ impl Model {
 
     fn data(&self) -> Html<Self> {
         html! {
-            <div id="data">
-                <span>
-                    <abbr title = "The displayed generation.">
-                    { "Gen" }
+            <ul id="data" class="mui-list--inline mui--text-body2">
+                <li>
+                    <abbr title="The displayed generation.">
+                        { "Generation" }
                     </abbr>
                     { ": " }
                     { self.gen }
-                </span>
-                <span>
-                    <abbr title = "Number of known living cells in generation 0.">
-                    { "Cells" }
+                    <button class="mui-btn mui-btn--small btn-tiny"
+                        disabled={ self.gen == 0 }
+                        onclick=|_| Msg::DecGen>
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="mui-btn mui-btn--small btn-tiny"
+                        disabled={ self.gen == self.period - 1 }
+                        onclick=|_| Msg::IncGen>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </li>
+                <li>
+                    <abbr title="Number of known living cells in generation 0.">
+                        { "Cell count" }
                     </abbr>
                     { ": " }
                     { self.cells }
-                </span>
-            </div>
-        }
-    }
-
-    fn status(&self) -> Html<Self> {
-        let status = match self.status {
-            Status::Found => "Found a result.",
-            Status::None => "No more result.",
-            Status::Searching => "Searching...",
-            Status::Paused => "Paused.",
-        };
-        html! {
-            <div id = "status">
-                { status }
-            </div>
+                </li>
+                <li>
+                    {
+                        match self.status {
+                            Status::Found => "Found a result.",
+                            Status::None => "No more result.",
+                            Status::Searching => "Searching...",
+                            Status::Paused => "Paused.",
+                        }
+                    }
+                </li>
+            </ul>
         }
     }
 
     fn buttons(&self) -> Html<Self> {
         html! {
-            <div id = "buttons">
-                <button
-                    onclick = |_| Msg::Start
-                    disabled = self.status == Status::Searching
-                >
-                    { "Start" }
+            <div id="buttons">
+                <button class="mui-btn mui-btn--raised"
+                    disabled={self.status == Status::Searching }
+                    onclick=|_| Msg::Start>
+                    <i class="fas fa-play"></i>
+                    <span class="mui--hidden-xs">
+                        { "Start" }
+                    </span>
                 </button>
-                <button
-                    onclick = |_| Msg::Pause
-                    disabled = self.status != Status::Searching
-                >
-                    { "Pause" }
+                <button class="mui-btn mui-btn--raised"
+                    disabled={self.status != Status::Searching }
+                    onclick=|_| Msg::Pause>
+                    <i class="fas fa-pause"></i>
+                    <span class="mui--hidden-xs">
+                        { "Pause" }
+                    </span>
                 </button>
-                <button
-                    onclick = |_| Msg::Reset
-                    title = "Reset the world"
-                >
-                    { "Set World" }
+                <button class="mui-btn mui-btn--raised"
+                    onclick=|_| Msg::Reset>
+                    <i class="fas fa-cog"></i>
+                    <abbr title="Reset the world" class="mui--hidden-xs">
+                        { "Set World" }
+                    </abbr>
                 </button>
             </div>
         }
     }
 
-    fn set_gen(&self) -> Html<Self> {
+    fn settings(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_gen">
-                    <abbr title = "The displayed generation.">
-                    { "Gen" }
-                    </abbr>
-                    { ":" }
-                </label>
-                <input
-                    id = "set_gen"
-                    type = "range"
-                    value = self.gen
-                    min = "0"
-                    max = self.period - 1
-                    oninput = |e| Msg::SetGen(e.value.parse().unwrap())
-                />
+            <div id="settings" class="mui-form">
+                { self.set_rule() }
+                { self.set_width() }
+                { self.set_height() }
+                { self.set_period() }
+                { self.set_dx() }
+                { self.set_dy() }
+                { self.set_trans() }
+                { self.set_sym() }
+                { self.set_max() }
+                { self.set_order() }
+                { self.set_choose() }
+                { self.set_front() }
             </div>
         }
     }
 
     fn set_rule(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_rule">
+            <div class="mui-textfield">
+                <label for="set_rule">
                     <abbr title = "Rule of the cellular automaton. \
                         Supports Life-like and isotropic non-totalistic rules.">
                     { "Rule" }
                     </abbr>
                     { ":" }
                 </label>
-                <input
-                    id = "set_rule"
-                    type = "text"
-                    value = self.data.rule_string.clone()
-                    onchange = |e| {
+                <input id="set_rule"
+                    type="text"
+                    value={ self.config.rule_string.clone() }
+                    onchange=|e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetRule(v)
                         } else {
                             Msg::None
                         }
-                    }
-                />
+                    }/>
             </div>
         }
     }
 
     fn set_width(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_width">
-                    <abbr title = "Width of the pattern.">
+            <div class="mui-textfield">
+                <label for="set_width">
+                    <abbr title="Width of the pattern.">
                     { "Width" }
                     </abbr>
                     { ":" }
                 </label>
-                <input
-                    id = "set_width"
-                    type = "number"
-                    value = self.data.width
-                    min = "1"
-                    onchange = |e| {
+                <input id="set_width"
+                    type="number"
+                    value={ self.config.width }
+                    min="1"
+                    onchange =|e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetWidth(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    }
-                />
+                    }/>
             </div>
         }
     }
 
     fn set_height(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_height">
-                    <abbr title = "Height of the pattern.">
+            <div class="mui-textfield">
+                <label for="set_height">
+                    <abbr title="Height of the pattern.">
                     { "Height" }
                     </abbr>
                     { ":" }
                 </label>
-                <input
-                    id = "set_height"
-                    type = "number"
-                    value = self.data.height
-                    min = "1"
-                    onchange = |e| {
+                <input id="set_height"
+                    type="number"
+                    value={ self.config.height }
+                    min="1"
+                    onchange=|e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetHeight(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    }
-                />
+                    }/>
             </div>
         }
     }
 
     fn set_period(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_period">
-                    <abbr title = "Period of the pattern.">
+            <div class="mui-textfield">
+                <label for="set_period">
+                    <abbr title="Period of the pattern.">
                     { "Period" }
                     </abbr>
                     { ":" }
                 </label>
-                <input
-                    id = "set_period"
-                    type = "number"
-                    value = self.data.period
-                    min = "1"
-                    onchange = |e| {
+                <input id="set_period"
+                    type="number"
+                    value={ self.config.period }
+                    min="1"
+                    onchange=|e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetPeriod(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    }
-                />
+                    }/>
             </div>
         }
     }
 
     fn set_dx(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_dx">
-                    <abbr title = "Horizontal translation.">
+            <div class="mui-textfield">
+                <label for="set_dx">
+                    <abbr title="Horizontal translation.">
                     { "dx" }
                     </abbr>
                     { ":" }
                 </label>
-                <input
-                    id = "set_dx"
-                    type = "number"
-                    value = self.data.dx
-                    onchange = |e| {
+                <input id="set_dx"
+                    type="number"
+                    value=self.config.dx
+                    onchange=|e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetDx(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    }
-                />
+                    }/>
             </div>
         }
     }
 
     fn set_dy(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_dy">
-                    <abbr title = "Vertical translation.">
+            <div class="mui-textfield">
+                <label for="set_dy">
+                    <abbr title="Vertical translation.">
                     { "dy" }
                     </abbr>
                     { ":" }
                 </label>
-                <input
-                    id = "set_dy"
-                    type = "number"
-                    value = self.data.dy
-                    onchange = |e| {
+                <input id="set_dy"
+                    type="number"
+                    value={ self.config.dy }
+                    onchange=|e| {
                         if let ChangeData::Value(v) = e {
                             Msg::SetDy(v.parse().unwrap())
                         } else {
                             Msg::None
                         }
-                    },
-                />
+                    }/>
             </div>
         }
     }
 
     fn set_max(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_max">
-                    <abbr title = "Maximal number of living cells in the first generation. \
+            <div class="mui-textfield">
+                <label for="set_max">
+                    <abbr title="Maximal number of living cells in the first generation. \
                         If this value is set to 0, it means there is no limitation.">
-                    { "Max" }
+                    { "Max cell count" }
                     </abbr>
                     { ":" }
                 </label>
-                <input
-                    id = "set_max",
-                    type = "number",
-                    value = match self.data.max_cell_count {
-                        None => 0,
-                        Some(i) => i,
+                <input id="set_max",
+                    type="number",
+                    value={
+                        match self.config.max_cell_count {
+                            None => 0,
+                            Some(i) => i,
+                        }
                     },
-                    min = "0",
-                    onchange = |e| {
+                    min="0",
+                    onchange=|e| {
                         if let ChangeData::Value(v) = e {
                             let max_cell_count = v.parse().unwrap();
                             let max_cell_count = match max_cell_count {
@@ -520,44 +534,39 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    }
-                />
+                    }/>
             </div>
         }
     }
 
     fn set_front(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_front">
-                    <abbr title = "Force the first row or column to be nonempty.">
-                    { "Front" }
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_front",
+                        type="checkbox",
+                        checked={ self.config.non_empty_front },
+                        onclick=|_| Msg::SetFront/>
+                    <abbr title="Force the first row or column to be nonempty.">
+                    { "Non empty front" }
                     </abbr>
-                    { ":" }
                 </label>
-                <input
-                    id = "set_front",
-                    type = "checkbox",
-                    checked = self.data.non_empty_front,
-                    onclick = |_| Msg::SetFront
-                />
             </div>
         }
     }
 
     fn set_trans(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_trans">
-                    <abbr title = "How the pattern transform after a period. \
+            <div class="mui-select">
+                <label for="set_trans">
+                    <abbr title="How the pattern transform after a period. \
                     It will apply this transformation before the translation.">
-                    { "Trans" }
+                    { "Transformation" }
                     </abbr>
                     { ":" }
                 </label>
-                <select
-                    id = "set_trans"
-                    onchange = |e| {
+                <select id="set_trans"
+                    onchange=|e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
                                 "Id" => Msg::SetTrans(Transform::Id),
@@ -573,22 +582,21 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    }
-                >
+                    }>
                     <option> { "Id" } </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "Rotate 90°" }
                     </option>
                     <option> { "Rotate 180°" } </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "Rotate 270°" }
                     </option>
                     <option> { "Flip |" } </option>
                     <option> { "Flip -" } </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "Flip \\" }
                     </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "Flip /" }
                     </option>
                 </select>
@@ -598,15 +606,14 @@ impl Model {
 
     fn set_sym(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_sym">
-                    <abbr title = "Symmetry of the pattern.">
-                    { "Sym" }
+            <div class="mui-select">
+                <label for="set_sym">
+                    <abbr title="Symmetry of the pattern.">
+                    { "Symmetry" }
                     </abbr>
                     { ":" }
                 </label>
-                <select
-                    id = "set_sym"
+                <select id ="set_sym"
                     onchange = |e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
@@ -625,26 +632,25 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    }
-                >
+                    }>
                     <option> { "C1" } </option>
                     <option> { "C2" } </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "C4" }
                     </option>
                     <option> { "D2|" } </option>
                     <option> { "D2-" } </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "D2\\" }
                     </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "D2/" }
                     </option>
                     <option> { "D4+" } </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "D4X" }
                     </option>
-                    <option disabled = self.data.width != self.data.height>
+                    <option disabled={ self.config.width != self.config.height}>
                         { "D8" }
                     </option>
                 </select>
@@ -654,16 +660,15 @@ impl Model {
 
     fn set_order(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_order">
-                    <abbr title = "Search order. Row first or column first.">
-                    { "Order" }
+            <div class="mui-select">
+                <label for="set_order">
+                    <abbr title="Search order. Row first or column first.">
+                    { "Search order" }
                     </abbr>
                     { ":" }
                 </label>
-                <select
-                    id = "set_order"
-                    onchange = |e| {
+                <select id="set_order"
+                    onchange=|e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
                                 "Automatic" => Msg::SetOrder(None),
@@ -674,11 +679,10 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    }
-                >
+                    } >
                     <option> { "Automatic" } </option>
-                    <option value = "Column"> { "Column first" } </option>
-                    <option value = "Row"> { "Row first" } </option>
+                    <option value="Column"> { "Column first" } </option>
+                    <option value="Row"> { "Row first" } </option>
                 </select>
             </div>
         }
@@ -686,16 +690,15 @@ impl Model {
 
     fn set_choose(&self) -> Html<Self> {
         html! {
-            <div class = "setting">
-                <label for = "set_choose">
-                    <abbr title = "How to choose a state for unknown cells.">
-                    { "Choose" }
+            <div class="mui-select">
+                <label for="set_choose">
+                    <abbr title="How to choose a state for unknown cells.">
+                    { "Choice of state for unknown cells" }
                     </abbr>
                     { ":" }
                 </label>
-                <select
-                    id = "set_order"
-                    onchange = |e| {
+                <select id="set_order"
+                    onchange=|e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
                                 "Dead" => Msg::SetChoose(Choose(Dead)),
@@ -706,8 +709,7 @@ impl Model {
                         } else {
                             Msg::None
                         }
-                    }
-                >
+                    }>
                     <option> { "Alive" } </option>
                     <option> { "Dead" } </option>
                     <option> { "Random" } </option>
