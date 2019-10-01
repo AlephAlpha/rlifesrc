@@ -548,13 +548,15 @@ impl<'a, R: Rule> World<'a, R> {
                             self.set_cell(cell, Some(default), false);
                         }
                     }
-
-                    // Sets the next cell in the search order.
-                    if cell.state.get().is_none() && cell.free.get() {
-                        let cell = unsafe { self.lift(cell).unwrap() };
-                        self.search_list.push(cell);
-                    }
                 }
+            }
+        }
+
+        for cell in self.cells.iter() {
+            // Sets the next cell in the search order.
+            if cell.state.get().is_none() && cell.free.get() {
+                let cell = unsafe { self.lift(cell).unwrap() };
+                self.search_list.push(cell);
             }
         }
     }
