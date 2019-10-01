@@ -334,10 +334,12 @@ impl Model {
                 </button>
                 <button class="mui-btn mui-btn--raised"
                     onclick=|_| Msg::Reset>
-                    <i class="fas fa-cog"></i>
-                    <abbr title="Reset the world" class="mui--hidden-xs">
-                        { "Set World" }
-                    </abbr>
+                    <i class="fas fa-redo"></i>
+                    <span class="mui--hidden-xs">
+                        <abbr title="Apply the settings and restart.">
+                            { "Set World" }
+                        </abbr>
+                    </span>
                 </button>
             </div>
         }
