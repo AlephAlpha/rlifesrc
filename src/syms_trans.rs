@@ -5,6 +5,9 @@ use std::{
     str::FromStr,
 };
 
+#[cfg(feature = "stdweb")]
+use serde::{Deserialize, Serialize};
+
 /// Transformations. Rotations and reflections.
 ///
 /// 8 different values corresponds to 8 elements of the dihedral group

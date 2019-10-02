@@ -299,7 +299,7 @@ impl Rule for NtLife {
         desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        stack: &mut Vec<&'a LifeCell<'a, Self>>,
+        set_stack: &mut Vec<&'a LifeCell<'a, Self>>,
     ) {
         let nbhd_states = self.implication_nbhd(state, desc, succ_state).0;
         if nbhd_states != 0 {
@@ -311,7 +311,7 @@ impl Rule for NtLife {
                 };
                 if let Some(neigh) = neigh {
                     world.set_cell(neigh, Some(state), false);
-                    stack.push(neigh);
+                    set_stack.push(neigh);
                 }
             }
         }

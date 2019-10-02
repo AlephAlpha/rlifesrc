@@ -281,14 +281,14 @@ impl Rule for Life {
         desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        stack: &mut Vec<&'a LifeCell<'a, Self>>,
+        set_stack: &mut Vec<&'a LifeCell<'a, Self>>,
     ) {
         if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
             for &neigh in cell.nbhd.iter() {
                 if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
                         world.set_cell(neigh, Some(state), false);
-                        stack.push(neigh);
+                        set_stack.push(neigh);
                     }
                 }
             }

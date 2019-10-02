@@ -44,7 +44,7 @@ pub trait Rule: Sized {
     /// Given the states of a cell, its neighborhood descriptor, and the state
     /// in the next generation (which must be known),
     /// deduces the states of some of its unknown neighbors,
-    /// and push a reference to each deduced cell into the `stack`.
+    /// and push a reference to each deduced cell into the `set_stack`.
     fn consistify_nbhd<'a>(
         &self,
         cell: &LifeCell<'a, Self>,
@@ -52,6 +52,6 @@ pub trait Rule: Sized {
         desc: Self::Desc,
         state: Option<State>,
         succ_state: State,
-        stack: &mut Vec<&'a LifeCell<'a, Self>>,
+        set_stack: &mut Vec<&'a LifeCell<'a, Self>>,
     );
 }

@@ -41,23 +41,28 @@ pub enum NewState {
 pub struct Search<'a, R: Rule> {
     /// The world.
     pub world: World<'a, R>,
+
     /// How to choose a state for an unknown cell.
     new_state: NewState,
+
     /// A stack to records the cells whose values are set during the search.
     ///
     /// The cells in this table always have known states.
     ///
     /// It is used in the backtracking.
     set_stack: Vec<&'a LifeCell<'a, R>>,
+
     /// The position in the `set_stack` of the next cell to be examined.
     ///
     /// See `proceed` for details.
     next_set: usize,
+
     /// The number of living cells in the 0th generation must not exceed
     /// this number.
     ///
     /// `None` means that there is no limit for the cell count.
     max_cell_count: Option<u32>,
+
     /// Whether to force the first row/column to be nonempty.
     non_empty_front: bool,
 }
@@ -94,23 +99,15 @@ impl<'a, R: Rule> Search<'a, R> {
     fn consistify(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
         let state = cell.state.get();
         let desc = cell.desc.get();
-        let succ_state = cell.succ_state.get();
 
-        // Examines the cell,
-        // and determines the state of the cell in the next generation.
-        if let Some(new_state) = self.world.rule.transition(state, desc) {
-            if let Some(succ_state) = succ_state {
+        if let Some(succ_state) = cell.succ_state.get() {
+            // Examines the cell,
+            if let Some(new_state) = self.world.rule.transition(state, desc) {
                 if new_state != succ_state {
                     return false;
                 }
-            } else {
-                let succ = cell.succ.unwrap();
-                self.world.set_cell(succ, Some(new_state), false);
-                self.set_stack.push(succ);
             }
-        }
 
-        if let Some(succ_state) = succ_state {
             // Determines the state of the current cell.
             if state.is_none() {
                 if let Some(state) = self.world.rule.implication(desc, succ_state) {
@@ -128,7 +125,13 @@ impl<'a, R: Rule> Search<'a, R> {
                 succ_state,
                 &mut self.set_stack,
             );
+        } else if let Some(new_state) = self.world.rule.transition(state, desc) {
+            // Determines the state of the cell in the next generation.
+            let succ = cell.succ.unwrap();
+            self.world.set_cell(succ, Some(new_state), false);
+            self.set_stack.push(succ);
         }
+
         true
     }
 

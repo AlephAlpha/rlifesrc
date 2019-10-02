@@ -7,9 +7,6 @@ use crate::{
 };
 use std::cell::Cell;
 
-#[cfg(feature = "stdweb")]
-use serde::{Deserialize, Serialize};
-
 /// The coordinates of a cell.
 ///
 /// `(x-coordinate, y-coordinate, time)`.
@@ -38,12 +35,6 @@ pub struct World<'a, R: Rule> {
     /// All the cells will live throughout the lifetime of the world.
     // So the unsafe code below is actually safe.
     cells: Vec<LifeCell<'a, R>>,
-
-    /// A shared dead cell outside the search range.
-    ///
-    /// If the next generation of a cell is out of the search range,
-    /// its `succ` would be this `dead_cell`.
-    dead_cell: LifeCell<'a, R>,
 
     /// A list of references of cells sorted by the search order.search
     ///
@@ -119,7 +110,6 @@ impl<'a, R: Rule> World<'a, R> {
             }
         }
 
-        let dead_cell = LifeCell::new(Dead, false, rule.b0());
         let search_list = Vec::new();
 
         let gen0_cell_count = Cell::new(0);
@@ -132,7 +122,6 @@ impl<'a, R: Rule> World<'a, R> {
             rule,
             column_first,
             cells,
-            dead_cell,
             search_list,
             gen0_cell_count,
             front_cell_count,
@@ -187,7 +176,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// then sets the state of the current cell to `default`.
     ///
     /// If the successor is out of the search range,
-    /// then sets it to `dead_cell`.
+    /// then sets it to `None`.
     fn init_pred_succ(&mut self, dx: isize, dy: isize, transform: Transform) -> &mut Self {
         for x in -1..=self.width {
             for y in -1..=self.height {
@@ -242,10 +231,11 @@ impl<'a, R: Rule> World<'a, R> {
                             Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
                         };
                         let succ = self.find_cell((new_x, new_y, 0));
-                        let succ = succ.unwrap_or(&self.dead_cell);
-                        unsafe {
-                            let cell = cell_ptr.as_mut().unwrap();
-                            cell.succ = self.lift(succ);
+                        if let Some(succ) = succ {
+                            unsafe {
+                                let cell = cell_ptr.as_mut().unwrap();
+                                cell.succ = self.lift(succ);
+                            }
                         }
                     }
                 }
@@ -309,7 +299,7 @@ impl<'a, R: Rule> World<'a, R> {
                                 cell.sym.push(self.lift(sym).unwrap());
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                            self.set_cell(cell, Some(cell.default_state), false);
+                            cell.free.set(false);
                         }
                     }
                 }
