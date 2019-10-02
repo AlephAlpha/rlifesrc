@@ -3,251 +3,12 @@
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
     rules::Rule,
+    syms_trans::{Symmetry, Transform},
 };
-use std::{
-    cell::Cell,
-    fmt::{Debug, Error, Formatter},
-    str::FromStr,
-};
+use std::cell::Cell;
 
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
-
-/// Transformations. Rotations and reflections.
-///
-/// 8 different values corresponds to 8 elements of the dihedral group
-/// _D_<sub>8</sub>.
-///
-/// `Id` is the identity transformation.
-///
-/// `R` means rotations around the center of the world.
-/// The number after it is the counterclockwise rotation angle in degrees.
-///
-/// `F` means reflections (flips).
-/// The symbol after it is the axis of reflection.
-///
-/// The transformation is applied _before_ the translation.
-///
-/// Some of the transformations are only valid when the world is square.
-#[derive(Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
-pub enum Transform {
-    /// `Id`.
-    ///
-    /// Identity transformation.
-    Id,
-    /// `R90`.
-    ///
-    /// 90° rotation counterclockwise.
-    Rotate90,
-    /// `R180`.
-    ///
-    /// 180° rotation counterclockwise.
-    Rotate180,
-    /// `R270`.
-    ///
-    /// 270° rotation counterclockwise.
-    Rotate270,
-    /// `F-`.
-    ///
-    /// Reflection across the middle row.
-    FlipRow,
-    /// `F|`.
-    ///
-    /// Reflection across the middle column.
-    FlipCol,
-    /// `F\`.
-    ///
-    /// Reflection across the diagonal.
-    FlipDiag,
-    /// `F/`.
-    ///
-    /// Reflection across the antidiagonal.
-    FlipAntidiag,
-}
-
-impl FromStr for Transform {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Id" => Ok(Transform::Id),
-            "R90" => Ok(Transform::Rotate90),
-            "R180" => Ok(Transform::Rotate180),
-            "R270" => Ok(Transform::Rotate270),
-            "F-" => Ok(Transform::FlipRow),
-            "F|" => Ok(Transform::FlipCol),
-            "F\\" => Ok(Transform::FlipDiag),
-            "F/" => Ok(Transform::FlipAntidiag),
-            _ => Err(String::from("invalid Transform")),
-        }
-    }
-}
-
-impl Debug for Transform {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        let s = match self {
-            Transform::Id => "Id",
-            Transform::Rotate90 => "R90",
-            Transform::Rotate180 => "R180",
-            Transform::Rotate270 => "R270",
-            Transform::FlipRow => "F-",
-            Transform::FlipCol => "F|",
-            Transform::FlipDiag => "F\\",
-            Transform::FlipAntidiag => "F/",
-        };
-        write!(f, "{}", s)?;
-        Ok(())
-    }
-}
-
-/// The default transformation is the `Id`.
-impl Default for Transform {
-    fn default() -> Self {
-        Transform::Id
-    }
-}
-
-impl Transform {
-    /// Whether the transformation requires the world to be square.
-    ///
-    /// Returns `true` for `R90`, `R270`, `F\` and `F/`.
-    pub fn square_world(self) -> bool {
-        match self {
-            Transform::Rotate90
-            | Transform::Rotate270
-            | Transform::FlipDiag
-            | Transform::FlipAntidiag => true,
-            _ => false,
-        }
-    }
-}
-
-/// Symmetries.
-///
-/// 10 different values corresponds to 10 subgroups of the dihedral group
-/// _D_<sub>8</sub>.
-///
-/// The notation is stolen from Oscar Cunningham's
-/// [Logic Life Search](https://github.com/OscarCunningham/logic-life-search).
-///
-/// `Id` is the identity transformation.
-///
-/// `R` means rotations around the center of the world.
-/// The number after it is the counterclockwise rotation angle in degrees.
-///
-/// `F` means reflections (flips).
-/// The symbol after it is the axis of reflection.
-///
-/// Some of the symmetries are only valid when the world is square.
-#[derive(Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
-pub enum Symmetry {
-    /// `C1`.
-    ///
-    /// No symmetry at all.
-    C1,
-    /// `C2`.
-    ///
-    /// Symmetry under 180° rotation.
-    C2,
-    /// `C4`.
-    ///
-    /// Symmetry under 90° rotation.
-    C4,
-    /// `D2-`.
-    ///
-    /// Symmetry under reflection across the middle row.
-    D2Row,
-    /// `D2|`.
-    ///
-    /// Symmetry under reflection across the middle column.
-    D2Col,
-    /// `D2\`.
-    ///
-    /// Symmetry under reflection across the diagonal.
-    D2Diag,
-    /// `D2/`.
-    ///
-    /// Symmetry under reflection across the antidiagonal.
-    D2Antidiag,
-    /// `D4+`.
-    ///
-    /// Symmetry under reflections across the middle row
-    /// and the middle column.
-    D4Ortho,
-    /// `D4X`.
-    ///
-    /// Symmetry under reflections across the diagonal
-    /// and the antidiagonal.
-    D4Diag,
-    /// `D8`.
-    ///
-    /// Symmetry under all 8 transformations.
-    D8,
-}
-
-impl FromStr for Symmetry {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "C1" => Ok(Symmetry::C1),
-            "C2" => Ok(Symmetry::C2),
-            "C4" => Ok(Symmetry::C4),
-            "D2-" => Ok(Symmetry::D2Row),
-            "D2|" => Ok(Symmetry::D2Col),
-            "D2\\" => Ok(Symmetry::D2Diag),
-            "D2/" => Ok(Symmetry::D2Antidiag),
-            "D4+" => Ok(Symmetry::D4Ortho),
-            "D4X" => Ok(Symmetry::D4Diag),
-            "D8" => Ok(Symmetry::D8),
-            _ => Err(String::from("invalid symmetry")),
-        }
-    }
-}
-
-impl Debug for Symmetry {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        let s = match self {
-            Symmetry::C1 => "C1",
-            Symmetry::C2 => "C2",
-            Symmetry::C4 => "C4",
-            Symmetry::D2Row => "D2-",
-            Symmetry::D2Col => "D2|",
-            Symmetry::D2Diag => "D2\\",
-            Symmetry::D2Antidiag => "D2/",
-            Symmetry::D4Ortho => "D4+",
-            Symmetry::D4Diag => "D4X",
-            Symmetry::D8 => "D8",
-        };
-        write!(f, "{}", s)?;
-        Ok(())
-    }
-}
-
-/// The default symmetry is the `C1`.
-impl Default for Symmetry {
-    fn default() -> Self {
-        Symmetry::C1
-    }
-}
-
-impl Symmetry {
-    /// Whether the transformation requires the world to be square.
-    ///
-    /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
-    pub fn square_world(self) -> bool {
-        match self {
-            Symmetry::C4
-            | Symmetry::D2Diag
-            | Symmetry::D2Antidiag
-            | Symmetry::D4Diag
-            | Symmetry::D8 => true,
-            _ => false,
-        }
-    }
-}
 
 /// The coordinates of a cell.
 ///
@@ -342,10 +103,11 @@ impl<'a, R: Rule> World<'a, R> {
             (height, width)
         };
         for x in -1..=w {
-            for _y in -1..=h {
+            for y in -1..=h {
                 for t in 0..period {
                     let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
-                    let mut cell = LifeCell::new(state);
+                    let free = x >= 0 && x < w && y >= 0 && y < h;
+                    let mut cell = LifeCell::new(state, free, rule.b0());
                     if t == 0 {
                         cell.is_gen0 = true;
                     }
@@ -357,7 +119,7 @@ impl<'a, R: Rule> World<'a, R> {
             }
         }
 
-        let dead_cell = LifeCell::default();
+        let dead_cell = LifeCell::new(Dead, false, rule.b0());
         let search_list = Vec::new();
 
         let gen0_cell_count = Cell::new(0);
@@ -377,19 +139,20 @@ impl<'a, R: Rule> World<'a, R> {
         };
 
         // Initializes the world.
-        world.init(dx, dy, transform, symmetry);
+        world
+            .init_nbhd()
+            .init_pred_succ(dx, dy, transform)
+            .init_sym(symmetry)
+            .init_state()
+            .init_search_order();
         world
     }
 
-    /// Initializes the world, and links the cells together.
+    /// Links the cells to their neighbors.
     ///
-    /// This method will be called only once, inside `World::new`.
-    fn init(&mut self, dx: isize, dy: isize, transform: Transform, symmetry: Symmetry) {
-        // First links a cell to its neighbors,
-        // so that we can use `set_cell` afterwards.
-        //
-        // Note that for cells on the edges of the search range,
-        // some neighbors might point to `None`.
+    /// Note that for cells on the edges of the search range,
+    /// some neighbors might point to `None`.
+    fn init_nbhd(&mut self) -> &mut Self {
         let neighbors = [
             (-1, -1),
             (-1, 0),
@@ -415,30 +178,23 @@ impl<'a, R: Rule> World<'a, R> {
                 }
             }
         }
+        self
+    }
 
-        // Sets other information.
+    /// Links a cell to its predecessor and successor.
+    ///
+    /// If the predecessor is out of the search range,
+    /// then sets the state of the current cell to `default`.
+    ///
+    /// If the successor is out of the search range,
+    /// then sets it to `dead_cell`.
+    fn init_pred_succ(&mut self, dx: isize, dy: isize, transform: Transform) -> &mut Self {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
                     let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
 
-                    // Default state of a cell.
-                    let default = if self.rule.b0() && t % 2 == 1 {
-                        Alive
-                    } else {
-                        Dead
-                    };
-
-                    // Sets the state of a cell.
-                    if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                        self.set_cell(cell, None, true);
-                    }
-
-                    // Links a cell to the cell in the last generation.
-                    //
-                    // If that cell is out of the search range,
-                    // then sets the state of the current cell to `default`.
                     if t != 0 {
                         let pred = self.find_cell((x, y, t - 1)).unwrap();
                         unsafe {
@@ -463,14 +219,10 @@ impl<'a, R: Rule> World<'a, R> {
                                 cell.pred = self.lift(pred);
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                            self.set_cell(cell, Some(default), false);
+                            cell.free.set(false);
                         }
                     }
 
-                    // Links a cell to the cell in the next generation.
-                    //
-                    // If that cell is out of the search range,
-                    // then sets it to `dead_cell`.
                     if t != self.period - 1 {
                         let succ = self.find_cell((x, y, t + 1)).unwrap();
                         unsafe {
@@ -496,11 +248,23 @@ impl<'a, R: Rule> World<'a, R> {
                             cell.succ = self.lift(succ);
                         }
                     }
+                }
+            }
+        }
+        self
+    }
 
-                    // Links a cell to the symmetric cells.
-                    //
-                    // If some symmetric cell is out of the search range,
-                    // then sets the current cell to `default`.
+    /// Links a cell to the symmetric cells.
+    ///
+    /// If some symmetric cell is out of the search range,
+    /// then sets the current cell to `default`.
+    fn init_sym(&mut self, symmetry: Symmetry) -> &mut Self {
+        for x in -1..=self.width {
+            for y in -1..=self.height {
+                for t in 0..self.period {
+                    let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
+                    let cell = self.find_cell((x, y, t)).unwrap();
+
                     let sym_coords = match symmetry {
                         Symmetry::C1 => vec![],
                         Symmetry::C2 => vec![(self.width - 1 - x, self.height - 1 - y, t)],
@@ -545,20 +309,41 @@ impl<'a, R: Rule> World<'a, R> {
                                 cell.sym.push(self.lift(sym).unwrap());
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                            self.set_cell(cell, Some(default), false);
+                            self.set_cell(cell, Some(cell.default_state), false);
                         }
                     }
                 }
             }
         }
+        self
+    }
 
+    /// Sets states for the cells.
+    fn init_state(&mut self) -> &mut Self {
+        for x in 0..self.width {
+            for y in 0..self.height {
+                for t in 0..self.period {
+                    let cell = self.find_cell((x, y, t)).unwrap();
+                    if cell.free.get() {
+                        self.set_cell(cell, None, true);
+                    }
+                }
+            }
+        }
+        self
+    }
+
+    /// Sets the search order.
+    ///
+    /// This method will be called only once, inside `World::new`.
+    fn init_search_order(&mut self) -> &mut Self {
         for cell in self.cells.iter() {
-            // Sets the next cell in the search order.
             if cell.state.get().is_none() && cell.free.get() {
                 let cell = unsafe { self.lift(cell).unwrap() };
                 self.search_list.push(cell);
             }
         }
+        self
     }
 
     /// Lift the lifetime of a reference to a cell to `'a`.
@@ -603,23 +388,28 @@ impl<'a, R: Rule> World<'a, R> {
     /// Sets the `state` and `free` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
     pub(crate) fn set_cell(&self, cell: &LifeCell<R>, state: Option<State>, free: bool) {
-        let old_state = cell.state.replace(state);
         cell.free.set(free);
-        R::update_desc(&cell, old_state, state);
-        if cell.is_gen0 {
-            match (state, old_state) {
-                (Some(Alive), Some(Alive)) => (),
-                (Some(Alive), _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
-                (_, Some(Alive)) => self.gen0_cell_count.set(self.gen0_cell_count.get() - 1),
-                _ => (),
+        let old_state = cell.state.replace(state);
+        if old_state != state {
+            R::update_desc(&cell, old_state, state);
+            if let Some(pred) = cell.pred {
+                pred.succ_state.set(state);
             }
-        }
-        if cell.is_front {
-            match (state, old_state) {
-                (Some(Dead), Some(Dead)) => (),
-                (Some(Dead), _) => self.front_cell_count.set(self.front_cell_count.get() - 1),
-                (_, Some(Dead)) => self.front_cell_count.set(self.front_cell_count.get() + 1),
-                _ => (),
+            if cell.is_gen0 {
+                match (state, old_state) {
+                    // (Some(Alive), Some(Alive)) => (),
+                    (Some(Alive), _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
+                    (_, Some(Alive)) => self.gen0_cell_count.set(self.gen0_cell_count.get() - 1),
+                    _ => (),
+                }
+            }
+            if cell.is_front {
+                match (state, old_state) {
+                    // (Some(Dead), Some(Dead)) => (),
+                    (Some(Dead), _) => self.front_cell_count.set(self.front_cell_count.get() - 1),
+                    (_, Some(Dead)) => self.front_cell_count.set(self.front_cell_count.get() + 1),
+                    _ => (),
+                }
             }
         }
     }

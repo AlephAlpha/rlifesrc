@@ -5,7 +5,7 @@ use rand::{
     distributions::{Distribution, Standard},
     Rng,
 };
-use std::cell::Cell;
+use std::{cell::Cell, ops::Not};
 pub use State::{Alive, Dead};
 
 #[cfg(feature = "stdweb")]
@@ -20,6 +20,18 @@ use serde::{Deserialize, Serialize};
 pub enum State {
     Alive,
     Dead,
+}
+
+/// Flip the state.
+impl Not for State {
+    type Output = State;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Alive => Dead,
+            Dead => Alive,
+        }
+    }
 }
 
 /// Randomly chooses between `Alive` and `Dead`.
@@ -39,6 +51,13 @@ impl Distribution<State> for Standard {
 /// The name `LifeCell` is chosen to avoid ambiguity with
 /// [`std::cell::Cell`](https://doc.rust-lang.org/std/cell/struct.Cell.html).
 pub struct LifeCell<'a, R: Rule> {
+    /// The default state of a cell.
+    ///
+    /// For rules without `B0`, it is always dead.
+    /// For rules with `B0`, it is dead on even generations,
+    /// alive on odd generations.
+    pub(crate) default_state: State,
+
     /// The state of the cell.
     ///
     /// `None` means that the state of the cell is unknown.
@@ -49,18 +68,23 @@ pub struct LifeCell<'a, R: Rule> {
     /// It describes the states of the neighboring cells.
     pub(crate) desc: Cell<R::Desc>,
 
+    /// The state of the next generation at the same position.
+    pub(crate) succ_state: Cell<Option<State>>,
+
     /// Whether the decision of the state depends on other cells.
     ///
     /// For known cells, `true` means that the decision is free, while
     /// `false` means that its state is implied by some other cells.
     ///
-    /// For unknown cells, `false` means that we don't care about the cell's
-    /// state, so that it is always unknown, even if its state can be implied
-    /// by cells.
+    /// Unknown cells are always free.
     pub(crate) free: Cell<bool>,
 
+    /// The predecessor of the cell.
+    ///
     /// The cell in the last generation at the same position.
     pub(crate) pred: Option<&'a LifeCell<'a, R>>,
+    /// The successor of the cell.
+    ///
     /// The cell in the next generation at the same position.
     pub(crate) succ: Option<&'a LifeCell<'a, R>>,
     /// The eight cells in the neighborhood.
@@ -82,26 +106,14 @@ impl<'a, R: Rule> LifeCell<'a, R> {
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `first_gen` and `first_col` are set to `false`.
-    pub(crate) fn new(state: State) -> Self {
+    pub(crate) fn new(default_state: State, free: bool, b0: bool) -> Self {
+        let succ_state = if b0 { !default_state } else { default_state };
         LifeCell {
-            state: Cell::new(Some(state)),
-            desc: Cell::new(R::new_desc(Some(state))),
-            ..Default::default()
-        }
-    }
-}
-
-/// The state of a default cell is `Dead`.
-/// Its neighborhood descriptor says that all neighboring cells are dead.
-///
-/// All references to other cells are `None`.
-/// `free`, `first_gen` and `first_col` are set to `false`.
-impl<'a, R: Rule> Default for LifeCell<'a, R> {
-    fn default() -> Self {
-        LifeCell {
-            state: Cell::new(Some(Dead)),
-            desc: Cell::new(R::new_desc(Some(Dead))),
-            free: Cell::new(false),
+            default_state,
+            state: Cell::new(Some(default_state)),
+            desc: Cell::new(R::new_desc(Some(default_state))),
+            succ_state: Cell::new(Some(succ_state)),
+            free: Cell::new(free),
             pred: Default::default(),
             succ: Default::default(),
             nbhd: Default::default(),

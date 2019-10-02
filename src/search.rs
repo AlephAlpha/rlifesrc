@@ -1,7 +1,7 @@
 //! The search process.
 
 use crate::{
-    cells::{Alive, Dead, LifeCell, State},
+    cells::{LifeCell, State},
     rules::Rule,
     world::World,
 };
@@ -48,8 +48,8 @@ pub struct Search<'a, R: Rule> {
     /// The cells in this table always have known states.
     ///
     /// It is used in the backtracking.
-    stack: Vec<&'a LifeCell<'a, R>>,
-    /// The position in the `stack` of the next cell to be examined.
+    set_stack: Vec<&'a LifeCell<'a, R>>,
+    /// The position in the `set_stack` of the next cell to be examined.
     ///
     /// See `proceed` for details.
     next_set: usize,
@@ -71,11 +71,11 @@ impl<'a, R: Rule> Search<'a, R> {
         non_empty_front: bool,
     ) -> Self {
         let size = (world.width * world.height * world.period) as usize;
-        let stack = Vec::with_capacity(size);
+        let set_stack = Vec::with_capacity(size);
         Search {
             world,
             new_state,
-            stack,
+            set_stack,
             next_set: 0,
             max_cell_count,
             non_empty_front,
@@ -92,29 +92,30 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     fn consistify(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
-        let succ = cell.succ.unwrap();
         let state = cell.state.get();
         let desc = cell.desc.get();
+        let succ_state = cell.succ_state.get();
 
         // Examines the cell,
         // and determines the state of the cell in the next generation.
         if let Some(new_state) = self.world.rule.transition(state, desc) {
-            if let Some(succ_state) = succ.state.get() {
+            if let Some(succ_state) = succ_state {
                 if new_state != succ_state {
                     return false;
                 }
             } else {
+                let succ = cell.succ.unwrap();
                 self.world.set_cell(succ, Some(new_state), false);
-                self.stack.push(succ);
+                self.set_stack.push(succ);
             }
         }
 
-        if let Some(succ_state) = succ.state.get() {
+        if let Some(succ_state) = succ_state {
             // Determines the state of the current cell.
             if state.is_none() {
                 if let Some(state) = self.world.rule.implication(desc, succ_state) {
                     self.world.set_cell(cell, Some(state), false);
-                    self.stack.push(cell);
+                    self.set_stack.push(cell);
                 }
             }
 
@@ -125,7 +126,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 desc,
                 state,
                 succ_state,
-                &mut self.stack,
+                &mut self.set_stack,
             );
         }
         true
@@ -152,7 +153,7 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     fn proceed(&mut self) -> bool {
-        while self.next_set < self.stack.len() {
+        while self.next_set < self.set_stack.len() {
             // Tests if the number of living cells exceeds the `max_cell_count`.
             if let Some(max) = self.max_cell_count {
                 if self.world.gen0_cell_count.get() > max {
@@ -165,7 +166,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 return false;
             }
 
-            let cell = self.stack[self.next_set];
+            let cell = self.set_stack[self.next_set];
             let state = cell.state.get().unwrap();
 
             // Determines some cells by symmetry.
@@ -176,7 +177,7 @@ impl<'a, R: Rule> Search<'a, R> {
                     }
                 } else {
                     self.world.set_cell(sym, Some(state), false);
-                    self.stack.push(sym);
+                    self.set_stack.push(sym);
                 }
             }
 
@@ -196,18 +197,15 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `true` if it backtracks successfully,
     /// `false` if it goes back to the time before the first cell is set.
     fn backup(&mut self) -> bool {
-        self.next_set = self.stack.len();
+        self.next_set = self.set_stack.len();
         while self.next_set > 0 {
             self.next_set -= 1;
-            let cell = self.stack[self.next_set];
-            self.stack.pop();
+            let cell = self.set_stack[self.next_set];
+            self.set_stack.pop();
             if cell.free.get() {
-                let state = match cell.state.get().unwrap() {
-                    Dead => Alive,
-                    Alive => Dead,
-                };
+                let state = !cell.state.get().unwrap();
                 self.world.set_cell(cell, Some(state), false);
-                self.stack.push(cell);
+                self.set_stack.push(cell);
                 return true;
             } else {
                 self.world.set_cell(cell, None, true);
@@ -237,17 +235,18 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Makes a decision.
     ///
     /// Chooses an unknown cell, assigns a state for it,
-    /// and push a reference to it to the `stack`.
+    /// and push a reference to it to the `set_stack`.
     ///
     /// Returns `false` is there is no unknown cell.
     fn decide(&mut self) -> bool {
         if let Some(cell) = self.world.get_unknown() {
             let state = match self.new_state {
-                Choose(state) => state,
+                Choose(State::Dead) => cell.default_state,
+                Choose(State::Alive) => !cell.default_state,
                 Random => rand::random(),
             };
             self.world.set_cell(cell, Some(state), true);
-            self.stack.push(cell);
+            self.set_stack.push(cell);
             true
         } else {
             false
