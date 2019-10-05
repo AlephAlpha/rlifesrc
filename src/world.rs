@@ -115,7 +115,7 @@ impl<'a, R: Rule> World<'a, R> {
         let gen0_cell_count = Cell::new(0);
         let front_cell_count = Cell::new(0);
 
-        let mut world = World {
+        World {
             width,
             height,
             period,
@@ -125,23 +125,19 @@ impl<'a, R: Rule> World<'a, R> {
             search_list,
             gen0_cell_count,
             front_cell_count,
-        };
-
-        // Initializes the world.
-        world
-            .init_nbhd()
-            .init_pred_succ(dx, dy, transform)
-            .init_sym(symmetry)
-            .init_state()
-            .init_search_order();
-        world
+        }
+        .init_nbhd()
+        .init_pred_succ(dx, dy, transform)
+        .init_sym(symmetry)
+        .init_state()
+        .init_search_order()
     }
 
     /// Links the cells to their neighbors.
     ///
     /// Note that for cells on the edges of the search range,
     /// some neighbors might point to `None`.
-    fn init_nbhd(&mut self) -> &mut Self {
+    fn init_nbhd(mut self) -> Self {
         let neighbors = [
             (-1, -1),
             (-1, 0),
@@ -177,7 +173,7 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// If the successor is out of the search range,
     /// then sets it to `None`.
-    fn init_pred_succ(&mut self, dx: isize, dy: isize, transform: Transform) -> &mut Self {
+    fn init_pred_succ(mut self, dx: isize, dy: isize, transform: Transform) -> Self {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
@@ -248,7 +244,7 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// If some symmetric cell is out of the search range,
     /// then sets the current cell to `default`.
-    fn init_sym(&mut self, symmetry: Symmetry) -> &mut Self {
+    fn init_sym(mut self, symmetry: Symmetry) -> Self {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
@@ -309,7 +305,7 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Sets states for the cells.
-    fn init_state(&mut self) -> &mut Self {
+    fn init_state(self) -> Self {
         for x in 0..self.width {
             for y in 0..self.height {
                 for t in 0..self.period {
@@ -326,7 +322,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Sets the search order.
     ///
     /// This method will be called only once, inside `World::new`.
-    fn init_search_order(&mut self) -> &mut Self {
+    fn init_search_order(mut self) -> Self {
         for cell in self.cells.iter() {
             if cell.state.get().is_none() && cell.free.get() {
                 let cell = unsafe { self.lift(cell).unwrap() };

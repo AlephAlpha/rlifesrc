@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum State {
-    Alive,
-    Dead,
+    Alive = 0b01,
+    Dead = 0b10,
 }
 
 /// Flip the state.
