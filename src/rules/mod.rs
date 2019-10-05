@@ -14,7 +14,7 @@ pub use ntlife::NtLife;
 pub trait Rule: Sized {
     /// The type of neighborhood descriptor of the rule.
     ///
-    /// It describes the states of the neighbors of a cell,
+    /// It describes the states of the successor and neighbors of a cell,
     /// and is used to determine the state of the cell in the next generation.
     type Desc: Copy;
 
@@ -25,33 +25,26 @@ pub trait Rule: Sized {
     fn b0(&self) -> bool;
 
     /// Generates a neighborhood descriptor which says that all neighboring
-    /// cells have states `state`.
-    fn new_desc(state: Option<State>) -> Self::Desc;
+    /// cells have states `state`, and the successor has state `succ_state`.
+    fn new_desc(state: State, succ_state: State) -> Self::Desc;
 
-    /// Updates the neighborhood descriptors of all neighbors when the state
-    /// of one cell is changed.
+    /// Updates the neighborhood descriptors of all neighbors and the predecessor
+    /// when the state of one cell is changed.
     fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>);
 
-    /// Given the states of a cell and its neighborhood descriptor,
-    /// deduces the state of the cell in the next generation.
-    fn transition(&self, state: Option<State>, desc: Self::Desc) -> Option<State>;
-
-    /// Given the neighborhood descriptor of a cell, and the state in the next
-    /// generation (which must be known),
-    /// deduces its state in the current generation.
-    fn implication(&self, desc: Self::Desc, succ_state: State) -> Option<State>;
-
-    /// Given the states of a cell, its neighborhood descriptor, and the state
-    /// in the next generation (which must be known),
-    /// deduces the states of some of its unknown neighbors,
-    /// and push a reference to each deduced cell into the `set_stack`.
-    fn consistify_nbhd<'a>(
+    /// Consistifies a cell.
+    ///
+    /// Examines the state and the neighborhood descriptor of the cell,
+    /// and makes sure that it can validly produce the cell in the next
+    /// generation. If possible, determines the states of some of the
+    /// cells involved.
+    ///
+    /// Returns `false` if there is a conflict,
+    /// `true` if the cells are consistent.
+    fn consistify<'a>(
         &self,
-        cell: &LifeCell<'a, Self>,
+        cell: &'a LifeCell<'a, Self>,
         world: &World<'a, Self>,
-        desc: Self::Desc,
-        state: Option<State>,
-        succ_state: State,
         set_stack: &mut Vec<&'a LifeCell<'a, Self>>,
-    );
+    ) -> bool;
 }

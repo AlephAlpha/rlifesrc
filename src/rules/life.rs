@@ -5,25 +5,59 @@ use crate::{
     rules::Rule,
     world::World,
 };
+use bitflags::bitflags;
 use ca_rules::ParseLife;
 
-#[derive(Clone, Copy)]
+const DEAD: usize = 0b10;
+const ALIVE: usize = 0b01;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 /// The neighborhood descriptor.
 ///
-/// It counts the number of dead cells and living cells in the neighborhood,
-/// write them as two 4-bit integers, and concatenate these two integers
-/// into a `u8`.
+/// It is a 12-bit integer of the form `0b_abcd_efgh_ij_kl`,
+/// where:
 ///
-/// For example, if a cell has 4 dead neighbors, 3 living neighbors,
-/// 1 unknown neighbors, the the neighborhood descriptor is `0x43`.
-pub struct NbhdDesc(u8);
+/// * `0b_abcd` is the number of dead cells in the neighborhood.
+/// * `0b_efgh` is the number of living cells in the neighborhood.
+/// * `0b_ij` is the state of the successor.
+/// * `0b_kl` is the state of the cell itself.
+///
+/// For `0b_ij` and `0b_kl`:
+/// * `0b_10` means dead,
+/// * `0b_01` means alive,
+/// * `0b_00` means unknown.
+pub struct NbhdDesc(usize);
 
-/// A struct to store the results of `transition` and `implication`.
-#[derive(Clone, Copy, Default)]
-struct Implication {
-    dead: Option<State>,
-    alive: Option<State>,
-    none: Option<State>,
+bitflags! {
+    /// Flags to imply the state of a cell and its neighbors.
+    struct ImplFlags: u8 {
+        /// A conflict is detected.
+        const CONFLICT = 0b_0000_0001;
+
+        /// The successor must be alive.
+        const SUCC_ALIVE = 0b_0000_0100;
+
+        /// The successor must be dead.
+        const SUCC_DEAD = 0b_0000_1000;
+
+        /// The cell itself must be alive.
+        const SELF_ALIVE = 0b_0001_0000;
+
+        /// The cell itself must be dead.
+        const SELF_DEAD = 0b_0010_0000;
+
+        /// All unknown neighbors must be alive.
+        const NBHD_ALIVE = 0b_0100_0000;
+
+        /// All unknown neighbors must be dead.
+        const NBHD_DEAD = 0b_1000_0000;
+    }
+}
+
+impl Default for ImplFlags {
+    fn default() -> Self {
+        ImplFlags::empty()
+    }
 }
 
 /// Totalistic life-like rules.
@@ -31,10 +65,11 @@ struct Implication {
 /// The struct will not store the definition of the rule itself,
 /// but the results of `transition` and `implication`.
 pub struct Life {
+    /// Whether the rule contains `B0`.
     b0: bool,
-    trans_table: [Implication; 256],
-    impl_table: [Option<State>; 512],
-    impl_nbhd_table: [Implication; 512],
+
+    /// An array of actions for all neighborhood descriptors.
+    impl_table: [ImplFlags; 1 << 12],
 }
 
 impl Life {
@@ -42,179 +77,142 @@ impl Life {
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
 
-        let trans_table = Self::init_trans_table(b, s);
-        let impl_table = Self::init_impl_table(&trans_table);
-        let impl_nbhd_table = Self::init_impl_nbhd_table(&trans_table);
+        let impl_table = [ImplFlags::empty(); 1 << 12];
 
-        Life {
-            b0,
-            trans_table,
-            impl_table,
-            impl_nbhd_table,
-        }
+        Life { b0, impl_table }
+            .init_trans(b, s)
+            .init_conflict()
+            .init_impl()
+            .init_impl_nbhd()
     }
 
-    /// Generates the transition table.
-    fn init_trans_table(b: Vec<u8>, s: Vec<u8>) -> [Implication; 256] {
-        let mut trans_table: [Implication; 256] = [Default::default(); 256];
-
+    /// Deduces the implication for the successor.
+    fn init_trans(mut self, b: Vec<u8>, s: Vec<u8>) -> Self {
         // Fills in the positions of the neighborhood descriptors
         // that have no unknown neighbors.
         for alives in 0..=8 {
-            let nbhd = ((8 - alives) << 4) | alives;
+            let desc = ((8 - alives) << 8) | alives << 4;
             let alives = alives as u8;
-            trans_table[nbhd].dead = if b.contains(&alives) {
-                Some(Alive)
+            self.impl_table[desc | DEAD] |= if b.contains(&alives) {
+                ImplFlags::SUCC_ALIVE
             } else {
-                Some(Dead)
+                ImplFlags::SUCC_DEAD
             };
-            trans_table[nbhd].alive = if s.contains(&alives) {
-                Some(Alive)
+            self.impl_table[desc | ALIVE] |= if s.contains(&alives) {
+                ImplFlags::SUCC_ALIVE
             } else {
-                Some(Dead)
+                ImplFlags::SUCC_DEAD
             };
-            trans_table[nbhd].none = if b.contains(&alives) && s.contains(&alives) {
-                Some(Alive)
+            self.impl_table[desc] |= if b.contains(&alives) && s.contains(&alives) {
+                ImplFlags::SUCC_ALIVE
             } else if !b.contains(&alives) && !s.contains(&alives) {
-                Some(Dead)
+                ImplFlags::SUCC_DEAD
             } else {
-                None
+                ImplFlags::empty()
             };
         }
 
-        // Fills in the other positions.
+        // Fills in other positions.
         for unknowns in 1..=8 {
             for alives in 0..=8 - unknowns {
-                let nbhd = ((8 - alives - unknowns) << 4) | alives;
-                let nbhd0 = ((8 - alives - unknowns + 1) << 4) | alives;
-                let nbhd1 = ((8 - alives - unknowns) << 4) | (alives + 1);
-                let trans0 = trans_table[nbhd0];
-                let trans1 = trans_table[nbhd1];
-                if trans0.dead == trans1.dead {
-                    trans_table[nbhd].dead = trans0.dead;
-                }
-                if trans0.alive == trans1.alive {
-                    trans_table[nbhd].alive = trans0.alive;
-                }
-                if trans0.none == trans1.none {
-                    trans_table[nbhd].none = trans0.none;
+                let desc = (8 - alives - unknowns) << 8 | alives << 4;
+                let desc0 = (8 - alives - unknowns + 1) << 8 | alives << 4;
+                let desc1 = (8 - alives - unknowns) << 8 | (alives + 1) << 4;
+
+                for &state in [DEAD, ALIVE, 0].iter() {
+                    let trans0 = self.impl_table[desc0 | state];
+
+                    if trans0 == self.impl_table[desc1 | state] {
+                        self.impl_table[desc | state] |= trans0;
+                    }
                 }
             }
         }
 
-        trans_table
+        self
     }
 
-    /// Generates the implication table.
-    fn init_impl_table(trans_table: &[Implication; 256]) -> [Option<State>; 512] {
-        let mut impl_table = [Default::default(); 512];
+    /// Deduces the conflicts.
+    fn init_conflict(mut self) -> Self {
+        for nbhd_state in 0..0xff {
+            for &state in [DEAD, ALIVE, 0].iter() {
+                let desc = nbhd_state << 4 | state;
 
+                if self.impl_table[desc].contains(ImplFlags::SUCC_ALIVE) {
+                    self.impl_table[desc | DEAD << 2] = ImplFlags::CONFLICT;
+                } else if self.impl_table[desc].contains(ImplFlags::SUCC_DEAD) {
+                    self.impl_table[desc | ALIVE << 2] = ImplFlags::CONFLICT;
+                }
+            }
+        }
+        self
+    }
+
+    /// Deduces the implication for the cell itself.
+    fn init_impl(mut self) -> Self {
         for unknowns in 0..=8 {
             for alives in 0..=8 - unknowns {
-                let nbhd = ((8 - alives - unknowns) << 4) | alives;
-                for (i, &succ) in [Dead, Alive].iter().enumerate() {
-                    let index = nbhd * 2 + i;
-                    let possibly_dead = match trans_table[nbhd].dead {
-                        Some(state) => state == succ,
-                        None => true,
+                let desc = (8 - alives - unknowns) << 8 | alives << 4;
+
+                for &succ_state in [DEAD, ALIVE].iter() {
+                    let flag = if succ_state == DEAD {
+                        ImplFlags::SUCC_ALIVE | ImplFlags::CONFLICT
+                    } else {
+                        ImplFlags::SUCC_DEAD | ImplFlags::CONFLICT
                     };
-                    let possibly_alive = match trans_table[nbhd].alive {
-                        Some(state) => state == succ,
-                        None => true,
-                    };
+
+                    let possibly_dead = !self.impl_table[desc | DEAD].intersects(flag);
+                    let possibly_alive = !self.impl_table[desc | ALIVE].intersects(flag);
+
+                    let index = desc | succ_state << 2;
                     if possibly_dead && !possibly_alive {
-                        impl_table[index] = Some(Dead);
+                        self.impl_table[index] |= ImplFlags::SELF_DEAD;
                     } else if !possibly_dead && possibly_alive {
-                        impl_table[index] = Some(Alive);
+                        self.impl_table[index] |= ImplFlags::SELF_ALIVE;
+                    } else if !possibly_dead && !possibly_alive {
+                        self.impl_table[index] = ImplFlags::CONFLICT;
                     }
                 }
             }
         }
 
-        impl_table
+        self
     }
 
-    /// Generates the neighborhood implication table.
-    fn init_impl_nbhd_table(trans_table: &[Implication; 256]) -> [Implication; 512] {
-        let mut impl_nbhd_table: [Implication; 512] = [Default::default(); 512];
-
+    ///  Deduces the implication for the neighbors.
+    fn init_impl_nbhd(mut self) -> Self {
         for unknowns in 1..=8 {
             for alives in 0..=8 - unknowns {
-                let nbhd = ((8 - alives - unknowns) << 4) | alives;
-                let nbhd0 = ((8 - alives - unknowns + 1) << 4) | alives;
-                let nbhd1 = ((8 - alives - unknowns) << 4) | (alives + 1);
-                let trans0 = trans_table[nbhd0];
-                let trans1 = trans_table[nbhd1];
-                for (i, &succ) in [Dead, Alive].iter().enumerate() {
-                    let index = nbhd * 2 + i;
+                let desc = (8 - alives - unknowns) << 8 | alives << 4;
+                let desc0 = (8 - alives - unknowns + 1) << 8 | alives << 4;
+                let desc1 = (8 - alives - unknowns) << 8 | (alives + 1) << 4;
 
-                    let possibly_dead = match trans0.dead {
-                        Some(state) => state == succ,
-                        None => true,
+                for &succ_state in [DEAD, ALIVE].iter() {
+                    let flag = if succ_state == DEAD {
+                        ImplFlags::SUCC_ALIVE | ImplFlags::CONFLICT
+                    } else {
+                        ImplFlags::SUCC_DEAD | ImplFlags::CONFLICT
                     };
-                    let possibly_alive = match trans1.dead {
-                        Some(state) => state == succ,
-                        None => true,
-                    };
-                    if possibly_dead && !possibly_alive {
-                        impl_nbhd_table[index].dead = Some(Dead);
-                    } else if !possibly_dead && possibly_alive {
-                        impl_nbhd_table[index].dead = Some(Alive);
-                    }
 
-                    let possibly_dead = match trans0.alive {
-                        Some(state) => state == succ,
-                        None => true,
-                    };
-                    let possibly_alive = match trans1.alive {
-                        Some(state) => state == succ,
-                        None => true,
-                    };
-                    if possibly_dead && !possibly_alive {
-                        impl_nbhd_table[index].alive = Some(Dead);
-                    } else if !possibly_dead && possibly_alive {
-                        impl_nbhd_table[index].alive = Some(Alive);
-                    }
+                    let index = desc | succ_state << 2;
 
-                    let possibly_dead = match trans0.none {
-                        Some(state) => state == succ,
-                        None => true,
-                    };
-                    let possibly_alive = match trans1.none {
-                        Some(state) => state == succ,
-                        None => true,
-                    };
-                    if possibly_dead && !possibly_alive {
-                        impl_nbhd_table[index].none = Some(Dead);
-                    } else if !possibly_dead && possibly_alive {
-                        impl_nbhd_table[index].none = Some(Alive);
+                    for &state in [DEAD, ALIVE, 0].iter() {
+                        let possibly_dead = !self.impl_table[desc0 | state].intersects(flag);
+                        let possibly_alive = !self.impl_table[desc1 | state].intersects(flag);
+
+                        if possibly_dead && !possibly_alive {
+                            self.impl_table[index | state] |= ImplFlags::NBHD_DEAD;
+                        } else if !possibly_dead && possibly_alive {
+                            self.impl_table[index | state] |= ImplFlags::NBHD_ALIVE;
+                        } else if !possibly_dead && !possibly_alive {
+                            self.impl_table[index | state] = ImplFlags::CONFLICT;
+                        }
                     }
                 }
             }
         }
 
-        impl_nbhd_table
-    }
-
-    /// Implicates states of some neighbors using the
-    /// neighborhood implication table.
-    fn implication_nbhd(
-        &self,
-        state: Option<State>,
-        desc: NbhdDesc,
-        succ_state: State,
-    ) -> Option<State> {
-        let index = desc.0 as usize * 2
-            + match succ_state {
-                Dead => 0,
-                Alive => 1,
-            };
-        let implication = self.impl_nbhd_table[index];
-        match state {
-            Some(Dead) => implication.dead,
-            Some(Alive) => implication.alive,
-            None => implication.none,
-        }
+        self
     }
 
     pub fn parse_rule(input: &str) -> Result<Self, String> {
@@ -228,71 +226,115 @@ impl Rule for Life {
     fn b0(&self) -> bool {
         self.b0
     }
-    fn new_desc(state: Option<State>) -> Self::Desc {
-        match state {
-            Some(Dead) => NbhdDesc(0x80),
-            Some(Alive) => NbhdDesc(0x08),
-            None => NbhdDesc(0x00),
-        }
+
+    fn new_desc(state: State, succ_state: State) -> Self::Desc {
+        let nbhd_state = match state {
+            Dead => 0x80,
+            Alive => 0x08,
+        };
+        let succ_state = match succ_state {
+            Dead => DEAD,
+            Alive => ALIVE,
+        };
+        let state = match state {
+            Dead => DEAD,
+            Alive => ALIVE,
+        };
+        NbhdDesc(nbhd_state << 4 | succ_state << 2 | state)
     }
 
     fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
         let old_state_num = match old_state {
             Some(Dead) => 0x10,
             Some(Alive) => 0x01,
-            None => 0x00,
+            None => 0,
         };
         let state_num = match state {
             Some(Dead) => 0x10,
             Some(Alive) => 0x01,
-            None => 0x00,
+            None => 0,
         };
         for &neigh in cell.nbhd.iter() {
             let neigh = neigh.unwrap();
             let mut desc = neigh.desc.get();
-            desc.0 -= old_state_num;
-            desc.0 += state_num;
+            desc.0 -= old_state_num << 4;
+            desc.0 += state_num << 4;
             neigh.desc.set(desc);
         }
-    }
 
-    fn transition(&self, state: Option<State>, desc: NbhdDesc) -> Option<State> {
-        let transition = self.trans_table[desc.0 as usize];
-        match state {
-            Some(Dead) => transition.dead,
-            Some(Alive) => transition.alive,
-            None => transition.none,
+        let change_num = match (state, old_state) {
+            (Some(Dead), Some(Alive)) | (Some(Alive), Some(Dead)) => 0b11,
+            (Some(Dead), None) | (None, Some(Dead)) => 0b10,
+            (Some(Alive), None) | (None, Some(Alive)) => 0b01,
+            _ => 0,
+        };
+        if let Some(pred) = cell.pred {
+            let mut desc = pred.desc.get();
+            desc.0 ^= change_num << 2;
+            pred.desc.set(desc);
         }
+        let mut desc = cell.desc.get();
+        desc.0 ^= change_num;
+        cell.desc.set(desc);
     }
 
-    fn implication(&self, desc: NbhdDesc, succ_state: State) -> Option<State> {
-        let index = desc.0 as usize * 2
-            + match succ_state {
-                Dead => 0,
-                Alive => 1,
-            };
-        self.impl_table[index]
-    }
-
-    fn consistify_nbhd<'a>(
+    fn consistify<'a>(
         &self,
-        cell: &LifeCell<'a, Self>,
+        cell: &'a LifeCell<'a, Self>,
         world: &World<'a, Self>,
-        desc: Self::Desc,
-        state: Option<State>,
-        succ_state: State,
         set_stack: &mut Vec<&'a LifeCell<'a, Self>>,
-    ) {
-        if let Some(state) = self.implication_nbhd(state, desc, succ_state) {
+    ) -> bool {
+        let flags = self.impl_table[cell.desc.get().0];
+
+        if flags.contains(ImplFlags::CONFLICT) {
+            return false;
+        }
+
+        let succ_state = if flags.contains(ImplFlags::SUCC_DEAD) {
+            Some(Dead)
+        } else if flags.contains(ImplFlags::SUCC_ALIVE) {
+            Some(Alive)
+        } else {
+            None
+        };
+        if let Some(succ_state) = succ_state {
+            let succ = cell.succ.unwrap();
+            world.set_cell(succ, Some(succ_state), false);
+            set_stack.push(succ);
+            return true;
+        }
+
+        let state = if flags.contains(ImplFlags::SELF_DEAD) {
+            Some(Dead)
+        } else if flags.contains(ImplFlags::SELF_ALIVE) {
+            Some(Alive)
+        } else {
+            None
+        };
+        if let Some(state) = state {
+            world.set_cell(cell, Some(state), false);
+            set_stack.push(cell);
+        }
+
+        let nbhd_state = if flags.contains(ImplFlags::NBHD_DEAD) {
+            Some(Dead)
+        } else if flags.contains(ImplFlags::NBHD_ALIVE) {
+            Some(Alive)
+        } else {
+            None
+        };
+        if let Some(nbhd_state) = nbhd_state {
             for &neigh in cell.nbhd.iter() {
                 if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
-                        world.set_cell(neigh, Some(state), false);
+                        world.set_cell(neigh, Some(nbhd_state), false);
                         set_stack.push(neigh);
                     }
                 }
             }
         }
+
+        true
     }
 }
 

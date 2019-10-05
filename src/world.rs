@@ -381,13 +381,10 @@ impl<'a, R: Rule> World<'a, R> {
         cell.free.set(free);
         let old_state = cell.state.replace(state);
         if old_state != state {
-            R::update_desc(&cell, old_state, state);
-            if let Some(pred) = cell.pred {
-                pred.succ_state.set(state);
-            }
+            cell.update_desc(old_state, state);
             if cell.is_gen0 {
                 match (state, old_state) {
-                    // (Some(Alive), Some(Alive)) => (),
+                    (Some(Alive), Some(Alive)) => (),
                     (Some(Alive), _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
                     (_, Some(Alive)) => self.gen0_cell_count.set(self.gen0_cell_count.get() - 1),
                     _ => (),
@@ -395,7 +392,7 @@ impl<'a, R: Rule> World<'a, R> {
             }
             if cell.is_front {
                 match (state, old_state) {
-                    // (Some(Dead), Some(Dead)) => (),
+                    (Some(Dead), Some(Dead)) => (),
                     (Some(Dead), _) => self.front_cell_count.set(self.front_cell_count.get() - 1),
                     (_, Some(Dead)) => self.front_cell_count.set(self.front_cell_count.get() + 1),
                     _ => (),

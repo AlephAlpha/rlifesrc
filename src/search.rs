@@ -97,42 +97,9 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     fn consistify(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
-        let state = cell.state.get();
-        let desc = cell.desc.get();
-
-        if let Some(succ_state) = cell.succ_state.get() {
-            // Examines the cell,
-            if let Some(new_state) = self.world.rule.transition(state, desc) {
-                if new_state != succ_state {
-                    return false;
-                }
-            }
-
-            // Determines the state of the current cell.
-            if state.is_none() {
-                if let Some(state) = self.world.rule.implication(desc, succ_state) {
-                    self.world.set_cell(cell, Some(state), false);
-                    self.set_stack.push(cell);
-                }
-            }
-
-            // Determines the states of some neighbors of the cell.
-            self.world.rule.consistify_nbhd(
-                &cell,
-                &self.world,
-                desc,
-                state,
-                succ_state,
-                &mut self.set_stack,
-            );
-        } else if let Some(new_state) = self.world.rule.transition(state, desc) {
-            // Determines the state of the cell in the next generation.
-            let succ = cell.succ.unwrap();
-            self.world.set_cell(succ, Some(new_state), false);
-            self.set_stack.push(succ);
-        }
-
-        true
+        self.world
+            .rule
+            .consistify(&cell, &self.world, &mut self.set_stack)
     }
 
     /// Consistifies a cell, its eight neighbors,
@@ -146,7 +113,7 @@ impl<'a, R: Rule> Search<'a, R> {
             self.consistify(pred) && {
                 cell.nbhd
                     .iter()
-                    .all(|&neigh_id| self.consistify(neigh_id.unwrap()))
+                    .all(|&neigh| self.consistify(neigh.unwrap()))
             }
         }
     }

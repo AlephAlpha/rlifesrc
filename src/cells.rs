@@ -65,11 +65,9 @@ pub struct LifeCell<'a, R: Rule> {
 
     /// The “neighborhood descriptors” of the cell.
     ///
-    /// It describes the states of the neighboring cells.
+    /// It describes the states of the cell itself, its neighbors,
+    /// and its successor.
     pub(crate) desc: Cell<R::Desc>,
-
-    /// The state of the next generation at the same position.
-    pub(crate) succ_state: Cell<Option<State>>,
 
     /// Whether the decision of the state depends on other cells.
     ///
@@ -111,8 +109,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
         LifeCell {
             default_state,
             state: Cell::new(Some(default_state)),
-            desc: Cell::new(R::new_desc(Some(default_state))),
-            succ_state: Cell::new(Some(succ_state)),
+            desc: Cell::new(R::new_desc(default_state, succ_state)),
             free: Cell::new(free),
             pred: Default::default(),
             succ: Default::default(),
@@ -121,5 +118,9 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             is_gen0: false,
             is_front: false,
         }
+    }
+
+    pub(crate) fn update_desc(&self, old_state: Option<State>, state: Option<State>) {
+        R::update_desc(self, old_state, state);
     }
 }
