@@ -120,6 +120,14 @@ impl<'a, R: Rule> LifeCell<'a, R> {
         }
     }
 
+    /// Extends the lifetime of a reference to a cell to `'a`.
+    ///
+    /// Only safe to use after the creation of the world,
+    /// and only when the cell is in the world.
+    pub(crate) unsafe fn extend_life(&self) -> Option<&'a Self> {
+        (self as *const Self).as_ref()
+    }
+
     pub(crate) fn update_desc(&self, old_state: Option<State>, state: Option<State>) {
         R::update_desc(self, old_state, state);
     }

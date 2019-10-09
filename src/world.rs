@@ -24,11 +24,6 @@ pub struct World<'a, R: Rule> {
     /// The rule of the cellular automaton.
     pub(crate) rule: R,
 
-    /// Search order. Whether the search starts from columns.
-    ///
-    /// Automatically determined by the width and the height of the world.
-    pub(crate) column_first: bool,
-
     /// A vector that stores all the cells in the search range.
     ///
     /// The vector will not be moved after it is created.
@@ -88,21 +83,16 @@ impl<'a, R: Rule> World<'a, R> {
         // Fill the vector with dead cells.
         // If the rule contains `B0`, then fill the odd generations
         // with living cells instead.
-        let (w, h) = if column_first {
-            (width, height)
-        } else {
-            (height, width)
-        };
-        for x in -1..=w {
-            for y in -1..=h {
+        for x in -1..=width {
+            for y in -1..=height {
                 for t in 0..period {
                     let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
-                    let free = x >= 0 && x < w && y >= 0 && y < h;
+                    let free = x >= 0 && x < width && y >= 0 && y < height;
                     let mut cell = LifeCell::new(state, free, rule.b0());
                     if t == 0 {
                         cell.is_gen0 = true;
                     }
-                    if x == 0 {
+                    if (column_first && x == 0) || (!column_first && y == 0) {
                         cell.is_front = true;
                     }
                     cells.push(cell);
@@ -120,7 +110,6 @@ impl<'a, R: Rule> World<'a, R> {
             height,
             period,
             rule,
-            column_first,
             cells,
             search_list,
             gen0_cell_count,
@@ -130,7 +119,7 @@ impl<'a, R: Rule> World<'a, R> {
         .init_pred_succ(dx, dy, transform)
         .init_sym(symmetry)
         .init_state()
-        .init_search_order()
+        .init_search_order(column_first)
     }
 
     /// Links the cells to their neighbors.
@@ -156,7 +145,7 @@ impl<'a, R: Rule> World<'a, R> {
                         if let Some(neigh) = self.find_cell((x + nx, y + ny, t)) {
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.nbhd[i] = self.lift(neigh);
+                                cell.nbhd[i] = neigh.extend_life();
                             }
                         }
                     }
@@ -184,7 +173,7 @@ impl<'a, R: Rule> World<'a, R> {
                         let pred = self.find_cell((x, y, t - 1)).unwrap();
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.pred = self.lift(pred);
+                            cell.pred = pred.extend_life();
                         }
                     } else {
                         let (new_x, new_y) = match transform {
@@ -201,7 +190,7 @@ impl<'a, R: Rule> World<'a, R> {
                         if let Some(pred) = pred {
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.pred = self.lift(pred);
+                                cell.pred = pred.extend_life();
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             cell.free.set(false);
@@ -212,7 +201,7 @@ impl<'a, R: Rule> World<'a, R> {
                         let succ = self.find_cell((x, y, t + 1)).unwrap();
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.succ = self.lift(succ);
+                            cell.succ = succ.extend_life();
                         }
                     } else {
                         let (x, y) = (x + dx, y + dy);
@@ -230,7 +219,7 @@ impl<'a, R: Rule> World<'a, R> {
                         if let Some(succ) = succ {
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.succ = self.lift(succ);
+                                cell.succ = succ.extend_life();
                             }
                         }
                     }
@@ -292,7 +281,7 @@ impl<'a, R: Rule> World<'a, R> {
                             let sym = self.find_cell(coord).unwrap();
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.sym.push(self.lift(sym).unwrap());
+                                cell.sym.push(sym.extend_life().unwrap());
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             cell.free.set(false);
@@ -322,34 +311,36 @@ impl<'a, R: Rule> World<'a, R> {
     /// Sets the search order.
     ///
     /// This method will be called only once, inside `World::new`.
-    fn init_search_order(mut self) -> Self {
-        for cell in self.cells.iter() {
-            if cell.state.get().is_none() && cell.free.get() {
-                let cell = unsafe { self.lift(cell).unwrap() };
-                self.search_list.push(cell);
+    fn init_search_order(mut self, column_first: bool) -> Self {
+        if column_first {
+            for x in 0..self.width {
+                for y in 0..self.height {
+                    for t in 0..self.period {
+                        let cell = self.find_cell((x, y, t)).unwrap();
+                        let cell = unsafe { cell.extend_life().unwrap() };
+                        self.search_list.push(cell);
+                    }
+                }
+            }
+        } else {
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    for t in 0..self.period {
+                        let cell = self.find_cell((x, y, t)).unwrap();
+                        let cell = unsafe { cell.extend_life().unwrap() };
+                        self.search_list.push(cell);
+                    }
+                }
             }
         }
         self
-    }
-
-    /// Lift the lifetime of a reference to a cell to `'a`.
-    ///
-    /// Only safe to use after the creation of the world,
-    /// and only when the cell is in the world.
-    unsafe fn lift(&self, cell: &LifeCell<'a, R>) -> Option<&'a LifeCell<'a, R>> {
-        let cell_ptr: *const _ = cell;
-        cell_ptr.as_ref()
     }
 
     /// Finds a cell by its coordinates. Returns a reference.
     fn find_cell(&self, coord: Coord) -> Option<&LifeCell<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
-            let index = if self.column_first {
-                ((x + 1) * (self.height + 2) + y + 1) * self.period + t
-            } else {
-                ((y + 1) * (self.width + 2) + x + 1) * self.period + t
-            };
+            let index = ((x + 1) * (self.height + 2) + y + 1) * self.period + t;
             Some(&self.cells[index as usize])
         } else {
             None
@@ -360,11 +351,7 @@ impl<'a, R: Rule> World<'a, R> {
     fn find_cell_mut(&mut self, coord: Coord) -> Option<&mut LifeCell<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
-            let index = if self.column_first {
-                ((x + 1) * (self.height + 2) + y + 1) * self.period + t
-            } else {
-                ((y + 1) * (self.width + 2) + x + 1) * self.period + t
-            };
+            let index = ((x + 1) * (self.height + 2) + y + 1) * self.period + t;
             Some(&mut self.cells[index as usize])
         } else {
             None
@@ -373,7 +360,7 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Sets the `state` and `free` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn set_cell(&self, cell: &LifeCell<R>, state: Option<State>, free: bool) {
+    pub(crate) fn set_cell(&self, cell: &LifeCell<'a, R>, state: Option<State>, free: bool) {
         cell.free.set(free);
         let old_state = cell.state.replace(state);
         if old_state != state {
