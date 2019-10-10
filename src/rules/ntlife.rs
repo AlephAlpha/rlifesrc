@@ -105,7 +105,7 @@ pub struct NtLife {
     b0: bool,
 
     /// An array of actions for all neighborhood descriptors.
-    impl_table: Box<[ImplFlags; 1 << 20]>,
+    impl_table: Vec<ImplFlags>,
 }
 
 impl NtLife {
@@ -113,7 +113,7 @@ impl NtLife {
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
 
-        let impl_table = Box::new([ImplFlags::empty(); 1 << 20]);
+        let impl_table = vec![ImplFlags::empty(); 1 << 20];
 
         NtLife { b0, impl_table }
             .init_trans(b, s)

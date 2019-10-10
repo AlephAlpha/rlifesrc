@@ -102,8 +102,7 @@ impl<'a, R: Rule> Search<'a, R> {
             .consistify(&cell, &self.world, &mut self.set_stack)
     }
 
-    /// Consistifies a cell, its eight neighbors,
-    /// and the cell in the last generation.
+    /// Consistifies a cell, its neighbors, and its predecessor.
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
