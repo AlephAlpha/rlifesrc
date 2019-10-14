@@ -3,6 +3,7 @@
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
     rules::Rule,
+    search::SetCell,
     world::World,
 };
 use bitflags::bitflags;
@@ -271,7 +272,7 @@ impl Rule for Life {
         &self,
         cell: &'a LifeCell<'a, Self>,
         world: &World<'a, Self>,
-        set_stack: &mut Vec<&'a LifeCell<'a, Self>>,
+        set_stack: &mut Vec<SetCell<'a, Self>>,
     ) -> bool {
         let flags = self.impl_table[cell.desc.get().0];
 
@@ -286,8 +287,8 @@ impl Rule for Life {
                 Alive
             };
             let succ = cell.succ.unwrap();
-            world.set_cell(succ, Some(state), false);
-            set_stack.push(succ);
+            world.set_cell(succ, Some(state));
+            set_stack.push(SetCell::Deduce(succ));
             return true;
         }
 
@@ -297,8 +298,8 @@ impl Rule for Life {
             } else {
                 Alive
             };
-            world.set_cell(cell, Some(state), false);
-            set_stack.push(cell);
+            world.set_cell(cell, Some(state));
+            set_stack.push(SetCell::Deduce(cell));
         }
 
         if flags.intersects(ImplFlags::NBHD_DEAD | ImplFlags::NBHD_ALIVE) {
@@ -310,8 +311,8 @@ impl Rule for Life {
             for &neigh in cell.nbhd.iter() {
                 if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
-                        world.set_cell(neigh, Some(state), false);
-                        set_stack.push(neigh);
+                        world.set_cell(neigh, Some(state));
+                        set_stack.push(SetCell::Deduce(neigh));
                     }
                 }
             }

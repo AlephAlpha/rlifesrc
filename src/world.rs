@@ -87,8 +87,7 @@ impl<'a, R: Rule> World<'a, R> {
             for y in -1..=height {
                 for t in 0..period {
                     let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
-                    let free = x >= 0 && x < width && y >= 0 && y < height;
-                    let mut cell = LifeCell::new(state, free, rule.b0());
+                    let mut cell = LifeCell::new(state, rule.b0());
                     if t == 0 {
                         cell.is_gen0 = true;
                     }
@@ -193,7 +192,9 @@ impl<'a, R: Rule> World<'a, R> {
                                 cell.pred = pred.extend_life();
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                            cell.free.set(false);
+                            // Temperately marks its state as `None`.
+                            // Will restore in `init_state`.
+                            cell.state.set(None);
                         }
                     }
 
@@ -284,7 +285,9 @@ impl<'a, R: Rule> World<'a, R> {
                                 cell.sym.push(sym.extend_life().unwrap());
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                            cell.free.set(false);
+                            // Temperately marks its state as `None`.
+                            // Will restore in `init_state`.
+                            cell.state.set(None);
                         }
                     }
                 }
@@ -299,8 +302,10 @@ impl<'a, R: Rule> World<'a, R> {
             for y in 0..self.height {
                 for t in 0..self.period {
                     let cell = self.find_cell((x, y, t)).unwrap();
-                    if cell.free.get() {
-                        self.set_cell(cell, None, true);
+                    if cell.state.get().is_some() {
+                        self.set_cell(cell, None);
+                    } else {
+                        cell.state.set(Some(cell.default_state));
                     }
                 }
             }
@@ -358,10 +363,9 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Sets the `state` and `free` of a cell,
+    /// Sets the `state` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn set_cell(&self, cell: &LifeCell<'a, R>, state: Option<State>, free: bool) {
-        cell.free.set(free);
+    pub(crate) fn set_cell(&self, cell: &LifeCell<'a, R>, state: Option<State>) {
         let old_state = cell.state.replace(state);
         if old_state != state {
             cell.update_desc(old_state, state);

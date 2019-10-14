@@ -34,6 +34,26 @@ pub enum NewState {
     Random,
 }
 
+/// Whether the state of a cell is decided by choice,
+/// or deduced by other cells.
+#[derive(Clone, Copy)]
+pub enum SetCell<'a, R: Rule> {
+    /// Decides the state of a cell by choice.
+    Decide(&'a LifeCell<'a, R>),
+    /// Determines the state of a cell by other cells.
+    Deduce(&'a LifeCell<'a, R>),
+}
+
+impl<'a, R: Rule> SetCell<'a, R> {
+    /// Get a reference to the set cell.
+    fn get_cell(&self) -> &'a LifeCell<'a, R> {
+        match self {
+            SetCell::Decide(cell) => cell,
+            SetCell::Deduce(cell) => cell,
+        }
+    }
+}
+
 /// The search.
 ///
 /// In addition to the world itself,
@@ -50,7 +70,7 @@ pub struct Search<'a, R: Rule> {
     /// The cells in this table always have known states.
     ///
     /// It is used in the backtracking.
-    set_stack: Vec<&'a LifeCell<'a, R>>,
+    set_stack: Vec<SetCell<'a, R>>,
 
     /// The position in the `set_stack` of the next cell to be examined.
     ///
@@ -135,7 +155,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 return false;
             }
 
-            let cell = self.set_stack[self.next_set];
+            let cell = self.set_stack[self.next_set].get_cell();
             let state = cell.state.get().unwrap();
 
             // Determines some cells by symmetry.
@@ -145,8 +165,8 @@ impl<'a, R: Rule> Search<'a, R> {
                         return false;
                     }
                 } else {
-                    self.world.set_cell(sym, Some(state), false);
-                    self.set_stack.push(sym);
+                    self.world.set_cell(sym, Some(state));
+                    self.set_stack.push(SetCell::Deduce(sym));
                 }
             }
 
@@ -160,7 +180,7 @@ impl<'a, R: Rule> Search<'a, R> {
         true
     }
 
-    /// Backtracks to the last time when a free unknown cell is set,
+    /// Backtracks to the last time when a unknown cell is decided by choice,
     /// and switch that cell to the other state.
     ///
     /// Returns `true` if it backtracks successfully,
@@ -169,15 +189,17 @@ impl<'a, R: Rule> Search<'a, R> {
         self.next_set = self.set_stack.len();
         while self.next_set > 0 {
             self.next_set -= 1;
-            let cell = self.set_stack[self.next_set];
-            self.set_stack.pop();
-            if cell.free.get() {
-                let state = !cell.state.get().unwrap();
-                self.world.set_cell(cell, Some(state), false);
-                self.set_stack.push(cell);
-                return true;
-            } else {
-                self.world.set_cell(cell, None, true);
+            let set_cell = self.set_stack.pop().unwrap();
+            match set_cell {
+                SetCell::Decide(cell) => {
+                    let state = !cell.state.get().unwrap();
+                    self.world.set_cell(cell, Some(state));
+                    self.set_stack.push(SetCell::Deduce(cell));
+                    return true;
+                }
+                SetCell::Deduce(cell) => {
+                    self.world.set_cell(cell, None);
+                }
             }
         }
         false
@@ -214,8 +236,8 @@ impl<'a, R: Rule> Search<'a, R> {
                 Choose(State::Alive) => !cell.default_state,
                 Random => rand::random(),
             };
-            self.world.set_cell(cell, Some(state), true);
-            self.set_stack.push(cell);
+            self.world.set_cell(cell, Some(state));
+            self.set_stack.push(SetCell::Decide(cell));
             true
         } else {
             false

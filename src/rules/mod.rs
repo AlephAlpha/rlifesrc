@@ -5,6 +5,7 @@ mod ntlife;
 
 use crate::{
     cells::{LifeCell, State},
+    search::SetCell,
     world::World,
 };
 pub use life::Life;
@@ -45,6 +46,6 @@ pub trait Rule: Sized {
         &self,
         cell: &'a LifeCell<'a, Self>,
         world: &World<'a, Self>,
-        set_stack: &mut Vec<&'a LifeCell<'a, Self>>,
+        set_stack: &mut Vec<SetCell<'a, Self>>,
     ) -> bool;
 }

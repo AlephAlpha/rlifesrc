@@ -69,14 +69,6 @@ pub struct LifeCell<'a, R: Rule> {
     /// and its successor.
     pub(crate) desc: Cell<R::Desc>,
 
-    /// Whether the decision of the state depends on other cells.
-    ///
-    /// For known cells, `true` means that the decision is free, while
-    /// `false` means that its state is implied by some other cells.
-    ///
-    /// Unknown cells are always free.
-    pub(crate) free: Cell<bool>,
-
     /// The predecessor of the cell.
     ///
     /// The cell in the last generation at the same position.
@@ -104,13 +96,12 @@ impl<'a, R: Rule> LifeCell<'a, R> {
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `first_gen` and `first_col` are set to `false`.
-    pub(crate) fn new(default_state: State, free: bool, b0: bool) -> Self {
+    pub(crate) fn new(default_state: State, b0: bool) -> Self {
         let succ_state = if b0 { !default_state } else { default_state };
         LifeCell {
             default_state,
             state: Cell::new(Some(default_state)),
             desc: Cell::new(R::new_desc(default_state, succ_state)),
-            free: Cell::new(free),
             pred: Default::default(),
             succ: Default::default(),
             nbhd: Default::default(),
