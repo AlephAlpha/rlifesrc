@@ -38,8 +38,9 @@ pub enum NewState {
 /// or deduced by other cells.
 #[derive(Clone, Copy)]
 pub enum SetCell<'a, R: Rule> {
-    /// Decides the state of a cell by choice.
-    Decide(&'a LifeCell<'a, R>),
+    /// Decides the state of a cell by choice,
+    /// and remembers its position in the `search_list` of the world.
+    Decide(usize, &'a LifeCell<'a, R>),
     /// Determines the state of a cell by other cells.
     Deduce(&'a LifeCell<'a, R>),
 }
@@ -48,7 +49,7 @@ impl<'a, R: Rule> SetCell<'a, R> {
     /// Get a reference to the set cell.
     fn get_cell(&self) -> &'a LifeCell<'a, R> {
         match self {
-            SetCell::Decide(cell) => cell,
+            SetCell::Decide(_, cell) => cell,
             SetCell::Deduce(cell) => cell,
         }
     }
@@ -75,7 +76,10 @@ pub struct Search<'a, R: Rule> {
     /// The position in the `set_stack` of the next cell to be examined.
     ///
     /// See `proceed` for details.
-    next_set: usize,
+    check_index: usize,
+
+    /// The position in the `search_list` of the last decided cell.
+    search_index: usize,
 
     /// The number of living cells in the 0th generation must not exceed
     /// this number.
@@ -101,7 +105,8 @@ impl<'a, R: Rule> Search<'a, R> {
             world,
             new_state,
             set_stack,
-            next_set: 0,
+            check_index: 0,
+            search_index: 0,
             max_cell_count,
             non_empty_front,
         }
@@ -142,7 +147,7 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     fn proceed(&mut self) -> bool {
-        while self.next_set < self.set_stack.len() {
+        while self.check_index < self.set_stack.len() {
             // Tests if the number of living cells exceeds the `max_cell_count`.
             if let Some(max) = self.max_cell_count {
                 if self.world.gen0_cell_count.get() > max {
@@ -155,7 +160,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 return false;
             }
 
-            let cell = self.set_stack[self.next_set].get_cell();
+            let cell = self.set_stack[self.check_index].get_cell();
             let state = cell.state.get().unwrap();
 
             // Determines some cells by symmetry.
@@ -175,7 +180,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 return false;
             }
 
-            self.next_set += 1;
+            self.check_index += 1;
         }
         true
     }
@@ -186,12 +191,11 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `true` if it backtracks successfully,
     /// `false` if it goes back to the time before the first cell is set.
     fn backup(&mut self) -> bool {
-        self.next_set = self.set_stack.len();
-        while self.next_set > 0 {
-            self.next_set -= 1;
-            let set_cell = self.set_stack.pop().unwrap();
+        while let Some(set_cell) = self.set_stack.pop() {
             match set_cell {
-                SetCell::Decide(cell) => {
+                SetCell::Decide(i, cell) => {
+                    self.check_index = self.set_stack.len();
+                    self.search_index = i;
                     let state = !cell.state.get().unwrap();
                     self.world.set_cell(cell, Some(state));
                     self.set_stack.push(SetCell::Deduce(cell));
@@ -230,14 +234,14 @@ impl<'a, R: Rule> Search<'a, R> {
     ///
     /// Returns `false` is there is no unknown cell.
     fn decide(&mut self) -> bool {
-        if let Some(cell) = self.world.get_unknown() {
+        if let Some((i, cell)) = self.world.get_unknown(self.search_index) {
             let state = match self.new_state {
                 Choose(State::Dead) => cell.default_state,
                 Choose(State::Alive) => !cell.default_state,
                 Random => rand::random(),
             };
             self.world.set_cell(cell, Some(state));
-            self.set_stack.push(SetCell::Decide(cell));
+            self.set_stack.push(SetCell::Decide(i, cell));
             true
         } else {
             false
@@ -252,8 +256,7 @@ impl<'a, R: Rule> Search<'a, R> {
     /// and no results are found.
     pub fn search(&mut self, max_step: Option<u32>) -> Status {
         let mut step_count = 0;
-        let unknown = self.world.get_unknown();
-        if unknown.is_none() && !self.backup() {
+        if self.world.get_unknown(0).is_none() && !self.backup() {
             return Status::None;
         }
         while self.go(&mut step_count) {

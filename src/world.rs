@@ -34,7 +34,7 @@ pub struct World<'a, R: Rule> {
     /// A list of references of cells sorted by the search order.search
     ///
     /// Used to find unknown cells.
-    pub(crate) search_list: Vec<&'a LifeCell<'a, R>>,
+    search_list: Vec<&'a LifeCell<'a, R>>,
 
     /// Number of known living cells in the first generation.
     pub(crate) gen0_cell_count: Cell<u32>,
@@ -411,12 +411,18 @@ impl<'a, R: Rule> World<'a, R> {
         str
     }
 
-    /// Get a references to the first unknown cell in the `search_list`.
-    pub(crate) fn get_unknown(&self) -> Option<&'a LifeCell<'a, R>> {
-        self.search_list
+    /// Get a references to the first unknown cell since `index` in the `search_list`.
+    pub(crate) fn get_unknown(&self, index: usize) -> Option<(usize, &'a LifeCell<'a, R>)> {
+        self.search_list[index..]
             .iter()
-            .find(|cell| cell.state.get().is_none())
-            .copied()
+            .enumerate()
+            .find_map(|(i, cell)| {
+                if cell.state.get().is_none() {
+                    Some((i + index, *cell))
+                } else {
+                    None
+                }
+            })
     }
 
     /// Tests whether the world is nonempty,
