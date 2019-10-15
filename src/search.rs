@@ -206,6 +206,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 }
             }
         }
+        self.search_index = 0;
         false
     }
 
@@ -235,6 +236,7 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `false` is there is no unknown cell.
     fn decide(&mut self) -> bool {
         if let Some((i, cell)) = self.world.get_unknown(self.search_index) {
+            self.search_index = i;
             let state = match self.new_state {
                 Choose(State::Dead) => cell.default_state,
                 Choose(State::Alive) => !cell.default_state,

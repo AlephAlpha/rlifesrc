@@ -11,7 +11,7 @@ use yew::{
     Callback,
 };
 
-const VIEW_FREQ: u32 = 25000;
+const VIEW_FREQ: u32 = 50000;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
