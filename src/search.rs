@@ -195,7 +195,7 @@ impl<'a, R: Rule> Search<'a, R> {
             match set_cell {
                 SetCell::Decide(i, cell) => {
                     self.check_index = self.set_stack.len();
-                    self.search_index = i;
+                    self.search_index = i + 1;
                     let state = !cell.state.get().unwrap();
                     self.world.set_cell(cell, Some(state));
                     self.set_stack.push(SetCell::Deduce(cell));
@@ -206,6 +206,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 }
             }
         }
+        self.check_index = 0;
         self.search_index = 0;
         false
     }
@@ -236,7 +237,7 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `false` is there is no unknown cell.
     fn decide(&mut self) -> bool {
         if let Some((i, cell)) = self.world.get_unknown(self.search_index) {
-            self.search_index = i;
+            self.search_index = i + 1;
             let state = match self.new_state {
                 Choose(State::Dead) => cell.default_state,
                 Choose(State::Alive) => !cell.default_state,

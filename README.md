@@ -8,13 +8,12 @@
 
 [点此试用网页版。](https://alephalpha.github.io/rlifesrc/)
 
+以下仅介绍原生版的编译和用法。网页版的具体说明见[这里](web/README.md)。
+
 * [编译](#编译)
-  * [编译原生版](#编译原生版)
-  * [编译网页版](#编译网页版)
 * [用法](#用法)
   * [命令行界面](#命令行)
   * [文本界面（TUI）](#文本界面)
-  * [网页版](#网页版)
 
 ## 编译
 
@@ -31,9 +30,7 @@ git clone https://github.com/AlephAlpha/rlifesrc.git
 cd rlifesrc/
 ```
 
-### 编译原生版
-
-原生版（文本界面和命令行界面）在 `tui` 目录中，编译之前要先 `cd` 到该目录（否则会尝试把网页版编译成机器码，而导致出错）。
+原生版（文本界面和命令行界面）在 `tui` 目录中，编译之前要先 `cd` 到该目录（否则会尝试把网页版编译成机器码，从而出错）。
 
 ```bash
 cd tui/
@@ -43,31 +40,6 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release
 编译需要一定时间，请耐心等待。
 
 编译好的文件是 `./target/release/rlifesrc-tui`。
-
-### 编译网页版
-
-网页版在 `web` 目录中。
-
-网页版无法编译成机器码，只能编译成 WebAssembly，因此需要先安装 [cargo-web](https://github.com/koute/cargo-web)。
-
-安装了 cargo-web 之后，用
-
-```bash
-cd web/
-cargo web build --release
-```
-
-来编译即可。记得一定要 `cd` 到 `web` 目录。
-
-由于用了 Web Worker，需要编译两个文件，无法直接使用 `cargo web start` 来运行，或者用 `cargo web deploy` 编译成静态网页。只能在编译之后手动把 `target/wasm32-unknown-unknown/release/` 文件夹里的以 `*.js` 和 `*.wasm` 结尾的四个文件，以及 `static` 中的两个文件，复制到同一个文件夹：
-
-```bash
-mkdir -p some_folder/
-cp ../target/wasm32-unknown-unknown/release/*.{js,wasm} some_folder/
-cp static/* some_folder/
-```
-
-然后就可以把这个文件夹中的内容部署到自己的网站，比如说 GitHub Pages。注意由于[此问题](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS/Errors/CORSRequestNotHttp)，无法直接在浏览器打开 `index.html` 来运行；至少火狐浏览器如此。
 
 ## 用法
 
@@ -163,8 +135,6 @@ ARGS:
 ./target/release/rlifesrc 16 5 3 0 1
 ```
 
-网页版涉及到的参数和选项与此类似，不过是直接在网页中输入，并点击 “Set World” 确认。
-
 10 种不同的对称性，对应二面体群 D8 的 10 个子群。对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](http://conwaylife.com/wiki/Symmetry)。
 
 8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。`F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://www.conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
@@ -220,16 +190,6 @@ O.O....OO.....OOO.........
 
 此时再按空格键或回车键的话会在当前结果的基础上搜下一个结果。
 
-搜索过程中不会显示搜索时间。搜索下一个结果时不会重置计时，除非加上命令行选项 `--reset-time`。
+搜索过程中不会显示搜索时间，若想知道时间可以暂停。搜索下一个结果时不会重置计时，除非加上命令行选项 `--reset-time`。
 
-如果搜索的图样比终端的窗口大小还要大，将无法完整显示。这是文本界面最主要的缺陷。
-
-### 网页版
-
-由于网页版是编译成 WebAssembly 而不是机器码，速度要慢很多，但随时随地只要有浏览器就能运行。
-
-进入页面后按照说明调整图样的宽度、高度、周期、平移等信息，然后点击 “Set World” 来确定这些信息。然后点 “Start” 开始搜索。
-
-搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Set World” 来重置世界。
-
-其余的用法和文本界面差不多。
+如果搜索的图样比终端的窗口大小还要大，将无法完整显示。这是文本界面最主要的缺陷。此时可以使用网页版。

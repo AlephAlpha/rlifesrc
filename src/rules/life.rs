@@ -38,17 +38,26 @@ bitflags! {
         /// The successor must be dead.
         const SUCC_DEAD = 0b_0000_1000;
 
+        /// The state of the successor is implied.
+        const SUCC = Self::SUCC_ALIVE.bits | Self::SUCC_DEAD.bits;
+
         /// The cell itself must be alive.
         const SELF_ALIVE = 0b_0001_0000;
 
         /// The cell itself must be dead.
         const SELF_DEAD = 0b_0010_0000;
 
+        /// The state of the cell itself is implied.
+        const SELF = Self::SELF_ALIVE.bits | Self::SELF_DEAD.bits;
+
         /// All unknown neighbors must be alive.
         const NBHD_ALIVE = 0b_0100_0000;
 
         /// All unknown neighbors must be dead.
         const NBHD_DEAD = 0b_1000_0000;
+
+        /// The states of all unknown neighbors are implied.
+        const NBHD = Self::NBHD_ALIVE.bits | Self::NBHD_DEAD.bits;
     }
 }
 
@@ -280,7 +289,7 @@ impl Rule for Life {
             return false;
         }
 
-        if flags.intersects(ImplFlags::SUCC_DEAD | ImplFlags::SUCC_ALIVE) {
+        if flags.intersects(ImplFlags::SUCC) {
             let state = if flags.contains(ImplFlags::SUCC_DEAD) {
                 Dead
             } else {
@@ -292,7 +301,7 @@ impl Rule for Life {
             return true;
         }
 
-        if flags.intersects(ImplFlags::SELF_DEAD | ImplFlags::SELF_ALIVE) {
+        if flags.intersects(ImplFlags::SELF) {
             let state = if flags.contains(ImplFlags::SELF_DEAD) {
                 Dead
             } else {
@@ -302,7 +311,7 @@ impl Rule for Life {
             set_stack.push(SetCell::Deduce(cell));
         }
 
-        if flags.intersects(ImplFlags::NBHD_DEAD | ImplFlags::NBHD_ALIVE) {
+        if flags.intersects(ImplFlags::NBHD) {
             let state = if flags.contains(ImplFlags::NBHD_DEAD) {
                 Dead
             } else {

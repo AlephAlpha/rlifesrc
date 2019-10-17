@@ -28,67 +28,28 @@ bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
     struct ImplFlags: u32 {
         /// A conflict is detected.
-        const CONFLICT = 0b_0000_0000_0000_0000_0000_0001;
+        const CONFLICT = 0b_0000_0001;
 
         /// The successor must be alive.
-        const SUCC_ALIVE = 0b_0000_0000_0000_0000_0000_0100;
+        const SUCC_ALIVE = 0b_0000_0100;
 
         /// The successor must be dead.
-        const SUCC_DEAD = 0b_0000_0000_0000_0000_0000_1000;
+        const SUCC_DEAD = 0b_0000_1000;
+
+        /// The state of the successor is implied.
+        const SUCC = Self::SUCC_ALIVE.bits | Self::SUCC_DEAD.bits;
 
         /// The cell itself must be alive.
-        const SELF_ALIVE = 0b_0000_0000_0000_0000_0001_0000;
+        const SELF_ALIVE = 0b_0001_0000;
 
         /// The cell itself must be dead.
-        const SELF_DEAD = 0b_0000_0000_0000_0000_0010_0000;
+        const SELF_DEAD = 0b_0010_0000;
 
-        /// The upper left neighbor must be alive.
-        const NBHD0_ALIVE = 0b_0000_0000_0000_0000_0100_0000;
+        /// The state of the cell itself is implied.
+        const SELF = Self::SELF_ALIVE.bits | Self::SELF_DEAD.bits;
 
-        /// The upper left neighbor must be dead.
-        const NBHD0_DEAD = 0b_0000_0000_0000_0000_1000_0000;
-
-        /// The upper neighbor must be alive.
-        const NBHD1_ALIVE = 0b_0000_0000_0000_0001_0000_0000;
-
-        /// The upper neighbor must be dead.
-        const NBHD1_DEAD = 0b_0000_0000_0000_0010_0000_0000;
-
-        /// The upper right neighbor must be alive.
-        const NBHD2_ALIVE = 0b_0000_0000_0000_0100_0000_0000;
-
-        /// The upper right neighbor must be dead.
-        const NBHD2_DEAD = 0b_0000_0000_0000_1000_0000_0000;
-
-        /// The left neighbor must be alive.
-        const NBHD3_ALIVE = 0b_0000_0000_0001_0000_0000_0000;
-
-        /// The left neighbor must be dead.
-        const NBHD3_DEAD = 0b_0000_0000_0010_0000_0000_0000;
-
-        /// The right neighbor must be alive.
-        const NBHD4_ALIVE = 0b_0000_0000_0100_0000_0000_0000;
-
-        /// The right neighbor must be dead.
-        const NBHD4_DEAD = 0b_0000_0000_1000_0000_0000_0000;
-
-        /// The upper left neighbor must be alive.
-        const NBHD5_ALIVE = 0b_0000_0001_0000_0000_0000_0000;
-
-        /// The upper left neighbor must be dead.
-        const NBHD5_DEAD = 0b_0000_0010_0000_0000_0000_0000;
-
-        /// The upper neighbor must be alive.
-        const NBHD6_ALIVE = 0b_0000_0100_0000_0000_0000_0000;
-
-        /// The upper neighbor must be dead.
-        const NBHD6_DEAD = 0b_0000_1000_0000_0000_0000_0000;
-
-        /// The upper right neighbor must be alive.
-        const NBHD7_ALIVE = 0b_0001_0000_0000_0000_0000_0000;
-
-        /// The upper right neighbor must be dead.
-        const NBHD7_DEAD = 0b_0010_0000_0000_0000_0000_0000;
+        /// The state of at least one unknown neighbor is implied.
+        const NBHD = 0xffff << 6;
     }
 }
 
@@ -343,7 +304,7 @@ impl Rule for NtLife {
             set_stack.push(SetCell::Deduce(cell));
         }
 
-        if flags.intersects(ImplFlags::from_bits(0xffff << 6).unwrap()) {
+        if flags.intersects(ImplFlags::NBHD) {
             for (i, &neigh) in cell.nbhd.iter().enumerate() {
                 if flags.intersects(ImplFlags::from_bits(3 << (2 * i + 6)).unwrap()) {
                     if let Some(neigh) = neigh {
