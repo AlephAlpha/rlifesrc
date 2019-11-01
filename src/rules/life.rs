@@ -9,7 +9,7 @@ use crate::{
 use bitflags::bitflags;
 use ca_rules::ParseLife;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 /// The neighborhood descriptor.
 ///
 /// It is a 12-bit integer of the form `0b_abcd_efgh_ij_kl`,

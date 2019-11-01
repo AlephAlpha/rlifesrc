@@ -5,7 +5,11 @@ use rand::{
     distributions::{Distribution, Standard},
     Rng,
 };
-use std::{cell::Cell, ops::Not};
+use std::{
+    cell::Cell,
+    fmt::{Debug, Error, Formatter},
+    ops::Not,
+};
 pub use State::{Alive, Dead};
 
 #[cfg(feature = "stdweb")]
@@ -121,5 +125,16 @@ impl<'a, R: Rule> LifeCell<'a, R> {
 
     pub(crate) fn update_desc(&self, old_state: Option<State>, state: Option<State>) {
         R::update_desc(self, old_state, state);
+    }
+}
+
+impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(
+            f,
+            "LifeCell {{ state: {:?}, desc: {:?} }}",
+            self.state.get(),
+            self.desc.get()
+        )
     }
 }
