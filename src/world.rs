@@ -5,13 +5,24 @@ use crate::{
     rules::Rule,
     syms_trans::{Symmetry, Transform},
 };
-use std::cell::Cell;
+use std::{cell::Cell, cmp::Ordering};
+
+#[cfg(feature = "stdweb")]
+use serde::{Deserialize, Serialize};
 
 /// The coordinates of a cell.
 ///
 /// `(x-coordinate, y-coordinate, time)`.
 /// All three coordinates are 0-indexed.
 pub type Coord = (isize, isize, isize);
+
+/// Search order.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
+pub enum SearchOrder {
+    RowFirst,
+    ColumnFirst,
+}
 
 /// The world.
 pub struct World<'a, R: Rule> {
@@ -62,19 +73,25 @@ impl<'a, R: Rule> World<'a, R> {
         transform: Transform,
         symmetry: Symmetry,
         rule: R,
-        column_first: Option<bool>,
+        search_order: Option<SearchOrder>,
     ) -> Self {
-        // Determine the search order automatically if `column_first` is `None`.
-        let column_first = column_first.unwrap_or_else(|| {
+        // Determine the search order automatically if `search_order` is `None`.
+        let search_order = search_order.unwrap_or_else(|| {
             let (width, height) = match symmetry {
                 Symmetry::D2Row => (width, (height + 1) / 2),
                 Symmetry::D2Col => ((width + 1) / 2, height),
                 _ => (width, height),
             };
-            if width == height {
-                dx.abs() >= dy.abs()
-            } else {
-                width > height
+            match width.cmp(&height) {
+                Ordering::Greater => SearchOrder::ColumnFirst,
+                Ordering::Less => SearchOrder::RowFirst,
+                Ordering::Equal => {
+                    if dx.abs() >= dy.abs() {
+                        SearchOrder::ColumnFirst
+                    } else {
+                        SearchOrder::RowFirst
+                    }
+                }
             }
         });
 
@@ -91,8 +108,17 @@ impl<'a, R: Rule> World<'a, R> {
                     if t == 0 {
                         cell.is_gen0 = true;
                     }
-                    if (column_first && x == 0) || (!column_first && y == 0) {
-                        cell.is_front = true;
+                    match search_order {
+                        SearchOrder::ColumnFirst => {
+                            if x == 0 {
+                                cell.is_front = true
+                            }
+                        }
+                        SearchOrder::RowFirst => {
+                            if y == 0 {
+                                cell.is_front = true
+                            }
+                        }
                     }
                     cells.push(cell);
                 }
@@ -118,7 +144,7 @@ impl<'a, R: Rule> World<'a, R> {
         .init_pred_succ(dx, dy, transform)
         .init_sym(symmetry)
         .init_state()
-        .init_search_order(column_first)
+        .init_search_order(search_order)
     }
 
     /// Links the cells to their neighbors.
@@ -316,24 +342,27 @@ impl<'a, R: Rule> World<'a, R> {
     /// Sets the search order.
     ///
     /// This method will be called only once, inside `World::new`.
-    fn init_search_order(mut self, column_first: bool) -> Self {
-        if column_first {
-            for x in 0..self.width {
-                for y in 0..self.height {
-                    for t in 0..self.period {
-                        let cell = self.find_cell((x, y, t)).unwrap();
-                        let cell = unsafe { cell.extend_life().unwrap() };
-                        self.search_list.push(cell);
+    fn init_search_order(mut self, search_order: SearchOrder) -> Self {
+        match search_order {
+            SearchOrder::ColumnFirst => {
+                for x in 0..self.width {
+                    for y in 0..self.height {
+                        for t in 0..self.period {
+                            let cell = self.find_cell((x, y, t)).unwrap();
+                            let cell = unsafe { cell.extend_life().unwrap() };
+                            self.search_list.push(cell);
+                        }
                     }
                 }
             }
-        } else {
-            for y in 0..self.height {
-                for x in 0..self.width {
-                    for t in 0..self.period {
-                        let cell = self.find_cell((x, y, t)).unwrap();
-                        let cell = unsafe { cell.extend_life().unwrap() };
-                        self.search_list.push(cell);
+            SearchOrder::RowFirst => {
+                for y in 0..self.height {
+                    for x in 0..self.width {
+                        for t in 0..self.period {
+                            let cell = self.find_cell((x, y, t)).unwrap();
+                            let cell = unsafe { cell.extend_life().unwrap() };
+                            self.search_list.push(cell);
+                        }
                     }
                 }
             }

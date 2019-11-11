@@ -2,10 +2,10 @@ use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
     rules::{Life, NtLife},
-    NewState::{Choose, Random},
+    NewState, Search, SearchOrder,
     State::{Alive, Dead},
+    Status, Symmetry, TraitSearch, Transform, World,
 };
-use rlifesrc_lib::{Search, Status, Symmetry, TraitSearch, Transform, World};
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
@@ -228,16 +228,16 @@ pub fn parse_args() -> Option<Args> {
     let all = matches.is_present("ALL");
     let reset = matches.is_present("RESET");
     let no_tui = matches.is_present("NOTUI");
-    let column_first = match matches.value_of("ORDER").unwrap() {
-        "row" | "r" => Some(false),
-        "column" | "c" => Some(true),
+    let search_order = match matches.value_of("ORDER").unwrap() {
+        "row" | "r" => Some(SearchOrder::RowFirst),
+        "column" | "c" => Some(SearchOrder::ColumnFirst),
         _ => None,
     };
     let new_state = match matches.value_of("CHOOSE").unwrap() {
-        "dead" | "d" => Choose(Dead),
-        "alive" | "a" => Choose(Alive),
-        "random" | "r" => Random,
-        _ => Choose(Dead),
+        "dead" | "d" => NewState::Choose(Dead),
+        "alive" | "a" => NewState::Choose(Alive),
+        "random" | "r" => NewState::Random,
+        _ => NewState::Choose(Dead),
     };
     let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
     let max_cell_count = match max_cell_count {
@@ -249,7 +249,7 @@ pub fn parse_args() -> Option<Args> {
     let rule_string = &matches.value_of("RULE").unwrap();
 
     if let Ok(rule) = Life::parse_rule(rule_string) {
-        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
+        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, search_order);
         let search = Box::new(Search::new(
             world,
             new_state,
@@ -263,7 +263,7 @@ pub fn parse_args() -> Option<Args> {
             reset,
         })
     } else if let Ok(rule) = NtLife::parse_rule(rule_string) {
-        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, column_first);
+        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, search_order);
         let search = Box::new(Search::new(
             world,
             new_state,

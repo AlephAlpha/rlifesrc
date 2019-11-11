@@ -1,7 +1,6 @@
 use rlifesrc_lib::{
     rules::{Life, NtLife},
-    NewState::{self, Choose},
-    Search, State, Status, Symmetry, TraitSearch, Transform, World,
+    NewState, Search, SearchOrder, State, Status, Symmetry, TraitSearch, Transform, World,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -22,7 +21,7 @@ pub struct Config {
     pub dy: isize,
     pub transform: Transform,
     pub symmetry: Symmetry,
-    pub column_first: Option<bool>,
+    pub search_order: Option<SearchOrder>,
     pub new_state: NewState,
     pub max_cell_count: Option<u32>,
     pub non_empty_front: bool,
@@ -39,8 +38,8 @@ impl Default for Config {
             dy: 1,
             transform: Transform::Id,
             symmetry: Symmetry::C1,
-            column_first: None,
-            new_state: Choose(State::Alive),
+            search_order: None,
+            new_state: NewState::Choose(State::Alive),
             max_cell_count: None,
             non_empty_front: true,
             rule_string: String::from("B3/S23"),
@@ -139,7 +138,7 @@ impl Agent for Worker {
             config.transform,
             config.symmetry,
             rule,
-            config.column_first,
+            config.search_order,
         );
         let search = Box::new(Search::new(
             world,
@@ -192,7 +191,7 @@ impl Agent for Worker {
                         config.transform,
                         config.symmetry,
                         rule,
-                        config.column_first,
+                        config.search_order,
                     );
                     self.search = Box::new(Search::new(
                         world,
@@ -209,7 +208,7 @@ impl Agent for Worker {
                         config.transform,
                         config.symmetry,
                         rule,
-                        config.column_first,
+                        config.search_order,
                     );
                     self.search = Box::new(Search::new(
                         world,

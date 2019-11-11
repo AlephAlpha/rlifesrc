@@ -3,13 +3,12 @@
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
     rules::Rule,
-    search::SetCell,
+    search::{Reason, SetCell},
     world::World,
 };
 use bitflags::bitflags;
 use ca_rules::ParseNtLife;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
 /// The neighborhood descriptor.
 ///
 /// It is a 20-bit integer of the form `0b_abcdefgh_ijklmnop_qr_st`,
@@ -22,6 +21,7 @@ use ca_rules::ParseNtLife;
 /// * `0b_01` means alive,
 /// * `0b_00` means unknown.
 /// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct NbhdDesc(usize);
 
 bitflags! {
@@ -290,7 +290,7 @@ impl Rule for NtLife {
             };
             let succ = cell.succ.unwrap();
             world.set_cell(succ, Some(state));
-            set_stack.push(SetCell::Deduce(succ));
+            set_stack.push(SetCell::new(succ, Reason::Deduce));
             return true;
         }
 
@@ -301,7 +301,7 @@ impl Rule for NtLife {
                 Alive
             };
             world.set_cell(cell, Some(state));
-            set_stack.push(SetCell::Deduce(cell));
+            set_stack.push(SetCell::new(cell, Reason::Deduce));
         }
 
         if flags.intersects(ImplFlags::NBHD) {
@@ -315,7 +315,7 @@ impl Rule for NtLife {
                                 Alive
                             };
                         world.set_cell(neigh, Some(state));
-                        set_stack.push(SetCell::Deduce(neigh));
+                        set_stack.push(SetCell::new(neigh, Reason::Deduce));
                     }
                 }
             }

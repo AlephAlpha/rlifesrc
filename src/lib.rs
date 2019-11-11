@@ -7,4 +7,4 @@ mod world;
 pub use cells::State;
 pub use search::{NewState, Search, Status, TraitSearch};
 pub use syms_trans::{Symmetry, Transform};
-pub use world::World;
+pub use world::{SearchOrder, World};

@@ -1,6 +1,6 @@
 use crate::worker::{Config, Request, Response, Worker};
 use rlifesrc_lib::{
-    NewState::{self, Choose, Random},
+    NewState, SearchOrder,
     State::{Alive, Dead},
     Status, Symmetry, Transform,
 };
@@ -37,7 +37,7 @@ pub enum Msg {
     SetTrans(Transform),
     SetSym(Symmetry),
     SetRule(String),
-    SetOrder(Option<bool>),
+    SetOrder(Option<SearchOrder>),
     SetChoose(NewState),
     SetMax(Option<u32>),
     SetFront,
@@ -163,8 +163,8 @@ impl Component for Model {
             Msg::SetRule(rule_string) => {
                 self.config.rule_string = rule_string;
             }
-            Msg::SetOrder(column_first) => {
-                self.config.column_first = column_first;
+            Msg::SetOrder(search_order) => {
+                self.config.search_order = search_order;
             }
             Msg::SetChoose(new_state) => {
                 self.config.new_state = new_state;
@@ -674,8 +674,8 @@ impl Model {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
                                 "Automatic" => Msg::SetOrder(None),
-                                "Column" => Msg::SetOrder(Some(true)),
-                                "Row" => Msg::SetOrder(Some(false)),
+                                "Column" => Msg::SetOrder(Some(SearchOrder::ColumnFirst)),
+                                "Row" => Msg::SetOrder(Some(SearchOrder::RowFirst)),
                                 _ => Msg::None,
                             }
                         } else {
@@ -703,9 +703,9 @@ impl Model {
                     onchange=|e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
-                                "Dead" => Msg::SetChoose(Choose(Dead)),
-                                "Alive" => Msg::SetChoose(Choose(Alive)),
-                                "Random" => Msg::SetChoose(Random),
+                                "Dead" => Msg::SetChoose(NewState::Choose(Dead)),
+                                "Alive" => Msg::SetChoose(NewState::Choose(Alive)),
+                                "Random" => Msg::SetChoose(NewState::Random),
                                 _ => Msg::None,
                             }
                         } else {

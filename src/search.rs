@@ -34,24 +34,31 @@ pub enum NewState {
     Random,
 }
 
-/// Whether the state of a cell is decided by choice,
-/// or deduced by other cells.
+/// Reasons for setting a cell.
 #[derive(Clone, Copy)]
-pub enum SetCell<'a, R: Rule> {
+pub(crate) enum Reason {
     /// Decides the state of a cell by choice,
     /// and remembers its position in the `search_list` of the world.
-    Decide(usize, &'a LifeCell<'a, R>),
+    Decide(usize),
+
     /// Determines the state of a cell by other cells.
-    Deduce(&'a LifeCell<'a, R>),
+    Deduce,
+}
+
+/// Records the cells whose values are set and their reasons.
+#[derive(Clone, Copy)]
+pub struct SetCell<'a, R: Rule> {
+    /// The set cell.
+    cell: &'a LifeCell<'a, R>,
+
+    /// The reason for setting a cell.
+    reason: Reason,
 }
 
 impl<'a, R: Rule> SetCell<'a, R> {
     /// Get a reference to the set cell.
-    fn get_cell(&self) -> &'a LifeCell<'a, R> {
-        match self {
-            SetCell::Decide(_, cell) => cell,
-            SetCell::Deduce(cell) => cell,
-        }
+    pub(crate) fn new(cell: &'a LifeCell<'a, R>, reason: Reason) -> Self {
+        SetCell { cell, reason }
     }
 }
 
@@ -160,7 +167,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 return false;
             }
 
-            let cell = self.set_stack[self.check_index].get_cell();
+            let cell = self.set_stack[self.check_index].cell;
             let state = cell.state.get().unwrap();
 
             // Determines some cells by symmetry.
@@ -171,7 +178,7 @@ impl<'a, R: Rule> Search<'a, R> {
                     }
                 } else {
                     self.world.set_cell(sym, Some(state));
-                    self.set_stack.push(SetCell::Deduce(sym));
+                    self.set_stack.push(SetCell::new(sym, Reason::Deduce));
                 }
             }
 
@@ -192,16 +199,17 @@ impl<'a, R: Rule> Search<'a, R> {
     /// `false` if it goes back to the time before the first cell is set.
     fn backup(&mut self) -> bool {
         while let Some(set_cell) = self.set_stack.pop() {
-            match set_cell {
-                SetCell::Decide(i, cell) => {
+            let cell = set_cell.cell;
+            match set_cell.reason {
+                Reason::Decide(i) => {
                     self.check_index = self.set_stack.len();
                     self.search_index = i + 1;
                     let state = !cell.state.get().unwrap();
                     self.world.set_cell(cell, Some(state));
-                    self.set_stack.push(SetCell::Deduce(cell));
+                    self.set_stack.push(SetCell::new(cell, Reason::Deduce));
                     return true;
                 }
-                SetCell::Deduce(cell) => {
+                Reason::Deduce => {
                     self.world.set_cell(cell, None);
                 }
             }
@@ -244,7 +252,7 @@ impl<'a, R: Rule> Search<'a, R> {
                 Random => rand::random(),
             };
             self.world.set_cell(cell, Some(state));
-            self.set_stack.push(SetCell::Decide(i, cell));
+            self.set_stack.push(SetCell::new(cell, Reason::Decide(i)));
             true
         } else {
             false
