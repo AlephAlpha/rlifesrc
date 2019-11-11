@@ -94,16 +94,12 @@ pub enum Request {
     DisplayGen(isize),
 }
 
-impl Transferable for Request {}
-
 #[derive(Serialize, Deserialize)]
 pub enum Response {
     UpdateWorld((String, u32)),
     UpdateStatus(Status),
     InvalidRule,
 }
-
-impl Transferable for Response {}
 
 pub struct Step;
 

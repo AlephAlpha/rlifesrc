@@ -206,9 +206,7 @@ impl Component for Model {
         }
         true
     }
-}
 
-impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         html! {
             <div id="rlifesrc">

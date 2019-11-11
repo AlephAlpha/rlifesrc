@@ -3,6 +3,7 @@
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
     rules::Rule,
+    search::{Reason, SetCell},
     syms_trans::{Symmetry, Transform},
 };
 use std::{cell::Cell, cmp::Ordering};
@@ -329,7 +330,7 @@ impl<'a, R: Rule> World<'a, R> {
                 for t in 0..self.period {
                     let cell = self.find_cell((x, y, t)).unwrap();
                     if cell.state.get().is_some() {
-                        self.set_cell(cell, None);
+                        self.clear_cell(cell);
                     } else {
                         cell.state.set(Some(cell.default_state));
                     }
@@ -394,25 +395,47 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Sets the `state` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn set_cell(&self, cell: &LifeCell<'a, R>, state: Option<State>) {
-        let old_state = cell.state.replace(state);
-        if old_state != state {
-            cell.update_desc(old_state, state);
+    pub(crate) fn set_cell(
+        &self,
+        cell: &'a LifeCell<'a, R>,
+        state: State,
+        set_stack: &mut Vec<SetCell<'a, R>>,
+        reason: Reason,
+    ) {
+        let old_state = cell.state.replace(Some(state));
+        if old_state != Some(state) {
+            cell.update_desc(old_state, Some(state));
             if cell.is_gen0 {
                 match (state, old_state) {
-                    (Some(Alive), Some(Alive)) => (),
-                    (Some(Alive), _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
+                    (Alive, Some(Alive)) => (),
+                    (Alive, _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
                     (_, Some(Alive)) => self.gen0_cell_count.set(self.gen0_cell_count.get() - 1),
                     _ => (),
                 }
             }
             if cell.is_front {
                 match (state, old_state) {
-                    (Some(Dead), Some(Dead)) => (),
-                    (Some(Dead), _) => self.front_cell_count.set(self.front_cell_count.get() - 1),
+                    (Dead, Some(Dead)) => (),
+                    (Dead, _) => self.front_cell_count.set(self.front_cell_count.get() - 1),
                     (_, Some(Dead)) => self.front_cell_count.set(self.front_cell_count.get() + 1),
                     _ => (),
                 }
+            }
+        }
+        set_stack.push(SetCell::new(cell, reason));
+    }
+
+    /// Clears the `state` of a cell,
+    /// and update the neighborhood descriptor of its neighbors.
+    pub(crate) fn clear_cell(&self, cell: &'a LifeCell<'a, R>) {
+        let old_state = cell.state.take();
+        if old_state != None {
+            cell.update_desc(old_state, None);
+            if cell.is_gen0 && old_state == Some(Alive) {
+                self.gen0_cell_count.set(self.gen0_cell_count.get() - 1);
+            }
+            if cell.is_front && old_state == Some(Dead) {
+                self.front_cell_count.set(self.front_cell_count.get() + 1);
             }
         }
     }

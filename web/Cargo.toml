@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 rlifesrc-lib = { path = "../", features = ["stdweb"] }
-serde = { version = "1.0.101", features = ["derive"] }
-yew = "0.9.2"
+serde = { version = "1.0.102", features = ["derive"] }
+yew = "0.10.0"

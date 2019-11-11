@@ -296,8 +296,7 @@ impl Rule for Life {
                 Alive
             };
             let succ = cell.succ.unwrap();
-            world.set_cell(succ, Some(state));
-            set_stack.push(SetCell::new(succ, Reason::Deduce));
+            world.set_cell(succ, state, set_stack, Reason::Deduce);
             return true;
         }
 
@@ -307,8 +306,7 @@ impl Rule for Life {
             } else {
                 Alive
             };
-            world.set_cell(cell, Some(state));
-            set_stack.push(SetCell::new(cell, Reason::Deduce));
+            world.set_cell(cell, state, set_stack, Reason::Deduce);
         }
 
         if flags.intersects(ImplFlags::NBHD) {
@@ -320,8 +318,7 @@ impl Rule for Life {
             for &neigh in cell.nbhd.iter() {
                 if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
-                        world.set_cell(neigh, Some(state));
-                        set_stack.push(SetCell::new(neigh, Reason::Deduce));
+                        world.set_cell(neigh, state, set_stack, Reason::Deduce);
                     }
                 }
             }

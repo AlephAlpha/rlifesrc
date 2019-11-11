@@ -177,8 +177,8 @@ impl<'a, R: Rule> Search<'a, R> {
                         return false;
                     }
                 } else {
-                    self.world.set_cell(sym, Some(state));
-                    self.set_stack.push(SetCell::new(sym, Reason::Deduce));
+                    self.world
+                        .set_cell(sym, state, &mut self.set_stack, Reason::Deduce);
                 }
             }
 
@@ -205,12 +205,12 @@ impl<'a, R: Rule> Search<'a, R> {
                     self.check_index = self.set_stack.len();
                     self.search_index = i + 1;
                     let state = !cell.state.get().unwrap();
-                    self.world.set_cell(cell, Some(state));
-                    self.set_stack.push(SetCell::new(cell, Reason::Deduce));
+                    self.world
+                        .set_cell(cell, state, &mut self.set_stack, Reason::Deduce);
                     return true;
                 }
                 Reason::Deduce => {
-                    self.world.set_cell(cell, None);
+                    self.world.clear_cell(cell);
                 }
             }
         }
@@ -251,8 +251,8 @@ impl<'a, R: Rule> Search<'a, R> {
                 Choose(State::Alive) => !cell.default_state,
                 Random => rand::random(),
             };
-            self.world.set_cell(cell, Some(state));
-            self.set_stack.push(SetCell::new(cell, Reason::Decide(i)));
+            self.world
+                .set_cell(cell, state, &mut self.set_stack, Reason::Decide(i));
             true
         } else {
             false
