@@ -5,7 +5,6 @@ mod ntlife;
 
 use crate::{
     cells::{LifeCell, State},
-    search::SetCell,
     world::World,
 };
 pub use life::Life;
@@ -42,10 +41,5 @@ pub trait Rule: Sized {
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
-    fn consistify<'a>(
-        &self,
-        cell: &'a LifeCell<'a, Self>,
-        world: &World<'a, Self>,
-        set_stack: &mut Vec<SetCell<'a, Self>>,
-    ) -> bool;
+    fn consistify<'a>(world: &mut World<'a, Self>, cell: &'a LifeCell<'a, Self>) -> bool;
 }

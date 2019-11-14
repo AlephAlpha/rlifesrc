@@ -1,6 +1,8 @@
-//! Symmetries and transformations.
+//! World configuration.
 
+use crate::cells::State;
 use std::{
+    cmp::Ordering,
     fmt::{Debug, Error, Formatter},
     str::FromStr,
 };
@@ -8,7 +10,11 @@ use std::{
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
 
-/// Transformations. Rotations and reflections.
+/// Transformations (rotations and reflections) after the last generation.
+///
+/// The generation of the pattern after the last generation
+/// would be the first generation, applying this transformation first,
+/// and then the translation defined by `dx` and `dy`.
 ///
 /// 8 different values corresponds to 8 elements of the dihedral group
 /// _D_<sub>8</sub>.
@@ -20,8 +26,6 @@ use serde::{Deserialize, Serialize};
 ///
 /// `F` means reflections (flips).
 /// The symbol after it is the axis of reflection.
-///
-/// The transformation is applied _before_ the translation.
 ///
 /// Some of the transformations are only valid when the world is square.
 #[derive(Clone, Copy, PartialEq)]
@@ -118,21 +122,13 @@ impl Transform {
     }
 }
 
-/// Symmetries.
+/// Symmetries of the pattern.
 ///
 /// 10 different values corresponds to 10 subgroups of the dihedral group
 /// _D_<sub>8</sub>.
 ///
 /// The notation is stolen from Oscar Cunningham's
 /// [Logic Life Search](https://github.com/OscarCunningham/logic-life-search).
-///
-/// `Id` is the identity transformation.
-///
-/// `R` means rotations around the center of the world.
-/// The number after it is the counterclockwise rotation angle in degrees.
-///
-/// `F` means reflections (flips).
-/// The symbol after it is the axis of reflection.
 ///
 /// Some of the symmetries are only valid when the world is square.
 #[derive(Clone, Copy, PartialEq)]
@@ -240,6 +236,160 @@ impl Symmetry {
             | Symmetry::D4Diag
             | Symmetry::D8 => true,
             _ => false,
+        }
+    }
+}
+
+/// The order to find a new unknown cell.
+///
+/// It will always search all generations of a cell first,
+/// and the go to another cell.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
+pub enum SearchOrder {
+    /// ```plaintext
+    /// 123
+    /// 456
+    /// 789
+    /// ```
+    RowFirst,
+
+    /// ```plaintext
+    /// 147
+    /// 258
+    /// 369
+    /// ```
+    ColumnFirst,
+}
+
+/// How to choose a state for an unknown cell.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
+pub enum NewState {
+    /// Chooses the given state.
+    Choose(State),
+    /// Random. The probability of either state is 1/2.
+    Random,
+}
+
+/// The default symmetry is the `C1`.
+impl Default for NewState {
+    fn default() -> Self {
+        NewState::Choose(State::Alive)
+    }
+}
+
+/// World configuration.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
+pub struct Config {
+    /// Width.
+    pub width: isize,
+    /// Height.
+    pub height: isize,
+    /// Period.
+    pub period: isize,
+    pub dx: isize,
+    pub dy: isize,
+    pub transform: Transform,
+    pub symmetry: Symmetry,
+    pub search_order: Option<SearchOrder>,
+    pub new_state: NewState,
+    pub max_cell_count: Option<u32>,
+    pub non_empty_front: bool,
+    /// The rule string of the cellular automaton.
+    pub rule_string: String,
+}
+
+impl Config {
+    pub fn new(width: isize, height: isize, period: isize) -> Self {
+        Config {
+            width,
+            height,
+            period,
+            ..Config::default()
+        }
+    }
+
+    pub fn set_translate(mut self, dx: isize, dy: isize) -> Self {
+        self.dx = dx;
+        self.dy = dy;
+        self
+    }
+
+    pub fn set_transform(mut self, transform: Transform) -> Self {
+        self.transform = transform;
+        self
+    }
+
+    pub fn set_symmetry(mut self, symmetry: Symmetry) -> Self {
+        self.symmetry = symmetry;
+        self
+    }
+
+    pub fn set_search_order(mut self, search_order: Option<SearchOrder>) -> Self {
+        self.search_order = search_order;
+        self
+    }
+
+    pub fn set_new_state(mut self, new_state: NewState) -> Self {
+        self.new_state = new_state;
+        self
+    }
+
+    pub fn set_max_cell_count(mut self, max_cell_count: Option<u32>) -> Self {
+        self.max_cell_count = max_cell_count;
+        self
+    }
+
+    pub fn set_non_empty_front(mut self, non_empty_front: bool) -> Self {
+        self.non_empty_front = non_empty_front;
+        self
+    }
+
+    pub fn set_rule_string(mut self, rule_string: String) -> Self {
+        self.rule_string = rule_string;
+        self
+    }
+
+    /// Automatically determines the search order if `search_order` is `None`.
+    pub(crate) fn auto_search_order(&self) -> SearchOrder {
+        self.search_order.unwrap_or_else(|| {
+            let (width, height) = match self.symmetry {
+                Symmetry::D2Row => (self.width, (self.height + 1) / 2),
+                Symmetry::D2Col => ((self.width + 1) / 2, self.height),
+                _ => (self.width, self.height),
+            };
+            match width.cmp(&height) {
+                Ordering::Greater => SearchOrder::ColumnFirst,
+                Ordering::Less => SearchOrder::RowFirst,
+                Ordering::Equal => {
+                    if self.dx.abs() >= self.dy.abs() {
+                        SearchOrder::ColumnFirst
+                    } else {
+                        SearchOrder::RowFirst
+                    }
+                }
+            }
+        })
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            width: 26,
+            height: 8,
+            period: 4,
+            dx: 0,
+            dy: 1,
+            transform: Transform::Id,
+            symmetry: Symmetry::C1,
+            search_order: None,
+            new_state: NewState::Choose(State::Alive),
+            max_cell_count: None,
+            non_empty_front: true,
+            rule_string: String::from("B3/S23"),
         }
     }
 }

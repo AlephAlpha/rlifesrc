@@ -1,6 +1,6 @@
-use crate::worker::{Config, Request, Response, Worker};
+use crate::worker::{Request, Response, Worker};
 use rlifesrc_lib::{
-    NewState, SearchOrder,
+    Config, NewState, SearchOrder,
     State::{Alive, Dead},
     Status, Symmetry, Transform,
 };

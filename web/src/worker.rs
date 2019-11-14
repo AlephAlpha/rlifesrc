@@ -1,7 +1,4 @@
-use rlifesrc_lib::{
-    rules::{Life, NtLife},
-    NewState, Search, SearchOrder, State, Status, Symmetry, TraitSearch, Transform, World,
-};
+use rlifesrc_lib::{set_world, Config, Search, Status};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::{
@@ -11,41 +8,6 @@ use yew::{
 };
 
 const VIEW_FREQ: u32 = 50000;
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Config {
-    pub width: isize,
-    pub height: isize,
-    pub period: isize,
-    pub dx: isize,
-    pub dy: isize,
-    pub transform: Transform,
-    pub symmetry: Symmetry,
-    pub search_order: Option<SearchOrder>,
-    pub new_state: NewState,
-    pub max_cell_count: Option<u32>,
-    pub non_empty_front: bool,
-    pub rule_string: String,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            width: 26,
-            height: 8,
-            period: 4,
-            dx: 0,
-            dy: 1,
-            transform: Transform::Id,
-            symmetry: Symmetry::C1,
-            search_order: None,
-            new_state: NewState::Choose(State::Alive),
-            max_cell_count: None,
-            non_empty_front: true,
-            rule_string: String::from("B3/S23"),
-        }
-    }
-}
 
 struct Job {
     timeout: TimeoutService,
@@ -81,7 +43,7 @@ impl Job {
 
 pub struct Worker {
     status: Status,
-    search: Box<dyn TraitSearch>,
+    search: Box<dyn Search>,
     link: AgentLink<Worker>,
     job: Job,
 }
@@ -126,22 +88,7 @@ impl Agent for Worker {
 
     fn create(link: AgentLink<Self>) -> Self {
         let config: Config = Default::default();
-        let rule = Life::parse_rule(&config.rule_string).unwrap();
-        let world = World::new(
-            (config.width, config.height, config.period),
-            config.dx,
-            config.dy,
-            config.transform,
-            config.symmetry,
-            rule,
-            config.search_order,
-        );
-        let search = Box::new(Search::new(
-            world,
-            config.new_state,
-            config.max_cell_count,
-            config.non_empty_front,
-        ));
+        let search = set_world(config).unwrap();
 
         let status = Status::Paused;
         let job = Job::new(&link);
@@ -178,40 +125,8 @@ impl Agent for Worker {
             Request::SetWorld(config) => {
                 self.job.stop();
                 self.status = Status::Paused;
-                let dimensions = (config.width, config.height, config.period);
-                if let Ok(rule) = Life::parse_rule(&config.rule_string) {
-                    let world = World::new(
-                        dimensions,
-                        config.dx,
-                        config.dy,
-                        config.transform,
-                        config.symmetry,
-                        rule,
-                        config.search_order,
-                    );
-                    self.search = Box::new(Search::new(
-                        world,
-                        config.new_state,
-                        config.max_cell_count,
-                        config.non_empty_front,
-                    ));
-                    self.update_world(id, 0);
-                } else if let Ok(rule) = NtLife::parse_rule(&config.rule_string) {
-                    let world = World::new(
-                        dimensions,
-                        config.dx,
-                        config.dy,
-                        config.transform,
-                        config.symmetry,
-                        rule,
-                        config.search_order,
-                    );
-                    self.search = Box::new(Search::new(
-                        world,
-                        config.new_state,
-                        config.max_cell_count,
-                        config.non_empty_front,
-                    ));
+                if let Ok(search) = set_world(config) {
+                    self.search = search;
                     self.update_world(id, 0);
                 } else {
                     self.link.response(id, Response::InvalidRule);

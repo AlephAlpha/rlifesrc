@@ -26,7 +26,7 @@ pub enum State {
     Dead = 0b10,
 }
 
-/// Flip the state.
+/// Flips the state.
 impl Not for State {
     type Output = State;
 
@@ -55,12 +55,12 @@ impl Distribution<State> for Standard {
 /// The name `LifeCell` is chosen to avoid ambiguity with
 /// [`std::cell::Cell`](https://doc.rust-lang.org/std/cell/struct.Cell.html).
 pub struct LifeCell<'a, R: Rule> {
-    /// The default state of a cell.
+    /// The background state of a cell.
     ///
     /// For rules without `B0`, it is always dead.
     /// For rules with `B0`, it is dead on even generations,
     /// alive on odd generations.
-    pub(crate) default_state: State,
+    pub(crate) background: State,
 
     /// The state of the cell.
     ///
@@ -96,16 +96,16 @@ pub struct LifeCell<'a, R: Rule> {
 }
 
 impl<'a, R: Rule> LifeCell<'a, R> {
-    /// Generate a new cell with state `state`, such that its neighborhood
+    /// Generates a new cell with state `state`, such that its neighborhood
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `first_gen` and `first_col` are set to `false`.
-    pub(crate) fn new(default_state: State, b0: bool) -> Self {
-        let succ_state = if b0 { !default_state } else { default_state };
+    pub(crate) fn new(background: State, b0: bool) -> Self {
+        let succ_state = if b0 { !background } else { background };
         LifeCell {
-            default_state,
-            state: Cell::new(Some(default_state)),
-            desc: Cell::new(R::new_desc(default_state, succ_state)),
+            background,
+            state: Cell::new(Some(background)),
+            desc: Cell::new(R::new_desc(background, succ_state)),
             pred: Default::default(),
             succ: Default::default(),
             nbhd: Default::default(),
@@ -113,14 +113,6 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             is_gen0: false,
             is_front: false,
         }
-    }
-
-    /// Extends the lifetime of a reference to a cell to `'a`.
-    ///
-    /// Only safe to use after the creation of the world,
-    /// and only when the cell is in the world.
-    pub(crate) unsafe fn extend_life(&self) -> Option<&'a Self> {
-        (self as *const Self).as_ref()
     }
 
     pub(crate) fn update_desc(&self, old_state: Option<State>, state: Option<State>) {

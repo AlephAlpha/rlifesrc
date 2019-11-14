@@ -2,10 +2,10 @@
 
 use crate::{
     cells::{LifeCell, State},
-    rules::Rule,
+    config::{Config, NewState},
+    rules::{Life, NtLife, Rule},
     world::World,
 };
-use NewState::{Choose, Random};
 
 #[cfg(feature = "stdweb")]
 use serde::{Deserialize, Serialize};
@@ -24,16 +24,6 @@ pub enum Status {
     Paused,
 }
 
-/// How to choose a state for an unknown cell.
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
-pub enum NewState {
-    /// Chooses the given state.
-    Choose(State),
-    /// Random. The probability of either state is 1/2.
-    Random,
-}
-
 /// Reasons for setting a cell.
 #[derive(Clone, Copy)]
 pub(crate) enum Reason {
@@ -47,7 +37,7 @@ pub(crate) enum Reason {
 
 /// Records the cells whose values are set and their reasons.
 #[derive(Clone, Copy)]
-pub struct SetCell<'a, R: Rule> {
+pub(crate) struct SetCell<'a, R: Rule> {
     /// The set cell.
     cell: &'a LifeCell<'a, R>,
 
@@ -62,63 +52,7 @@ impl<'a, R: Rule> SetCell<'a, R> {
     }
 }
 
-/// The search.
-///
-/// In addition to the world itself,
-/// we need to record some other information during the search.
-pub struct Search<'a, R: Rule> {
-    /// The world.
-    pub world: World<'a, R>,
-
-    /// How to choose a state for an unknown cell.
-    new_state: NewState,
-
-    /// A stack to records the cells whose values are set during the search.
-    ///
-    /// The cells in this table always have known states.
-    ///
-    /// It is used in the backtracking.
-    set_stack: Vec<SetCell<'a, R>>,
-
-    /// The position in the `set_stack` of the next cell to be examined.
-    ///
-    /// See `proceed` for details.
-    check_index: usize,
-
-    /// The position in the `search_list` of the last decided cell.
-    search_index: usize,
-
-    /// The number of living cells in the 0th generation must not exceed
-    /// this number.
-    ///
-    /// `None` means that there is no limit for the cell count.
-    max_cell_count: Option<u32>,
-
-    /// Whether to force the first row/column to be nonempty.
-    non_empty_front: bool,
-}
-
-impl<'a, R: Rule> Search<'a, R> {
-    /// Construct a new search.
-    pub fn new(
-        world: World<'a, R>,
-        new_state: NewState,
-        max_cell_count: Option<u32>,
-        non_empty_front: bool,
-    ) -> Self {
-        let size = (world.width * world.height * world.period) as usize;
-        let set_stack = Vec::with_capacity(size);
-        Search {
-            world,
-            new_state,
-            set_stack,
-            check_index: 0,
-            search_index: 0,
-            max_cell_count,
-            non_empty_front,
-        }
-    }
-
+impl<'a, R: Rule> World<'a, R> {
     /// Consistifies a cell.
     ///
     /// Examines the state and the neighborhood descriptor of the cell,
@@ -129,9 +63,7 @@ impl<'a, R: Rule> Search<'a, R> {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     fn consistify(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
-        self.world
-            .rule
-            .consistify(&cell, &self.world, &mut self.set_stack)
+        Rule::consistify(self, &cell)
     }
 
     /// Consistifies a cell, its neighbors, and its predecessor.
@@ -157,13 +89,13 @@ impl<'a, R: Rule> Search<'a, R> {
         while self.check_index < self.set_stack.len() {
             // Tests if the number of living cells exceeds the `max_cell_count`.
             if let Some(max) = self.max_cell_count {
-                if self.world.gen0_cell_count.get() > max {
+                if self.gen0_cell_count > max {
                     return false;
                 }
             }
 
             // Tests if the first row / column is empty.
-            if self.non_empty_front && self.world.front_cell_count.get() == 0 {
+            if self.non_empty_front && self.front_cell_count == 0 {
                 return false;
             }
 
@@ -177,8 +109,7 @@ impl<'a, R: Rule> Search<'a, R> {
                         return false;
                     }
                 } else {
-                    self.world
-                        .set_cell(sym, state, &mut self.set_stack, Reason::Deduce);
+                    self.set_cell(sym, state, Reason::Deduce);
                 }
             }
 
@@ -205,12 +136,11 @@ impl<'a, R: Rule> Search<'a, R> {
                     self.check_index = self.set_stack.len();
                     self.search_index = i + 1;
                     let state = !cell.state.get().unwrap();
-                    self.world
-                        .set_cell(cell, state, &mut self.set_stack, Reason::Deduce);
+                    self.set_cell(cell, state, Reason::Deduce);
                     return true;
                 }
                 Reason::Deduce => {
-                    self.world.clear_cell(cell);
+                    self.clear_cell(cell);
                 }
             }
         }
@@ -219,7 +149,7 @@ impl<'a, R: Rule> Search<'a, R> {
         false
     }
 
-    /// Keep proceeding and backtracking,
+    /// Keeps proceeding and backtracking,
     /// until there are no more cells to examine (and returns `true`),
     /// or the backtracking goes back to the time before the first cell is set
     /// (and returns `false`).
@@ -244,15 +174,14 @@ impl<'a, R: Rule> Search<'a, R> {
     ///
     /// Returns `false` is there is no unknown cell.
     fn decide(&mut self) -> bool {
-        if let Some((i, cell)) = self.world.get_unknown(self.search_index) {
+        if let Some((i, cell)) = self.get_unknown(self.search_index) {
             self.search_index = i + 1;
             let state = match self.new_state {
-                Choose(State::Dead) => cell.default_state,
-                Choose(State::Alive) => !cell.default_state,
-                Random => rand::random(),
+                NewState::Choose(State::Dead) => cell.background,
+                NewState::Choose(State::Alive) => !cell.background,
+                NewState::Random => rand::random(),
             };
-            self.world
-                .set_cell(cell, state, &mut self.set_stack, Reason::Decide(i));
+            self.set_cell(cell, state, Reason::Decide(i));
             true
         } else {
             false
@@ -267,12 +196,12 @@ impl<'a, R: Rule> Search<'a, R> {
     /// and no results are found.
     pub fn search(&mut self, max_step: Option<u32>) -> Status {
         let mut step_count = 0;
-        if self.world.get_unknown(0).is_none() && !self.backup() {
+        if self.get_unknown(0).is_none() && !self.backup() {
             return Status::None;
         }
         while self.go(&mut step_count) {
             if !self.decide() {
-                if self.world.nontrivial() {
+                if self.nontrivial() {
                     return Status::Found;
                 } else if !self.backup() {
                     return Status::None;
@@ -289,10 +218,10 @@ impl<'a, R: Rule> Search<'a, R> {
     }
 }
 
-/// A trait for `Search`.
+/// A trait for `World`.
 ///
 /// So that we can switch between different rule types using trait objects.
-pub trait TraitSearch {
+pub trait Search {
     /// The search function.
     ///
     /// Returns `Found` if a result is found,
@@ -315,21 +244,30 @@ pub trait TraitSearch {
     fn gen0_cell_count(&self) -> u32;
 }
 
-/// The `TraitSearch` trait is implemented for every `Search`.
-impl<'a, R: Rule> TraitSearch for Search<'a, R> {
+/// The `Search` trait is implemented for every `World`.
+impl<'a, R: Rule> Search for World<'a, R> {
     fn search(&mut self, max_step: Option<u32>) -> Status {
         self.search(max_step)
     }
 
     fn display_gen(&self, t: isize) -> String {
-        self.world.display_gen(t)
+        self.display_gen(t)
     }
 
     fn period(&self) -> isize {
-        self.world.period
+        self.period
     }
 
     fn gen0_cell_count(&self) -> u32 {
-        self.world.gen0_cell_count.get()
+        self.gen0_cell_count
+    }
+}
+
+pub fn set_world(config: Config) -> Result<Box<dyn Search>, String> {
+    if let Ok(rule) = Life::parse_rule(&config.rule_string) {
+        Ok(Box::new(World::new(config, rule)))
+    } else {
+        let rule = NtLife::parse_rule(&config.rule_string)?;
+        Ok(Box::new(World::new(config, rule)))
     }
 }

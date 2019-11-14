@@ -1,10 +1,10 @@
 use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
-    rules::{Life, NtLife},
-    NewState, Search, SearchOrder,
+    rules::NtLife,
+    set_world, Config, NewState, Search, SearchOrder,
     State::{Alive, Dead},
-    Status, Symmetry, TraitSearch, Transform, World,
+    Status, Symmetry, Transform,
 };
 
 fn is_positive(s: &str) -> bool {
@@ -12,7 +12,7 @@ fn is_positive(s: &str) -> bool {
 }
 
 pub struct Args {
-    search: Box<dyn TraitSearch>,
+    search: Box<dyn Search>,
     all: bool,
     reset: bool,
     no_tui: bool,
@@ -194,7 +194,6 @@ pub fn parse_args() -> Option<Args> {
     let width = matches.value_of("X").unwrap().parse().unwrap();
     let height = matches.value_of("Y").unwrap().parse().unwrap();
     let period = matches.value_of("P").unwrap().parse().unwrap();
-    let dimensions = (width, height, period);
 
     let dx = matches.value_of("DX").unwrap().parse().unwrap();
     let dy = matches.value_of("DY").unwrap().parse().unwrap();
@@ -246,39 +245,26 @@ pub fn parse_args() -> Option<Args> {
     };
     let non_empty_front = matches.is_present("FRONT");
 
-    let rule_string = &matches.value_of("RULE").unwrap();
+    let rule_string = matches.value_of("RULE").unwrap().to_string();
 
-    if let Ok(rule) = Life::parse_rule(rule_string) {
-        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, search_order);
-        let search = Box::new(Search::new(
-            world,
-            new_state,
-            max_cell_count,
-            non_empty_front,
-        ));
-        Some(Args {
-            search,
-            all,
-            no_tui,
-            reset,
-        })
-    } else if let Ok(rule) = NtLife::parse_rule(rule_string) {
-        let world = World::new(dimensions, dx, dy, transform, symmetry, rule, search_order);
-        let search = Box::new(Search::new(
-            world,
-            new_state,
-            max_cell_count,
-            non_empty_front,
-        ));
-        Some(Args {
-            search,
-            all,
-            no_tui,
-            reset,
-        })
-    } else {
-        None
-    }
+    let config = Config::new(width, height, period)
+        .set_translate(dx, dy)
+        .set_transform(transform)
+        .set_symmetry(symmetry)
+        .set_search_order(search_order)
+        .set_new_state(new_state)
+        .set_max_cell_count(max_cell_count)
+        .set_non_empty_front(non_empty_front)
+        .set_rule_string(rule_string);
+
+    let search = set_world(config).ok()?;
+
+    Some(Args {
+        search,
+        all,
+        reset,
+        no_tui,
+    })
 }
 
 pub fn search(args: Args) {

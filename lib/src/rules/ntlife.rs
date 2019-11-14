@@ -3,7 +3,7 @@
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
     rules::Rule,
-    search::{Reason, SetCell},
+    search::Reason,
     world::World,
 };
 use bitflags::bitflags;
@@ -270,13 +270,8 @@ impl Rule for NtLife {
         cell.desc.set(desc);
     }
 
-    fn consistify<'a>(
-        &self,
-        cell: &'a LifeCell<'a, Self>,
-        world: &World<'a, Self>,
-        set_stack: &mut Vec<SetCell<'a, Self>>,
-    ) -> bool {
-        let flags = self.impl_table[cell.desc.get().0];
+    fn consistify<'a>(world: &mut World<'a, Self>, cell: &'a LifeCell<'a, Self>) -> bool {
+        let flags = world.rule.impl_table[cell.desc.get().0];
 
         if flags.contains(ImplFlags::CONFLICT) {
             return false;
@@ -289,7 +284,7 @@ impl Rule for NtLife {
                 Alive
             };
             let succ = cell.succ.unwrap();
-            world.set_cell(succ, state, set_stack, Reason::Deduce);
+            world.set_cell(succ, state, Reason::Deduce);
             return true;
         }
 
@@ -299,7 +294,7 @@ impl Rule for NtLife {
             } else {
                 Alive
             };
-            world.set_cell(cell, state, set_stack, Reason::Deduce);
+            world.set_cell(cell, state, Reason::Deduce);
         }
 
         if flags.intersects(ImplFlags::NBHD) {
@@ -312,7 +307,7 @@ impl Rule for NtLife {
                             } else {
                                 Alive
                             };
-                        world.set_cell(neigh, state, set_stack, Reason::Deduce);
+                        world.set_cell(neigh, state, Reason::Deduce);
                     }
                 }
             }

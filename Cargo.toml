@@ -1,21 +1,2 @@
-[package]
-name = "rlifesrc-lib"
-version = "0.1.0"
-authors = ["AlephAlpha <alephalpha911@gmail.com>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-bitflags = "1.2.1"
-ca-rules = "0.3.0"
-rand = "0.7.2"
-serde = { version = "1.0.102", features = ["derive"], optional = true }
-
-[features]
-default = []
-stdweb = ["serde", "rand/stdweb"]
-
-
 [workspace]
-members = ["tui", "web"]
+members = ["lib", "tui", "web"]

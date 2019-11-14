@@ -1,29 +1,17 @@
-//! The world, symmetries, transformations, and other information.
+//! The world.
 
 use crate::{
     cells::{Alive, Dead, LifeCell, State},
+    config::{Config, NewState, SearchOrder, Symmetry, Transform},
     rules::Rule,
     search::{Reason, SetCell},
-    syms_trans::{Symmetry, Transform},
 };
-use std::{cell::Cell, cmp::Ordering};
-
-#[cfg(feature = "stdweb")]
-use serde::{Deserialize, Serialize};
 
 /// The coordinates of a cell.
 ///
 /// `(x-coordinate, y-coordinate, time)`.
 /// All three coordinates are 0-indexed.
 pub type Coord = (isize, isize, isize);
-
-/// Search order.
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
-pub enum SearchOrder {
-    RowFirst,
-    ColumnFirst,
-}
 
 /// The world.
 pub struct World<'a, R: Rule> {
@@ -49,14 +37,41 @@ pub struct World<'a, R: Rule> {
     search_list: Vec<&'a LifeCell<'a, R>>,
 
     /// Number of known living cells in the first generation.
-    pub(crate) gen0_cell_count: Cell<u32>,
+    pub(crate) gen0_cell_count: u32,
 
     /// Number of unknown or living cells in the first generation.
-    pub(crate) front_cell_count: Cell<u32>,
+    pub(crate) front_cell_count: u32,
+
+    /// How to choose a state for an unknown cell.
+    pub(crate) new_state: NewState,
+
+    /// A stack to records the cells whose values are set during the search.
+    ///
+    /// The cells in this table always have known states.
+    ///
+    /// It is used in the backtracking.
+    pub(crate) set_stack: Vec<SetCell<'a, R>>,
+
+    /// The position in the `set_stack` of the next cell to be examined.
+    ///
+    /// See `proceed` for details.
+    pub(crate) check_index: usize,
+
+    /// The position in the `search_list` of the last decided cell.
+    pub(crate) search_index: usize,
+
+    /// The number of living cells in the 0th generation must not exceed
+    /// this number.
+    ///
+    /// `None` means that there is no limit for the cell count.
+    pub(crate) max_cell_count: Option<u32>,
+
+    /// Whether to force the first row/column to be nonempty.
+    pub(crate) non_empty_front: bool,
 }
 
 impl<'a, R: Rule> World<'a, R> {
-    /// Create a new world.
+    /// Creates a new world.
     ///
     /// The pattern has size `(width, height, period)`
     /// and symmetry `symmetry`.
@@ -67,43 +82,18 @@ impl<'a, R: Rule> World<'a, R> {
     /// In a period, the pattern would transforms according to `transform`,
     /// and translates `(dx, dy)`.
     /// The transformation is applied _before_ the translation.
-    pub fn new(
-        (width, height, period): Coord,
-        dx: isize,
-        dy: isize,
-        transform: Transform,
-        symmetry: Symmetry,
-        rule: R,
-        search_order: Option<SearchOrder>,
-    ) -> Self {
-        // Determine the search order automatically if `search_order` is `None`.
-        let search_order = search_order.unwrap_or_else(|| {
-            let (width, height) = match symmetry {
-                Symmetry::D2Row => (width, (height + 1) / 2),
-                Symmetry::D2Col => ((width + 1) / 2, height),
-                _ => (width, height),
-            };
-            match width.cmp(&height) {
-                Ordering::Greater => SearchOrder::ColumnFirst,
-                Ordering::Less => SearchOrder::RowFirst,
-                Ordering::Equal => {
-                    if dx.abs() >= dy.abs() {
-                        SearchOrder::ColumnFirst
-                    } else {
-                        SearchOrder::RowFirst
-                    }
-                }
-            }
-        });
+    pub fn new(config: Config, rule: R) -> Self {
+        let search_order = config.auto_search_order();
 
-        let mut cells = Vec::with_capacity(((width + 2) * (height + 2) * period) as usize);
+        let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
+        let mut cells = Vec::with_capacity(size);
 
-        // Fill the vector with dead cells.
-        // If the rule contains `B0`, then fill the odd generations
+        // Fills the vector with dead cells.
+        // If the rule contains `B0`, then fills the odd generations
         // with living cells instead.
-        for x in -1..=width {
-            for y in -1..=height {
-                for t in 0..period {
+        for x in -1..=config.width {
+            for y in -1..=config.height {
+                for t in 0..config.period {
                     let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
                     let mut cell = LifeCell::new(state, rule.b0());
                     if t == 0 {
@@ -126,24 +116,25 @@ impl<'a, R: Rule> World<'a, R> {
             }
         }
 
-        let search_list = Vec::new();
-
-        let gen0_cell_count = Cell::new(0);
-        let front_cell_count = Cell::new(0);
-
         World {
-            width,
-            height,
-            period,
+            width: config.width,
+            height: config.height,
+            period: config.period,
             rule,
             cells,
-            search_list,
-            gen0_cell_count,
-            front_cell_count,
+            search_list: Vec::with_capacity(size),
+            gen0_cell_count: 0,
+            front_cell_count: 0,
+            new_state: config.new_state,
+            set_stack: Vec::with_capacity(size),
+            check_index: 0,
+            search_index: 0,
+            max_cell_count: config.max_cell_count,
+            non_empty_front: config.non_empty_front,
         }
         .init_nbhd()
-        .init_pred_succ(dx, dy, transform)
-        .init_sym(symmetry)
+        .init_pred_succ(config.dx, config.dy, config.transform)
+        .init_sym(config.symmetry)
         .init_state()
         .init_search_order(search_order)
     }
@@ -153,7 +144,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Note that for cells on the edges of the search range,
     /// some neighbors might point to `None`.
     fn init_nbhd(mut self) -> Self {
-        let neighbors = [
+        const NBHD: [(isize, isize); 8] = [
             (-1, -1),
             (-1, 0),
             (-1, 1),
@@ -166,13 +157,11 @@ impl<'a, R: Rule> World<'a, R> {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
-                    let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
-                    for (i, (nx, ny)) in neighbors.iter().enumerate() {
-                        if let Some(neigh) = self.find_cell((x + nx, y + ny, t)) {
-                            unsafe {
-                                let cell = cell_ptr.as_mut().unwrap();
-                                cell.nbhd[i] = neigh.extend_life();
-                            }
+                    let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
+                    for (i, (nx, ny)) in NBHD.iter().enumerate() {
+                        unsafe {
+                            let cell = cell_ptr.as_mut().unwrap();
+                            cell.nbhd[i] = self.find_cell((x + nx, y + ny, t));
                         }
                     }
                 }
@@ -192,14 +181,13 @@ impl<'a, R: Rule> World<'a, R> {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
-                    let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
+                    let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
 
                     if t != 0 {
-                        let pred = self.find_cell((x, y, t - 1)).unwrap();
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.pred = pred.extend_life();
+                            cell.pred = self.find_cell((x, y, t - 1));
                         }
                     } else {
                         let (new_x, new_y) = match transform {
@@ -213,10 +201,10 @@ impl<'a, R: Rule> World<'a, R> {
                             Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
                         };
                         let pred = self.find_cell((new_x - dx, new_y - dy, self.period - 1));
-                        if let Some(pred) = pred {
+                        if pred.is_some() {
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.pred = pred.extend_life();
+                                cell.pred = pred;
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             // Temperately marks its state as `None`.
@@ -226,10 +214,9 @@ impl<'a, R: Rule> World<'a, R> {
                     }
 
                     if t != self.period - 1 {
-                        let succ = self.find_cell((x, y, t + 1)).unwrap();
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.succ = succ.extend_life();
+                            cell.succ = self.find_cell((x, y, t + 1));
                         }
                     } else {
                         let (x, y) = (x + dx, y + dy);
@@ -243,12 +230,9 @@ impl<'a, R: Rule> World<'a, R> {
                             Transform::FlipDiag => (y, x),
                             Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
                         };
-                        let succ = self.find_cell((new_x, new_y, 0));
-                        if let Some(succ) = succ {
-                            unsafe {
-                                let cell = cell_ptr.as_mut().unwrap();
-                                cell.succ = succ.extend_life();
-                            }
+                        unsafe {
+                            let cell = cell_ptr.as_mut().unwrap();
+                            cell.succ = self.find_cell((new_x, new_y, 0));
                         }
                     }
                 }
@@ -265,7 +249,7 @@ impl<'a, R: Rule> World<'a, R> {
         for x in -1..=self.width {
             for y in -1..=self.height {
                 for t in 0..self.period {
-                    let cell_ptr: *mut _ = self.find_cell_mut((x, y, t)).unwrap();
+                    let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
 
                     let sym_coords = match symmetry {
@@ -306,10 +290,9 @@ impl<'a, R: Rule> World<'a, R> {
                             && 0 <= coord.1
                             && coord.1 < self.height
                         {
-                            let sym = self.find_cell(coord).unwrap();
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
-                                cell.sym.push(sym.extend_life().unwrap());
+                                cell.sym.push(self.find_cell(coord).unwrap());
                             }
                         } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
                             // Temperately marks its state as `None`.
@@ -324,7 +307,7 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Sets states for the cells.
-    fn init_state(self) -> Self {
+    fn init_state(mut self) -> Self {
         for x in 0..self.width {
             for y in 0..self.height {
                 for t in 0..self.period {
@@ -332,7 +315,7 @@ impl<'a, R: Rule> World<'a, R> {
                     if cell.state.get().is_some() {
                         self.clear_cell(cell);
                     } else {
-                        cell.state.set(Some(cell.default_state));
+                        cell.state.set(Some(cell.background));
                     }
                 }
             }
@@ -350,7 +333,6 @@ impl<'a, R: Rule> World<'a, R> {
                     for y in 0..self.height {
                         for t in 0..self.period {
                             let cell = self.find_cell((x, y, t)).unwrap();
-                            let cell = unsafe { cell.extend_life().unwrap() };
                             self.search_list.push(cell);
                         }
                     }
@@ -361,7 +343,6 @@ impl<'a, R: Rule> World<'a, R> {
                     for x in 0..self.width {
                         for t in 0..self.period {
                             let cell = self.find_cell((x, y, t)).unwrap();
-                            let cell = unsafe { cell.extend_life().unwrap() };
                             self.search_list.push(cell);
                         }
                     }
@@ -371,19 +352,21 @@ impl<'a, R: Rule> World<'a, R> {
         self
     }
 
-    /// Finds a cell by its coordinates. Returns a reference.
-    fn find_cell(&self, coord: Coord) -> Option<&LifeCell<'a, R>> {
+    /// Finds a cell by its coordinates. Returns a reference that lives
+    /// as long as the world.
+    fn find_cell(&self, coord: Coord) -> Option<&'a LifeCell<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = ((x + 1) * (self.height + 2) + y + 1) * self.period + t;
-            Some(&self.cells[index as usize])
+            let cell = &self.cells[index as usize];
+            unsafe { (cell as *const LifeCell<'a, R>).as_ref() }
         } else {
             None
         }
     }
 
-    /// Finds a cell by its coordinates. Returns a mutable reference.
-    fn find_cell_mut(&mut self, coord: Coord) -> Option<&mut LifeCell<'a, R>> {
+    /// Finds a cell by its coordinates. Returns a mutable pointer.
+    fn find_cell_mut(&mut self, coord: Coord) -> Option<*mut LifeCell<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = ((x + 1) * (self.height + 2) + y + 1) * self.period + t;
@@ -395,47 +378,41 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Sets the `state` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn set_cell(
-        &self,
-        cell: &'a LifeCell<'a, R>,
-        state: State,
-        set_stack: &mut Vec<SetCell<'a, R>>,
-        reason: Reason,
-    ) {
+    pub(crate) fn set_cell(&mut self, cell: &'a LifeCell<'a, R>, state: State, reason: Reason) {
         let old_state = cell.state.replace(Some(state));
         if old_state != Some(state) {
             cell.update_desc(old_state, Some(state));
             if cell.is_gen0 {
                 match (state, old_state) {
                     (Alive, Some(Alive)) => (),
-                    (Alive, _) => self.gen0_cell_count.set(self.gen0_cell_count.get() + 1),
-                    (_, Some(Alive)) => self.gen0_cell_count.set(self.gen0_cell_count.get() - 1),
+                    (Alive, _) => self.gen0_cell_count += 1,
+                    (_, Some(Alive)) => self.gen0_cell_count -= 1,
                     _ => (),
                 }
             }
             if cell.is_front {
                 match (state, old_state) {
                     (Dead, Some(Dead)) => (),
-                    (Dead, _) => self.front_cell_count.set(self.front_cell_count.get() - 1),
-                    (_, Some(Dead)) => self.front_cell_count.set(self.front_cell_count.get() + 1),
+                    (Dead, _) => self.front_cell_count -= 1,
+                    (_, Some(Dead)) => self.front_cell_count += 1,
                     _ => (),
                 }
             }
         }
-        set_stack.push(SetCell::new(cell, reason));
+        self.set_stack.push(SetCell::new(cell, reason));
     }
 
     /// Clears the `state` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn clear_cell(&self, cell: &'a LifeCell<'a, R>) {
+    pub(crate) fn clear_cell(&mut self, cell: &'a LifeCell<'a, R>) {
         let old_state = cell.state.take();
         if old_state != None {
             cell.update_desc(old_state, None);
             if cell.is_gen0 && old_state == Some(Alive) {
-                self.gen0_cell_count.set(self.gen0_cell_count.get() - 1);
+                self.gen0_cell_count -= 1;
             }
             if cell.is_front && old_state == Some(Dead) {
-                self.front_cell_count.set(self.front_cell_count.get() + 1);
+                self.front_cell_count += 1;
             }
         }
     }
@@ -480,7 +457,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Tests whether the world is nonempty,
     /// and whether the minimal period of the pattern equals to the given period.
     pub(crate) fn nontrivial(&self) -> bool {
-        self.gen0_cell_count.get() > 0
+        self.gen0_cell_count > 0
             && (1..self.period).all(|t| {
                 self.period % t != 0
                     || self
