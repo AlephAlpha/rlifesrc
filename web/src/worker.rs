@@ -1,4 +1,4 @@
-use rlifesrc_lib::{set_world, Config, Search, Status};
+use rlifesrc_lib::{Config, Search, Status};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::{
@@ -88,7 +88,7 @@ impl Agent for Worker {
 
     fn create(link: AgentLink<Self>) -> Self {
         let config: Config = Default::default();
-        let search = set_world(config).unwrap();
+        let search = config.set_world().unwrap();
 
         let status = Status::Paused;
         let job = Job::new(&link);
@@ -125,7 +125,7 @@ impl Agent for Worker {
             Request::SetWorld(config) => {
                 self.job.stop();
                 self.status = Status::Paused;
-                if let Ok(search) = set_world(config) {
+                if let Ok(search) = config.set_world() {
                     self.search = search;
                     self.update_world(id, 0);
                 } else {

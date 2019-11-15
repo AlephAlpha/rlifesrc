@@ -20,7 +20,6 @@ use ca_rules::ParseNtLife;
 /// * `0b_10` means dead,
 /// * `0b_01` means alive,
 /// * `0b_00` means unknown.
-/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct NbhdDesc(usize);
 
@@ -59,9 +58,6 @@ bitflags! {
 /// life-like rule: isotropic non-totalistic rules,
 /// non-isotropic rules, hexagonal rules, rules with von Neumann
 /// neighborhoods, etc.
-///
-/// The struct will not store the definition of the rule itself,
-/// but the results of `transition` and `implication`.
 pub struct NtLife {
     /// Whether the rule contains `B0`.
     b0: bool,

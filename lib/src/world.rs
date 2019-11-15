@@ -67,22 +67,23 @@ pub struct World<'a, R: Rule> {
     pub(crate) max_cell_count: Option<u32>,
 
     /// Whether to force the first row/column to be nonempty.
+    ///
+    /// Here 'front' means the first row or column to search,
+    /// according to the search order.
     pub(crate) non_empty_front: bool,
 }
 
 impl<'a, R: Rule> World<'a, R> {
-    /// Creates a new world.
+    /// Creates a new world from the configuration and the rule.
     ///
-    /// The pattern has size `(width, height, period)`
-    /// and symmetry `symmetry`.
     /// In rules that contain `B0`, cells outside the search range are
     /// considered `Dead` in even generations, `Alive` in odd generations.
     /// In other rules, all cells outside the search range are `Dead`.
     ///
-    /// In a period, the pattern would transforms according to `transform`,
-    /// and translates `(dx, dy)`.
-    /// The transformation is applied _before_ the translation.
-    pub fn new(config: Config, rule: R) -> Self {
+    /// After the last generation, the pattern will return to
+    /// the first generation, applying the transformation first,
+    /// and then the translation defined by `dx` and `dy`.
+    pub fn new(config: &Config, rule: R) -> Self {
         let search_order = config.auto_search_order();
 
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;

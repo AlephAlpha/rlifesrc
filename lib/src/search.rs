@@ -2,8 +2,8 @@
 
 use crate::{
     cells::{LifeCell, State},
-    config::{Config, NewState},
-    rules::{Life, NtLife, Rule},
+    config::NewState,
+    rules::Rule,
     world::World,
 };
 
@@ -260,14 +260,5 @@ impl<'a, R: Rule> Search for World<'a, R> {
 
     fn gen0_cell_count(&self) -> u32 {
         self.gen0_cell_count
-    }
-}
-
-pub fn set_world(config: Config) -> Result<Box<dyn Search>, String> {
-    if let Ok(rule) = Life::parse_rule(&config.rule_string) {
-        Ok(Box::new(World::new(config, rule)))
-    } else {
-        let rule = NtLife::parse_rule(&config.rule_string)?;
-        Ok(Box::new(World::new(config, rule)))
     }
 }

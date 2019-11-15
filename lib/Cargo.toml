@@ -7,6 +7,7 @@ description = "A Game of Life pattern searcher."
 homepage = "https://github.com/AlephAlpha/rlifesrc"
 repository = "https://github.com/AlephAlpha/rlifesrc"
 license = "MIT"
+readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]

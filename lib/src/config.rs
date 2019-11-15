@@ -1,6 +1,11 @@
 //! World configuration.
 
-use crate::cells::State;
+use crate::{
+    cells::State,
+    rules::{Life, NtLife},
+    search::Search,
+    world::World,
+};
 use std::{
     cmp::Ordering,
     fmt::{Debug, Error, Formatter},
@@ -12,8 +17,8 @@ use serde::{Deserialize, Serialize};
 
 /// Transformations (rotations and reflections) after the last generation.
 ///
-/// The generation of the pattern after the last generation
-/// would be the first generation, applying this transformation first,
+/// After the last generation, the pattern will return to
+/// the first generation, applying this transformation first,
 /// and then the translation defined by `dx` and `dy`.
 ///
 /// 8 different values corresponds to 8 elements of the dihedral group
@@ -280,28 +285,66 @@ impl Default for NewState {
 }
 
 /// World configuration.
+///
+/// The world will be generated from this configuration.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub struct Config {
     /// Width.
     pub width: isize,
+
     /// Height.
     pub height: isize,
+
     /// Period.
     pub period: isize,
+
+    /// Horizontal translation.
     pub dx: isize,
+
+    /// Vertical translation.
     pub dy: isize,
+
+    /// Transformations (rotations and reflections) after the last generation.
+    ///
+    /// After the last generation, the pattern will return to
+    /// the first generation, applying this transformation first,
+    /// and then the translation defined by `dx` and `dy`.
     pub transform: Transform,
+
+    /// Symmetries of the pattern.
     pub symmetry: Symmetry,
+
+    /// The order to find a new unknown cell.
+    ///
+    /// It will always search all generations of a cell first,
+    /// and then go to another cell.
+    ///
+    /// `None` means that it will automatically choose a search order
+    /// according to the width and height of the world.
     pub search_order: Option<SearchOrder>,
+
+    /// How to choose a state for an unknown cell.
     pub new_state: NewState,
+
+    /// The number of living cells in generation 0 must not exceed
+    /// this number.
+    ///
+    /// `None` means that there is no limit for the cell count.
     pub max_cell_count: Option<u32>,
+
+    /// Whether to force the first row/column to be nonempty.
+    ///
+    /// Here 'front' means the first row or column to search,
+    /// according to the search order.
     pub non_empty_front: bool,
+
     /// The rule string of the cellular automaton.
     pub rule_string: String,
 }
 
 impl Config {
+    /// Sets up a new configuration with given size.
     pub fn new(width: isize, height: isize, period: isize) -> Self {
         Config {
             width,
@@ -311,42 +354,50 @@ impl Config {
         }
     }
 
+    /// Sets the translations `(dx, dy)`.
     pub fn set_translate(mut self, dx: isize, dy: isize) -> Self {
         self.dx = dx;
         self.dy = dy;
         self
     }
 
+    /// Sets the transformation.
     pub fn set_transform(mut self, transform: Transform) -> Self {
         self.transform = transform;
         self
     }
 
+    /// Sets the symmetry.
     pub fn set_symmetry(mut self, symmetry: Symmetry) -> Self {
         self.symmetry = symmetry;
         self
     }
 
+    /// Sets the search order.
     pub fn set_search_order(mut self, search_order: Option<SearchOrder>) -> Self {
         self.search_order = search_order;
         self
     }
 
+    /// Sets how to choose a state for an unknown cell.
     pub fn set_new_state(mut self, new_state: NewState) -> Self {
         self.new_state = new_state;
         self
     }
 
+    /// Sets the maximal number of living cells in generation 0.
     pub fn set_max_cell_count(mut self, max_cell_count: Option<u32>) -> Self {
         self.max_cell_count = max_cell_count;
         self
     }
 
+    /// Sets whether to force the first row/column to be nonempty.
     pub fn set_non_empty_front(mut self, non_empty_front: bool) -> Self {
         self.non_empty_front = non_empty_front;
         self
     }
 
+    /// Sets the rule string.
     pub fn set_rule_string(mut self, rule_string: String) -> Self {
         self.rule_string = rule_string;
         self
@@ -373,16 +424,26 @@ impl Config {
             }
         })
     }
+
+    /// Creates a new world from the configuration.
+    pub fn set_world(&self) -> Result<Box<dyn Search>, String> {
+        if let Ok(rule) = Life::parse_rule(&self.rule_string) {
+            Ok(Box::new(World::new(&self, rule)))
+        } else {
+            let rule = NtLife::parse_rule(&self.rule_string)?;
+            Ok(Box::new(World::new(&self, rule)))
+        }
+    }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Config {
-            width: 26,
-            height: 8,
-            period: 4,
+            width: 16,
+            height: 16,
+            period: 1,
             dx: 0,
-            dy: 1,
+            dy: 0,
             transform: Transform::Id,
             symmetry: Symmetry::C1,
             search_order: None,

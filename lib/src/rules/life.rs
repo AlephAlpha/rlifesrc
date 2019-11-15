@@ -68,9 +68,6 @@ impl Default for ImplFlags {
 }
 
 /// Totalistic life-like rules.
-///
-/// The struct will not store the definition of the rule itself,
-/// but the results of `transition` and `implication`.
 pub struct Life {
     /// Whether the rule contains `B0`.
     b0: bool,

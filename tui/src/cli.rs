@@ -2,7 +2,7 @@ use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
     rules::NtLife,
-    set_world, Config, NewState, Search, SearchOrder,
+    Config, NewState, Search, SearchOrder,
     State::{Alive, Dead},
     Status, Symmetry, Transform,
 };
@@ -257,7 +257,7 @@ pub fn parse_args() -> Option<Args> {
         .set_non_empty_front(non_empty_front)
         .set_rule_string(rule_string);
 
-    let search = set_world(config).ok()?;
+    let search = config.set_world().ok()?;
 
     Some(Args {
         search,

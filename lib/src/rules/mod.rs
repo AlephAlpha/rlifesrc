@@ -1,4 +1,7 @@
 //! Cellular automata rules.
+//!
+//! For the notations of rule strings, please see
+//! [this article on LifeWiki](https://www.conwaylife.com/wiki/Rulestring).
 
 mod life;
 mod ntlife;
@@ -20,7 +23,7 @@ pub trait Rule: Sized {
 
     /// Whether the rule contains `B0`.
     ///
-    /// In other words, whether a cell would become `alive` in the next
+    /// In other words, whether a cell would become `Alive` in the next
     /// generation, if all its neighbors in this generation are dead.
     fn b0(&self) -> bool;
 
