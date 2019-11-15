@@ -377,7 +377,7 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Sets the `state` of a cell,
+    /// Sets the `state` of a cell, push it to the `set_stack`,
     /// and update the neighborhood descriptor of its neighbors.
     pub(crate) fn set_cell(&mut self, cell: &'a LifeCell<'a, R>, state: State, reason: Reason) {
         let old_state = cell.state.replace(Some(state));
@@ -418,7 +418,7 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Display the whole world in some generation.
+    /// Displays the whole world in some generation.
     ///
     /// * **Dead** cells are represented by `.`;
     /// * **Living** cells are represented by `O`;
@@ -441,7 +441,7 @@ impl<'a, R: Rule> World<'a, R> {
         str
     }
 
-    /// Get a references to the first unknown cell since `index` in the `search_list`.
+    /// Gets a references to the first unknown cell since `index` in the `search_list`.
     pub(crate) fn get_unknown(&self, index: usize) -> Option<(usize, &'a LifeCell<'a, R>)> {
         self.search_list[index..]
             .iter()

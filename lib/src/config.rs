@@ -252,6 +252,9 @@ impl Symmetry {
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum SearchOrder {
+    /// Searches all cells of a row first,
+    /// and the go to the next row.
+    ///
     /// ```plaintext
     /// 123
     /// 456
@@ -259,6 +262,9 @@ pub enum SearchOrder {
     /// ```
     RowFirst,
 
+    /// Searches all cells of a column first,
+    /// and the go to the next column.
+    ///
     /// ```plaintext
     /// 147
     /// 258
@@ -277,7 +283,6 @@ pub enum NewState {
     Random,
 }
 
-/// The default symmetry is the `C1`.
 impl Default for NewState {
     fn default() -> Self {
         NewState::Choose(State::Alive)
@@ -426,6 +431,15 @@ impl Config {
     }
 
     /// Creates a new world from the configuration.
+    /// Returns an error if the rule string is invalid.
+    ///
+    /// In rules that contain `B0`, cells outside the search range are
+    /// considered `Dead` in even generations, `Alive` in odd generations.
+    /// In other rules, all cells outside the search range are `Dead`.
+    ///
+    /// After the last generation, the pattern will return to
+    /// the first generation, applying the transformation first,
+    /// and then the translation defined by `dx` and `dy`.
     pub fn set_world(&self) -> Result<Box<dyn Search>, String> {
         if let Ok(rule) = Life::parse_rule(&self.rule_string) {
             Ok(Box::new(World::new(&self, rule)))

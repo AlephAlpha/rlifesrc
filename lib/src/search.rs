@@ -230,7 +230,7 @@ pub trait Search {
     /// and no results are found.
     fn search(&mut self, max_step: Option<u32>) -> Status;
 
-    /// Display the whole world in some generation.
+    /// Displays the whole world in some generation.
     ///
     /// * **Dead** cells are represented by `.`;
     /// * **Living** cells are represented by `O`;
