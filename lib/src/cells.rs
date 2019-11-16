@@ -8,7 +8,7 @@ use rand::{
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
-    ops::Not,
+    ops::{Deref, Not},
 };
 pub use State::{Alive, Dead};
 
@@ -76,16 +76,16 @@ pub struct LifeCell<'a, R: Rule> {
     /// The predecessor of the cell.
     ///
     /// The cell in the last generation at the same position.
-    pub(crate) pred: Option<&'a LifeCell<'a, R>>,
+    pub(crate) pred: Option<CellRef<'a, R>>,
     /// The successor of the cell.
     ///
     /// The cell in the next generation at the same position.
-    pub(crate) succ: Option<&'a LifeCell<'a, R>>,
+    pub(crate) succ: Option<CellRef<'a, R>>,
     /// The eight cells in the neighborhood.
-    pub(crate) nbhd: [Option<&'a LifeCell<'a, R>>; 8],
+    pub(crate) nbhd: [Option<CellRef<'a, R>>; 8],
     /// The cells in the same generation that must has the same state
     /// with this cell because of the symmetry.
-    pub(crate) sym: Vec<&'a LifeCell<'a, R>>,
+    pub(crate) sym: Vec<CellRef<'a, R>>,
 
     /// Whether the cell is in the first generation.
     pub(crate) is_gen0: bool,
@@ -115,8 +115,9 @@ impl<'a, R: Rule> LifeCell<'a, R> {
         }
     }
 
-    pub(crate) fn update_desc(&self, old_state: Option<State>, state: Option<State>) {
-        R::update_desc(self, old_state, state);
+    pub(crate) unsafe fn to_ref(&self) -> CellRef<'a, R> {
+        let cell = (self as *const LifeCell<'a, R>).as_ref().unwrap();
+        CellRef { cell }
     }
 }
 
@@ -128,5 +129,45 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
             self.state.get(),
             self.desc.get()
         )
+    }
+}
+
+pub struct CellRef<'a, R: Rule> {
+    cell: &'a LifeCell<'a, R>,
+}
+
+impl<'a, R: Rule> CellRef<'a, R> {
+    pub(crate) fn update_desc(self, old_state: Option<State>, state: Option<State>) {
+        R::update_desc(self, old_state, state);
+    }
+}
+
+impl<'a, R: Rule> Clone for CellRef<'a, R> {
+    fn clone(&self) -> Self {
+        CellRef { cell: self.cell }
+    }
+}
+
+impl<'a, R: Rule> Copy for CellRef<'a, R> {}
+
+impl<'a, R: Rule> Deref for CellRef<'a, R> {
+    type Target = LifeCell<'a, R>;
+
+    fn deref(&self) -> &Self::Target {
+        self.cell
+    }
+}
+
+impl<'a, R: Rule> PartialEq for CellRef<'a, R> {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.cell, other.cell)
+    }
+}
+
+impl<'a, R: Rule> Eq for CellRef<'a, R> {}
+
+impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for CellRef<'a, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "CellRef {{ cell: {:?} }}", self.cell)
     }
 }

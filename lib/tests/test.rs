@@ -29,3 +29,10 @@ fn p3_spaceship() {
         )
     );
 }
+
+#[test]
+fn lwss() {
+    let config = Config::new(6, 6, 4).set_translate(0, 2);
+    let mut search = config.set_world().unwrap();
+    assert_eq!(search.search(None), Status::Found);
+}

@@ -7,7 +7,7 @@ mod life;
 mod ntlife;
 
 use crate::{
-    cells::{LifeCell, State},
+    cells::{CellRef, State},
     world::World,
 };
 pub use life::Life;
@@ -33,7 +33,7 @@ pub trait Rule: Sized {
 
     /// Updates the neighborhood descriptors of all neighbors and the predecessor
     /// when the state of one cell is changed.
-    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>);
+    fn update_desc(cell: CellRef<Self>, old_state: Option<State>, state: Option<State>);
 
     /// Consistifies a cell.
     ///
@@ -44,5 +44,5 @@ pub trait Rule: Sized {
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
-    fn consistify<'a>(world: &mut World<'a, Self>, cell: &'a LifeCell<'a, Self>) -> bool;
+    fn consistify<'a>(world: &mut World<'a, Self>, cell: CellRef<'a, Self>) -> bool;
 }

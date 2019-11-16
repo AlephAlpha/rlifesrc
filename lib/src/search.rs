@@ -1,7 +1,7 @@
 //! The search process.
 
 use crate::{
-    cells::{LifeCell, State},
+    cells::{CellRef, State},
     config::NewState,
     rules::Rule,
     world::World,
@@ -25,7 +25,7 @@ pub enum Status {
 }
 
 /// Reasons for setting a cell.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Reason {
     /// Decides the state of a cell by choice,
     /// and remembers its position in the `search_list` of the world.
@@ -39,15 +39,15 @@ pub(crate) enum Reason {
 #[derive(Clone, Copy)]
 pub(crate) struct SetCell<'a, R: Rule> {
     /// The set cell.
-    cell: &'a LifeCell<'a, R>,
+    pub(crate) cell: CellRef<'a, R>,
 
     /// The reason for setting a cell.
-    reason: Reason,
+    pub(crate) reason: Reason,
 }
 
 impl<'a, R: Rule> SetCell<'a, R> {
     /// Get a reference to the set cell.
-    pub(crate) fn new(cell: &'a LifeCell<'a, R>, reason: Reason) -> Self {
+    pub(crate) fn new(cell: CellRef<'a, R>, reason: Reason) -> Self {
         SetCell { cell, reason }
     }
 }
@@ -62,23 +62,27 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
-    fn consistify(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
-        Rule::consistify(self, &cell)
+    fn consistify(&mut self, cell: CellRef<'a, R>) -> bool {
+        Rule::consistify(self, cell)
     }
 
     /// Consistifies a cell, its neighbors, and its predecessor.
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
-    fn consistify10(&mut self, cell: &'a LifeCell<'a, R>) -> bool {
-        self.consistify(cell) && {
-            let pred = cell.pred.unwrap();
-            self.consistify(pred) && {
-                cell.nbhd
-                    .iter()
-                    .all(|&neigh| self.consistify(neigh.unwrap()))
+    fn consistify10(&mut self, cell: CellRef<'a, R>) -> bool {
+        self.consistify(cell)
+            && {
+                if let Some(pred) = cell.pred {
+                    self.consistify(pred)
+                } else {
+                    true
+                }
             }
-        }
+            && cell
+                .nbhd
+                .iter()
+                .all(|&neigh| self.consistify(neigh.unwrap()))
     }
 
     /// Deduces all the consequences by `consistify` and symmetry.

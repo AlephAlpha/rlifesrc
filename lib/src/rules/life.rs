@@ -1,7 +1,7 @@
 //! Totalistic life-like rules.
 
 use crate::{
-    cells::{Alive, Dead, LifeCell, State},
+    cells::{Alive, CellRef, Dead, State},
     rules::Rule,
     search::Reason,
     world::World,
@@ -239,7 +239,7 @@ impl Rule for Life {
         NbhdDesc(nbhd_state << 4 | (succ_state as usize) << 2 | state as usize)
     }
 
-    fn update_desc(cell: &LifeCell<Self>, old_state: Option<State>, state: Option<State>) {
+    fn update_desc(cell: CellRef<Self>, old_state: Option<State>, state: Option<State>) {
         let old_state_num = match old_state {
             Some(Dead) => 0x10,
             Some(Alive) => 0x01,
@@ -274,7 +274,7 @@ impl Rule for Life {
         cell.desc.set(desc);
     }
 
-    fn consistify<'a>(world: &mut World<'a, Self>, cell: &'a LifeCell<'a, Self>) -> bool {
+    fn consistify<'a>(world: &mut World<'a, Self>, cell: CellRef<'a, Self>) -> bool {
         let flags = world.rule.impl_table[cell.desc.get().0];
 
         if flags.contains(ImplFlags::CONFLICT) {

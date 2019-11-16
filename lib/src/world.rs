@@ -1,7 +1,7 @@
 //! The world.
 
 use crate::{
-    cells::{Alive, Dead, LifeCell, State},
+    cells::{Alive, CellRef, Dead, LifeCell, State},
     config::{Config, NewState, SearchOrder, Symmetry, Transform},
     rules::Rule,
     search::{Reason, SetCell},
@@ -34,7 +34,7 @@ pub struct World<'a, R: Rule> {
     /// A list of references of cells sorted by the search order.search
     ///
     /// Used to find unknown cells.
-    search_list: Vec<&'a LifeCell<'a, R>>,
+    search_list: Vec<CellRef<'a, R>>,
 
     /// Number of known living cells in the first generation.
     pub(crate) gen0_cell_count: u32,
@@ -207,10 +207,13 @@ impl<'a, R: Rule> World<'a, R> {
                                 let cell = cell_ptr.as_mut().unwrap();
                                 cell.pred = pred;
                             }
-                        } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                            // Temperately marks its state as `None`.
-                            // Will restore in `init_state`.
-                            cell.state.set(None);
+                        } else if 0 <= x
+                            && x < self.width
+                            && 0 <= y
+                            && y < self.height
+                            && !self.set_stack.iter().any(|s| s.cell == cell)
+                        {
+                            self.set_stack.push(SetCell::new(cell, Reason::Deduce));
                         }
                     }
 
@@ -295,10 +298,13 @@ impl<'a, R: Rule> World<'a, R> {
                                 let cell = cell_ptr.as_mut().unwrap();
                                 cell.sym.push(self.find_cell(coord).unwrap());
                             }
-                        } else if 0 <= x && x < self.width && 0 <= y && y < self.height {
-                            // Temperately marks its state as `None`.
-                            // Will restore in `init_state`.
-                            cell.state.set(None);
+                        } else if 0 <= x
+                            && x < self.width
+                            && 0 <= y
+                            && y < self.height
+                            && !self.set_stack.iter().any(|s| s.cell == cell)
+                        {
+                            self.set_stack.push(SetCell::new(cell, Reason::Deduce));
                         }
                     }
                 }
@@ -313,10 +319,8 @@ impl<'a, R: Rule> World<'a, R> {
             for y in 0..self.height {
                 for t in 0..self.period {
                     let cell = self.find_cell((x, y, t)).unwrap();
-                    if cell.state.get().is_some() {
+                    if !self.set_stack.iter().any(|s| s.cell == cell) {
                         self.clear_cell(cell);
-                    } else {
-                        cell.state.set(Some(cell.background));
                     }
                 }
             }
@@ -355,12 +359,12 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Finds a cell by its coordinates. Returns a reference that lives
     /// as long as the world.
-    fn find_cell(&self, coord: Coord) -> Option<&'a LifeCell<'a, R>> {
+    fn find_cell(&self, coord: Coord) -> Option<CellRef<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.width && y >= -1 && y <= self.height {
             let index = ((x + 1) * (self.height + 2) + y + 1) * self.period + t;
             let cell = &self.cells[index as usize];
-            unsafe { (cell as *const LifeCell<'a, R>).as_ref() }
+            unsafe { Some(cell.to_ref()) }
         } else {
             None
         }
@@ -379,7 +383,7 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Sets the `state` of a cell, push it to the `set_stack`,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn set_cell(&mut self, cell: &'a LifeCell<'a, R>, state: State, reason: Reason) {
+    pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: Reason) {
         let old_state = cell.state.replace(Some(state));
         if old_state != Some(state) {
             cell.update_desc(old_state, Some(state));
@@ -405,7 +409,7 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Clears the `state` of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn clear_cell(&mut self, cell: &'a LifeCell<'a, R>) {
+    pub(crate) fn clear_cell(&mut self, cell: CellRef<'a, R>) {
         let old_state = cell.state.take();
         if old_state != None {
             cell.update_desc(old_state, None);
@@ -442,7 +446,7 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Gets a references to the first unknown cell since `index` in the `search_list`.
-    pub(crate) fn get_unknown(&self, index: usize) -> Option<(usize, &'a LifeCell<'a, R>)> {
+    pub(crate) fn get_unknown(&self, index: usize) -> Option<(usize, CellRef<'a, R>)> {
         self.search_list[index..]
             .iter()
             .enumerate()
