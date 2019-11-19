@@ -1,5 +1,7 @@
 # [rlifesrc-lib](https://alephalpha.github.io/rlifesrc/)
 
+[![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc-lib)](https://travis-ci.org/AlephAlpha/rlifesrc-lib) [![Crates.io](https://img.shields.io/crates/v/rlifesrc-lib)](https://crates.io/crates/rlifesrc-lib) [![Docs.rs](https://docs.rs/rlifesrc-lib/badge.svg)](https://docs.rs/rlifesrc-lib/) [![English](https://img.shields.io/badge/readme-English-brightgreen)](README_en.md)
+
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
@@ -20,7 +22,7 @@ use rlifesrc_lib::{Config, Status};
 // 设置世界的参数。
 let config = Config::new(16, 5, 3).set_translate(0, 1);
 
-// 创造世界。
+// 创建世界。
 let mut search = config.set_world().unwrap();
 
 // 搜索并显示结果的第 0 代。

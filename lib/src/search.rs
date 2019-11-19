@@ -246,6 +246,12 @@ pub trait Search {
 
     /// Number of known living cells in the first generation.
     fn gen0_cell_count(&self) -> u32;
+
+    /// Set the max cell counts.
+    ///
+    /// Currently this is the only parameter that you can change
+    /// during the search.
+    fn set_max_cell_count(&mut self, max_cell_count: Option<u32>);
 }
 
 /// The `Search` trait is implemented for every `World`.
@@ -264,5 +270,9 @@ impl<'a, R: Rule> Search for World<'a, R> {
 
     fn gen0_cell_count(&self) -> u32 {
         self.gen0_cell_count
+    }
+
+    fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
+        self.max_cell_count = max_cell_count;
     }
 }

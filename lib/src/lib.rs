@@ -25,7 +25,7 @@
 //! // Configures the world.
 //! let config = Config::new(16, 5, 3).set_translate(0, 1);
 //!
-//! // Crates the world.
+//! // Creates the world.
 //! let mut search = config.set_world().unwrap();
 //!
 //! // Searches and displays the generation 0 of the result.
