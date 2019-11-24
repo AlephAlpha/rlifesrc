@@ -336,7 +336,7 @@ pub struct Config {
     /// this number.
     ///
     /// `None` means that there is no limit for the cell count.
-    pub max_cell_count: Option<u32>,
+    pub max_cell_count: Option<usize>,
 
     /// Whether to force the first row/column to be nonempty.
     ///
@@ -391,7 +391,7 @@ impl Config {
     }
 
     /// Sets the maximal number of living cells in generation 0.
-    pub fn set_max_cell_count(mut self, max_cell_count: Option<u32>) -> Self {
+    pub fn set_max_cell_count(mut self, max_cell_count: Option<usize>) -> Self {
         self.max_cell_count = max_cell_count;
         self
     }

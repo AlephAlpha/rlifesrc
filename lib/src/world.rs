@@ -37,10 +37,13 @@ pub struct World<'a, R: Rule> {
     search_list: Vec<CellRef<'a, R>>,
 
     /// Number of known living cells in the first generation.
-    pub(crate) gen0_cell_count: u32,
+    pub(crate) gen0_cell_count: usize,
 
     /// Number of unknown or living cells in the first generation.
-    pub(crate) front_cell_count: u32,
+    pub(crate) front_cell_count: usize,
+
+    /// Number of conflicts during the search.
+    pub(crate) conflicts: usize,
 
     /// How to choose a state for an unknown cell.
     pub(crate) new_state: NewState,
@@ -64,7 +67,7 @@ pub struct World<'a, R: Rule> {
     /// this number.
     ///
     /// `None` means that there is no limit for the cell count.
-    pub(crate) max_cell_count: Option<u32>,
+    pub(crate) max_cell_count: Option<usize>,
 
     /// Whether to force the first row/column to be nonempty.
     ///
@@ -126,6 +129,7 @@ impl<'a, R: Rule> World<'a, R> {
             search_list: Vec::with_capacity(size),
             gen0_cell_count: 0,
             front_cell_count: 0,
+            conflicts: 0,
             new_state: config.new_state,
             set_stack: Vec::with_capacity(size),
             check_index: 0,

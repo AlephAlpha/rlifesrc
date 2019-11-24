@@ -7,7 +7,7 @@ use yew::{
     Callback,
 };
 
-const VIEW_FREQ: u32 = 50000;
+const VIEW_FREQ: usize = 50000;
 
 struct Job {
     timeout: TimeoutService,
@@ -58,7 +58,7 @@ pub enum Request {
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {
-    UpdateWorld((String, u32)),
+    UpdateWorld((String, usize)),
     UpdateStatus(Status),
     InvalidRule,
 }

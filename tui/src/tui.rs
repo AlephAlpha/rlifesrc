@@ -1,9 +1,9 @@
 #![allow(clippy::borrowed_box)]
 
 #[cfg(debug_assertions)]
-const VIEW_FREQ: u32 = 5000;
+const VIEW_FREQ: usize = 5000;
 #[cfg(not(debug_assertions))]
-const VIEW_FREQ: u32 = 100000;
+const VIEW_FREQ: usize = 100000;
 
 use pancurses::{ColorPair, Input, Window};
 use rlifesrc_lib::{Search, Status};
@@ -62,7 +62,12 @@ impl SearchWindow {
         self.top_bar.mvprintw(
             0,
             0,
-            format!("Gen: {}  Cells: {}", self.gen, search.gen0_cell_count()),
+            format!(
+                "Gen: {}  Cells: {}  Confl: {}",
+                self.gen,
+                search.gen0_cell_count(),
+                search.conflicts()
+            ),
         );
         match self.status {
             Status::Searching => 1,
