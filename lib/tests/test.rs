@@ -14,6 +14,15 @@ fn not_found() {
 }
 
 #[test]
+fn max_cell_count() {
+    let config = Config::new(5, 5, 1);
+    let mut search = config.set_world().unwrap();
+    assert_eq!(search.search(None), Status::Found);
+    search.set_max_cell_count(Some(3));
+    assert_eq!(search.search(None), Status::None);
+}
+
+#[test]
 fn p3_spaceship() {
     let config = Config::new(16, 5, 3).set_translate(0, 1);
     let mut search = config.set_world().unwrap();

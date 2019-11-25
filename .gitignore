@@ -1,5 +1,3 @@
 /target
 **/*.rs.bk
 web/.deploy_git
-web/static/fontawesome
-web/static/mui

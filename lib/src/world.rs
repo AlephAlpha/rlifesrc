@@ -92,6 +92,20 @@ impl<'a, R: Rule> World<'a, R> {
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
         let mut cells = Vec::with_capacity(size);
 
+        // Whether to consider only the first generation of the front.
+        let front_gen0 = match search_order {
+            SearchOrder::ColumnFirst => {
+                config.dy == 0
+                    && config.dx >= 0
+                    && (config.transform == Transform::Id || config.transform == Transform::FlipRow)
+            }
+            SearchOrder::RowFirst => {
+                config.dx == 0
+                    && config.dy >= 0
+                    && (config.transform == Transform::Id || config.transform == Transform::FlipCol)
+            }
+        };
+
         // Fills the vector with dead cells.
         // If the rule contains `B0`, then fills the odd generations
         // with living cells instead.
@@ -105,12 +119,20 @@ impl<'a, R: Rule> World<'a, R> {
                     }
                     match search_order {
                         SearchOrder::ColumnFirst => {
-                            if x == 0 {
+                            if front_gen0 {
+                                if x == (config.dx - 1).max(0) && t == 0 {
+                                    cell.is_front = true
+                                }
+                            } else if x == 0 {
                                 cell.is_front = true
                             }
                         }
                         SearchOrder::RowFirst => {
-                            if y == 0 {
+                            if front_gen0 {
+                                if y == (config.dy - 1).max(0) && t == 0 {
+                                    cell.is_front = true
+                                }
+                            } else if y == 0 {
                                 cell.is_front = true
                             }
                         }
@@ -387,14 +409,25 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Sets the `state` of a cell, push it to the `set_stack`,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: Reason) {
+    ///
+    /// Return `false` if the number of living cells exceeds the `max_cell_count`
+    /// or the front becomes empty.
+    pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: Reason) -> bool {
         let old_state = cell.state.replace(Some(state));
+        let mut result = true;
         if old_state != Some(state) {
             cell.update_desc(old_state, Some(state));
             if cell.is_gen0 {
                 match (state, old_state) {
                     (Alive, Some(Alive)) => (),
-                    (Alive, _) => self.gen0_cell_count += 1,
+                    (Alive, _) => {
+                        self.gen0_cell_count += 1;
+                        if let Some(max) = self.max_cell_count {
+                            if self.gen0_cell_count > max {
+                                result = false;
+                            }
+                        }
+                    }
                     (_, Some(Alive)) => self.gen0_cell_count -= 1,
                     _ => (),
                 }
@@ -402,13 +435,19 @@ impl<'a, R: Rule> World<'a, R> {
             if cell.is_front {
                 match (state, old_state) {
                     (Dead, Some(Dead)) => (),
-                    (Dead, _) => self.front_cell_count -= 1,
+                    (Dead, _) => {
+                        self.front_cell_count -= 1;
+                        if self.non_empty_front && self.front_cell_count == 0 {
+                            result = false;
+                        }
+                    }
                     (_, Some(Dead)) => self.front_cell_count += 1,
                     _ => (),
                 }
             }
         }
         self.set_stack.push(SetCell::new(cell, reason));
+        result
     }
 
     /// Clears the `state` of a cell,

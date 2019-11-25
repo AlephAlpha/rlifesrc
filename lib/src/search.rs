@@ -91,18 +91,6 @@ impl<'a, R: Rule> World<'a, R> {
     /// `true` if the cells are consistent.
     fn proceed(&mut self) -> bool {
         while self.check_index < self.set_stack.len() {
-            // Tests if the number of living cells exceeds the `max_cell_count`.
-            if let Some(max) = self.max_cell_count {
-                if self.gen0_cell_count > max {
-                    return false;
-                }
-            }
-
-            // Tests if the first row / column is empty.
-            if self.non_empty_front && self.front_cell_count == 0 {
-                return false;
-            }
-
             let cell = self.set_stack[self.check_index].cell;
             let state = cell.state.get().unwrap();
 
@@ -112,8 +100,8 @@ impl<'a, R: Rule> World<'a, R> {
                     if state != old_state {
                         return false;
                     }
-                } else {
-                    self.set_cell(sym, state, Reason::Deduce);
+                } else if !self.set_cell(sym, state, Reason::Deduce) {
+                    return false;
                 }
             }
 
@@ -140,8 +128,9 @@ impl<'a, R: Rule> World<'a, R> {
                     self.check_index = self.set_stack.len();
                     self.search_index = i + 1;
                     let state = !cell.state.get().unwrap();
-                    self.set_cell(cell, state, Reason::Deduce);
-                    return true;
+                    if self.set_cell(cell, state, Reason::Deduce) {
+                        return true;
+                    }
                 }
                 Reason::Deduce => {
                     self.clear_cell(cell);
@@ -182,8 +171,9 @@ impl<'a, R: Rule> World<'a, R> {
     /// Chooses an unknown cell, assigns a state for it,
     /// and push a reference to it to the `set_stack`.
     ///
-    /// Returns `false` is there is no unknown cell.
-    fn decide(&mut self) -> bool {
+    /// Returns `None` is there is no unknown cell,
+    /// `Some(false)` if the new state leads to an immediate conflict.
+    fn decide(&mut self) -> Option<bool> {
         if let Some((i, cell)) = self.get_unknown(self.search_index) {
             self.search_index = i + 1;
             let state = match self.new_state {
@@ -191,10 +181,9 @@ impl<'a, R: Rule> World<'a, R> {
                 NewState::Choose(State::Alive) => !cell.background,
                 NewState::Random => rand::random(),
             };
-            self.set_cell(cell, state, Reason::Decide(i));
-            true
+            Some(self.set_cell(cell, state, Reason::Decide(i)))
         } else {
-            false
+            None
         }
     }
 
@@ -210,12 +199,14 @@ impl<'a, R: Rule> World<'a, R> {
             return Status::None;
         }
         while self.go(&mut step_count) {
-            if !self.decide() {
-                if self.nontrivial() {
-                    return Status::Found;
-                } else if !self.backup() {
+            if let Some(result) = self.decide() {
+                if !result && !self.backup() {
                     return Status::None;
                 }
+            } else if self.nontrivial() {
+                return Status::Found;
+            } else if !self.backup() {
+                return Status::None;
             }
 
             if let Some(max) = max_step {
@@ -287,5 +278,12 @@ impl<'a, R: Rule> Search for World<'a, R> {
 
     fn set_max_cell_count(&mut self, max_cell_count: Option<usize>) {
         self.max_cell_count = max_cell_count;
+        if let Some(max) = self.max_cell_count {
+            while self.gen0_cell_count > max {
+                if !self.backup() {
+                    break;
+                }
+            }
+        }
     }
 }
