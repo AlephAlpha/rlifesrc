@@ -1,6 +1,6 @@
 # [rlifesrc-lib](https://alephalpha.github.io/rlifesrc/)
 
-[![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc-lib)](https://travis-ci.org/AlephAlpha/rlifesrc-lib) [![Crates.io](https://img.shields.io/crates/v/rlifesrc-lib)](https://crates.io/crates/rlifesrc-lib) [![Docs.rs](https://docs.rs/rlifesrc-lib/badge.svg)](https://docs.rs/rlifesrc-lib/) [![English](https://img.shields.io/badge/readme-English-brightgreen)](README_en.md)
+[![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc-lib) [![Crates.io](https://img.shields.io/crates/v/rlifesrc-lib)](https://crates.io/crates/rlifesrc-lib) [![Docs.rs](https://docs.rs/rlifesrc-lib/badge.svg)](https://docs.rs/rlifesrc-lib/) [![English](https://img.shields.io/badge/readme-English-brightgreen)](README_en.md)
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 

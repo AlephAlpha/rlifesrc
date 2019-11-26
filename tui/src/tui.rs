@@ -1,9 +1,9 @@
 #![allow(clippy::borrowed_box)]
 
 #[cfg(debug_assertions)]
-const VIEW_FREQ: usize = 5000;
+const VIEW_FREQ: u64 = 5000;
 #[cfg(not(debug_assertions))]
-const VIEW_FREQ: usize = 100000;
+const VIEW_FREQ: u64 = 100000;
 
 use pancurses::{ColorPair, Input, Window};
 use rlifesrc_lib::{Search, Status};
