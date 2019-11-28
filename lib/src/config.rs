@@ -332,8 +332,8 @@ pub struct Config {
     /// How to choose a state for an unknown cell.
     pub new_state: NewState,
 
-    /// The number of living cells in generation 0 must not exceed
-    /// this number.
+    /// The number of minimum living cells in all generations must not
+    /// exceed this number.
     ///
     /// `None` means that there is no limit for the cell count.
     pub max_cell_count: Option<usize>,

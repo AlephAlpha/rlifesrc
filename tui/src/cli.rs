@@ -148,9 +148,9 @@ pub fn parse_args() -> Option<Args> {
         )
         .arg(
             Arg::with_name("MAX")
-                .help("Maximal number of living cells in the first generation")
+                .help("Upper bound of numbers of minimum living cells in all generations")
                 .long_help(
-                    "Maximal number of living cells in the first generation\n\
+                    "Upper bound of numbers of minimum living cells in all generations\n\
                      If this value is set to 0, it means there is no limitation.\n",
                 )
                 .short("m")

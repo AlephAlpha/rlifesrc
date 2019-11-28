@@ -242,7 +242,7 @@ pub trait Search {
     fn period(&self) -> isize;
 
     /// Number of known living cells in the first generation.
-    fn gen0_cell_count(&self) -> usize;
+    fn cell_count(&self, t: isize) -> usize;
 
     /// Number of conflicts during the search.
     fn conflicts(&self) -> u64;
@@ -268,8 +268,8 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.period
     }
 
-    fn gen0_cell_count(&self) -> usize {
-        self.gen0_cell_count
+    fn cell_count(&self, t: isize) -> usize {
+        self.cell_count[t as usize]
     }
 
     fn conflicts(&self) -> u64 {
@@ -279,7 +279,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
     fn set_max_cell_count(&mut self, max_cell_count: Option<usize>) {
         self.max_cell_count = max_cell_count;
         if let Some(max) = self.max_cell_count {
-            while self.gen0_cell_count > max {
+            while *self.cell_count.iter().min().unwrap() > max {
                 if !self.backup() {
                     break;
                 }

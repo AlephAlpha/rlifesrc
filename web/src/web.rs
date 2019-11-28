@@ -299,7 +299,7 @@ impl Model {
                     </button>
                 </li>
                 <li>
-                    <abbr title="Number of known living cells in generation 0.">
+                    <abbr title="Number of known living cells in the current generation.">
                         { "Cell count" }
                     </abbr>
                     { ": " }
@@ -516,7 +516,7 @@ impl Model {
         html! {
             <div class="mui-textfield">
                 <label for="set_max">
-                    <abbr title="Maximal number of living cells in the first generation. \
+                    <abbr title="Upper bound of numbers of minimum living cells in all generations. \
                         If this value is set to 0, it means there is no limitation.">
                     { "Max cell count" }
                     </abbr>

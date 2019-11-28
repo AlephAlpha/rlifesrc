@@ -87,8 +87,8 @@ pub struct LifeCell<'a, R: Rule> {
     /// with this cell because of the symmetry.
     pub(crate) sym: Vec<CellRef<'a, R>>,
 
-    /// Whether the cell is in the first generation.
-    pub(crate) is_gen0: bool,
+    /// The generation of the cell.
+    pub(crate) gen: usize,
     /// Whether the cell is on the first row or column.
     ///
     /// Here the choice of row or column depends on the search order.
@@ -100,7 +100,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `first_gen` and `first_col` are set to `false`.
-    pub(crate) fn new(background: State, b0: bool) -> Self {
+    pub(crate) fn new(background: State, b0: bool, gen: usize) -> Self {
         let succ_state = if b0 { !background } else { background };
         LifeCell {
             background,
@@ -110,7 +110,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             succ: Default::default(),
             nbhd: Default::default(),
             sym: Default::default(),
-            is_gen0: false,
+            gen,
             is_front: false,
         }
     }

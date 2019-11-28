@@ -36,10 +36,10 @@ pub struct World<'a, R: Rule> {
     /// Used to find unknown cells.
     search_list: Vec<CellRef<'a, R>>,
 
-    /// Number of known living cells in the first generation.
-    pub(crate) gen0_cell_count: usize,
+    /// Number of known living cells in each generation.
+    pub(crate) cell_count: Vec<usize>,
 
-    /// Number of unknown or living cells in the first generation.
+    /// Number of unknown or living cells in the front.
     pub(crate) front_cell_count: usize,
 
     /// Number of conflicts during the search.
@@ -63,8 +63,8 @@ pub struct World<'a, R: Rule> {
     /// The position in the `search_list` of the last decided cell.
     pub(crate) search_index: usize,
 
-    /// The number of living cells in the 0th generation must not exceed
-    /// this number.
+    /// The number of minimum living cells in all generations must not
+    /// exceed this number.
     ///
     /// `None` means that there is no limit for the cell count.
     pub(crate) max_cell_count: Option<usize>,
@@ -113,10 +113,7 @@ impl<'a, R: Rule> World<'a, R> {
             for y in -1..=config.height {
                 for t in 0..config.period {
                     let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
-                    let mut cell = LifeCell::new(state, rule.b0());
-                    if t == 0 {
-                        cell.is_gen0 = true;
-                    }
+                    let mut cell = LifeCell::new(state, rule.b0(), t as usize);
                     match search_order {
                         SearchOrder::ColumnFirst => {
                             if front_gen0 {
@@ -149,7 +146,7 @@ impl<'a, R: Rule> World<'a, R> {
             rule,
             cells,
             search_list: Vec::with_capacity(size),
-            gen0_cell_count: 0,
+            cell_count: vec![0; config.period as usize],
             front_cell_count: 0,
             conflicts: 0,
             new_state: config.new_state,
@@ -417,20 +414,18 @@ impl<'a, R: Rule> World<'a, R> {
         let mut result = true;
         if old_state != Some(state) {
             cell.update_desc(old_state, Some(state));
-            if cell.is_gen0 {
-                match (state, old_state) {
-                    (Alive, Some(Alive)) => (),
-                    (Alive, _) => {
-                        self.gen0_cell_count += 1;
-                        if let Some(max) = self.max_cell_count {
-                            if self.gen0_cell_count > max {
-                                result = false;
-                            }
+            match (state, old_state) {
+                (Alive, Some(Alive)) => (),
+                (Alive, _) => {
+                    self.cell_count[cell.gen] += 1;
+                    if let Some(max) = self.max_cell_count {
+                        if *self.cell_count.iter().min().unwrap() > max {
+                            result = false;
                         }
                     }
-                    (_, Some(Alive)) => self.gen0_cell_count -= 1,
-                    _ => (),
                 }
+                (_, Some(Alive)) => self.cell_count[cell.gen] -= 1,
+                _ => (),
             }
             if cell.is_front {
                 match (state, old_state) {
@@ -456,8 +451,8 @@ impl<'a, R: Rule> World<'a, R> {
         let old_state = cell.state.take();
         if old_state != None {
             cell.update_desc(old_state, None);
-            if cell.is_gen0 && old_state == Some(Alive) {
-                self.gen0_cell_count -= 1;
+            if old_state == Some(Alive) {
+                self.cell_count[cell.gen] -= 1;
             }
             if cell.is_front && old_state == Some(Dead) {
                 self.front_cell_count += 1;
@@ -505,7 +500,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Tests whether the world is nonempty,
     /// and whether the minimal period of the pattern equals to the given period.
     pub(crate) fn nontrivial(&self) -> bool {
-        self.gen0_cell_count > 0
+        self.cell_count[0] > 0
             && (1..self.period).all(|t| {
                 self.period % t != 0
                     || self
