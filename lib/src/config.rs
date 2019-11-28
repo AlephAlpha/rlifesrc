@@ -344,6 +344,13 @@ pub struct Config {
     /// according to the search order.
     pub non_empty_front: bool,
 
+    /// Whether to automatically reduce the `max_cell_count`
+    /// when a result is found.
+    ///
+    /// The `max_cell_count` will be set to the cell count of
+    /// the current result minus one.
+    pub reduce_max: bool,
+
     /// The rule string of the cellular automaton.
     pub rule_string: String,
 }
@@ -399,6 +406,13 @@ impl Config {
     /// Sets whether to force the first row/column to be nonempty.
     pub fn set_non_empty_front(mut self, non_empty_front: bool) -> Self {
         self.non_empty_front = non_empty_front;
+        self
+    }
+
+    /// Sets whether to automatically reduce the `max_cell_count`
+    /// when a result is found.
+    pub fn set_reduce_max(mut self, reduce_max: bool) -> Self {
+        self.reduce_max = reduce_max;
         self
     }
 
@@ -464,6 +478,7 @@ impl Default for Config {
             new_state: NewState::Choose(State::Alive),
             max_cell_count: None,
             non_empty_front: true,
+            reduce_max: false,
             rule_string: String::from("B3/S23"),
         }
     }

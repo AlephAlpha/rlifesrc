@@ -114,12 +114,12 @@ cp static/* some_folder/
 
   <dt>Max cell count</dt>
   <dd>
-  第 0 代活细胞个数的极大值。
+  活细胞个数的上界（只考虑活细胞最少的一代）。
 
   如果这个值设为 0，则不限制活细胞的个数。
   </dd>
 
-  <dt>Max cell count</dt>
+  <dt>Search order</dt>
   <dd>
   搜索顺序。
 

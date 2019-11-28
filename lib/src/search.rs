@@ -204,6 +204,10 @@ impl<'a, R: Rule> World<'a, R> {
                     return Status::None;
                 }
             } else if self.nontrivial() {
+                if self.reduce_max {
+                    let cell_count = *self.cell_count.iter().min().unwrap();
+                    self.max_cell_count = Some(cell_count - 1);
+                }
                 return Status::Found;
             } else if !self.backup() {
                 return Status::None;

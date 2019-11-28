@@ -74,6 +74,13 @@ pub struct World<'a, R: Rule> {
     /// Here 'front' means the first row or column to search,
     /// according to the search order.
     pub(crate) non_empty_front: bool,
+
+    /// Whether to automatically reduce the `max_cell_count`
+    /// when a result is found.
+    ///
+    /// The `max_cell_count` will be set to the cell count of
+    /// the current result minus one.
+    pub(crate) reduce_max: bool,
 }
 
 impl<'a, R: Rule> World<'a, R> {
@@ -155,6 +162,7 @@ impl<'a, R: Rule> World<'a, R> {
             search_index: 0,
             max_cell_count: config.max_cell_count,
             non_empty_front: config.non_empty_front,
+            reduce_max: config.reduce_max,
         }
         .init_nbhd()
         .init_pred_succ(config.dx, config.dy, config.transform)

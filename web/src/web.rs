@@ -41,6 +41,7 @@ pub enum Msg {
     SetChoose(NewState),
     SetMax(Option<usize>),
     SetFront,
+    SetReduce,
     Reset,
     DataReceived(Response),
     None,
@@ -182,6 +183,9 @@ impl Component for Model {
             }
             Msg::SetFront => {
                 self.config.non_empty_front ^= true;
+            }
+            Msg::SetReduce => {
+                self.config.reduce_max ^= true;
             }
             Msg::Reset => {
                 self.gen = 0;
@@ -366,6 +370,7 @@ impl Model {
                 { self.set_order() }
                 { self.set_choose() }
                 { self.set_front() }
+                { self.set_reduce() }
             </div>
         }
     }
@@ -565,14 +570,32 @@ impl Model {
         }
     }
 
+    fn set_reduce(&self) -> Html<Self> {
+        html! {
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_reduce",
+                        type="checkbox",
+                        checked={ self.config.reduce_max },
+                        onclick=|_| Msg::SetReduce/>
+                    <abbr title="Reduce the max cell count when a result is found.\n\
+                        The new max cell count will be set to the cell count of\
+                        the current result minus one.">
+                    { "Reduce max cell count" }
+                    </abbr>
+                </label>
+            </div>
+        }
+    }
+
     fn set_trans(&self) -> Html<Self> {
         html! {
             <div class="mui-select">
                 <label for="set_trans">
                     <abbr title="Transformations after the last generation.\n\
-                    After the last generation, the pattern will return to \
-                    the first generation, applying this transformation first, \
-                    and then the translation defined by dx and dy.">
+                        After the last generation, the pattern will return to \
+                        the first generation, applying this transformation first, \
+                        and then the translation defined by dx and dy.">
                     { "Transformation" }
                     </abbr>
                     { ":" }
