@@ -99,7 +99,7 @@ impl<'a, R: Rule> World<'a, R> {
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
         let mut cells = Vec::with_capacity(size);
 
-        // Whether to consider only half of the first generation of the front.
+        // Whether to consider only the first generation of the front.
         let front_gen0 = match search_order {
             SearchOrder::ColumnFirst => {
                 config.dy == 0
@@ -113,6 +113,12 @@ impl<'a, R: Rule> World<'a, R> {
             }
         };
 
+        // Whether to consider only half of the first generation of the front.
+        let front_half = match config.symmetry {
+            Symmetry::D2Diag | Symmetry::D2Antidiag | Symmetry::D4Diag => false,
+            _ => front_gen0,
+        };
+
         // Fills the vector with dead cells.
         // If the rule contains `B0`, then fills the odd generations
         // with living cells instead.
@@ -124,7 +130,10 @@ impl<'a, R: Rule> World<'a, R> {
                     match search_order {
                         SearchOrder::ColumnFirst => {
                             if front_gen0 {
-                                if x == (config.dx - 1).max(0) && t == 0 && 2 * y < config.height {
+                                if x == (config.dx - 1).max(0)
+                                    && t == 0
+                                    && (!front_half || 2 * y < config.height)
+                                {
                                     cell.is_front = true
                                 }
                             } else if x == 0 {
@@ -133,7 +142,10 @@ impl<'a, R: Rule> World<'a, R> {
                         }
                         SearchOrder::RowFirst => {
                             if front_gen0 {
-                                if y == (config.dy - 1).max(0) && t == 0 && 2 * x < config.width {
+                                if y == (config.dy - 1).max(0)
+                                    && t == 0
+                                    && (!front_half || 2 * x < config.width)
+                                {
                                     cell.is_front = true
                                 }
                             } else if y == 0 {
