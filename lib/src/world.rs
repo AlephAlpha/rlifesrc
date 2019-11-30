@@ -427,38 +427,26 @@ impl<'a, R: Rule> World<'a, R> {
     /// Sets the `state` of a cell, push it to the `set_stack`,
     /// and update the neighborhood descriptor of its neighbors.
     ///
+    /// The original state of the cell must be unknown.
+    ///
     /// Return `false` if the number of living cells exceeds the `max_cell_count`
     /// or the front becomes empty.
     pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: Reason) -> bool {
-        let old_state = cell.state.replace(Some(state));
+        cell.state.set(Some(state));
         let mut result = true;
-        if old_state != Some(state) {
-            cell.update_desc(old_state, Some(state));
-            match (state, old_state) {
-                (Alive, Some(Alive)) => (),
-                (Alive, _) => {
-                    self.cell_count[cell.gen] += 1;
-                    if let Some(max) = self.max_cell_count {
-                        if *self.cell_count.iter().min().unwrap() > max {
-                            result = false;
-                        }
-                    }
+        cell.update_desc(None, Some(state));
+        if let Alive = state {
+            self.cell_count[cell.gen] += 1;
+            if let Some(max) = self.max_cell_count {
+                if *self.cell_count.iter().min().unwrap() > max {
+                    result = false;
                 }
-                (_, Some(Alive)) => self.cell_count[cell.gen] -= 1,
-                _ => (),
             }
-            if cell.is_front {
-                match (state, old_state) {
-                    (Dead, Some(Dead)) => (),
-                    (Dead, _) => {
-                        self.front_cell_count -= 1;
-                        if self.non_empty_front && self.front_cell_count == 0 {
-                            result = false;
-                        }
-                    }
-                    (_, Some(Dead)) => self.front_cell_count += 1,
-                    _ => (),
-                }
+        }
+        if cell.is_front && state == Dead {
+            self.front_cell_count -= 1;
+            if self.non_empty_front && self.front_cell_count == 0 {
+                result = false;
             }
         }
         self.set_stack.push(SetCell::new(cell, reason));

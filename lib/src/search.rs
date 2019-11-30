@@ -128,6 +128,7 @@ impl<'a, R: Rule> World<'a, R> {
                     self.check_index = self.set_stack.len();
                     self.search_index = i + 1;
                     let state = !cell.state.get().unwrap();
+                    self.clear_cell(cell);
                     if self.set_cell(cell, state, Reason::Deduce) {
                         return true;
                     }
