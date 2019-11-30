@@ -6,6 +6,7 @@ use crate::{
     search::Search,
     world::World,
 };
+use derivative::Derivative;
 use std::{
     cmp::Ordering,
     fmt::{Debug, Error, Formatter},
@@ -33,12 +34,14 @@ use serde::{Deserialize, Serialize};
 /// The symbol after it is the axis of reflection.
 ///
 /// Some of the transformations are only valid when the world is square.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Derivative, PartialEq)]
+#[derivative(Default)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum Transform {
     /// `Id`.
     ///
     /// Identity transformation.
+    #[derivative(Default)]
     Id,
     /// `R90`.
     ///
@@ -105,13 +108,6 @@ impl Debug for Transform {
     }
 }
 
-/// The default transformation is the `Id`.
-impl Default for Transform {
-    fn default() -> Self {
-        Transform::Id
-    }
-}
-
 impl Transform {
     /// Whether the transformation requires the world to be square.
     ///
@@ -136,12 +132,14 @@ impl Transform {
 /// [Logic Life Search](https://github.com/OscarCunningham/logic-life-search).
 ///
 /// Some of the symmetries are only valid when the world is square.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Derivative, PartialEq)]
+#[derivative(Default)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum Symmetry {
     /// `C1`.
     ///
     /// No symmetry at all.
+    #[derivative(Default)]
     C1,
     /// `C2`.
     ///
@@ -222,13 +220,6 @@ impl Debug for Symmetry {
     }
 }
 
-/// The default symmetry is the `C1`.
-impl Default for Symmetry {
-    fn default() -> Self {
-        Symmetry::C1
-    }
-}
-
 impl Symmetry {
     /// Whether the transformation requires the world to be square.
     ///
@@ -292,16 +283,20 @@ impl Default for NewState {
 /// World configuration.
 ///
 /// The world will be generated from this configuration.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative, PartialEq)]
+#[derivative(Default)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub struct Config {
     /// Width.
+    #[derivative(Default(value = "16"))]
     pub width: isize,
 
     /// Height.
+    #[derivative(Default(value = "16"))]
     pub height: isize,
 
     /// Period.
+    #[derivative(Default(value = "1"))]
     pub period: isize,
 
     /// Horizontal translation.
@@ -342,6 +337,7 @@ pub struct Config {
     ///
     /// Here 'front' means the first row or column to search,
     /// according to the search order.
+    #[derivative(Default(value = "true"))]
     pub non_empty_front: bool,
 
     /// Whether to automatically reduce the `max_cell_count`
@@ -352,6 +348,7 @@ pub struct Config {
     pub reduce_max: bool,
 
     /// The rule string of the cellular automaton.
+    #[derivative(Default(value = "String::from(\"B3/S23\")"))]
     pub rule_string: String,
 }
 
@@ -460,26 +457,6 @@ impl Config {
         } else {
             let rule = NtLife::parse_rule(&self.rule_string)?;
             Ok(Box::new(World::new(&self, rule)))
-        }
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            width: 16,
-            height: 16,
-            period: 1,
-            dx: 0,
-            dy: 0,
-            transform: Transform::Id,
-            symmetry: Symmetry::C1,
-            search_order: None,
-            new_state: NewState::Choose(State::Alive),
-            max_cell_count: None,
-            non_empty_front: true,
-            reduce_max: false,
-            rule_string: String::from("B3/S23"),
         }
     }
 }
