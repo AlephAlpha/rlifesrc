@@ -394,7 +394,7 @@ impl Config {
         self
     }
 
-    /// Sets the maximal number of living cells in generation 0.
+    /// Sets the maximal number of living cells.
     pub fn set_max_cell_count(mut self, max_cell_count: Option<usize>) -> Self {
         self.max_cell_count = max_cell_count;
         self

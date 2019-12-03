@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// During the search, the state of a cell is represented by `Option<State>`,
 /// where `None` means that the state of the cell is unknown.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
 pub enum State {
     Alive = 0b01,
