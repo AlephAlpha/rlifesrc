@@ -88,7 +88,7 @@ impl Agent for Worker {
 
     fn create(link: AgentLink<Self>) -> Self {
         let config: Config = Default::default();
-        let search = config.set_world().unwrap();
+        let search = config.world().unwrap();
 
         let status = Status::Paused;
         let job = Job::new(&link);
@@ -125,7 +125,7 @@ impl Agent for Worker {
             Request::SetWorld(config) => {
                 self.job.stop();
                 self.status = Status::Paused;
-                if let Ok(search) = config.set_world() {
+                if let Ok(search) = config.world() {
                     self.search = search;
                     self.update_world(id, 0);
                 } else {

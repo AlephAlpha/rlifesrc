@@ -122,7 +122,11 @@ pub fn parse_args() -> Option<Args> {
                 .long("rule")
                 .takes_value(true)
                 .default_value("B3/S23")
-                .validator(|d| NtLife::parse_rule(&d).map(|_| ())),
+                .validator(|d| {
+                    NtLife::parse_rule(&d)
+                        .map(|_| ())
+                        .map_err(|e| e.to_string())
+                }),
         )
         .arg(
             Arg::with_name("ORDER")
@@ -269,7 +273,7 @@ pub fn parse_args() -> Option<Args> {
         .set_reduce_max(reduce_max)
         .set_rule_string(rule_string);
 
-    let search = config.set_world().ok()?;
+    let search = config.world().ok()?;
 
     Some(Args {
         search,

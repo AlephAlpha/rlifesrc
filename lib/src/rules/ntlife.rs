@@ -7,7 +7,7 @@ use crate::{
     world::World,
 };
 use bitflags::bitflags;
-use ca_rules::ParseNtLife;
+use ca_rules::{ParseNtLife, ParseRuleError};
 
 /// The neighborhood descriptor.
 ///
@@ -216,8 +216,8 @@ impl NtLife {
         self
     }
 
-    pub fn parse_rule(input: &str) -> Result<Self, String> {
-        ParseNtLife::parse_rule(input).map_err(|e| e.to_string())
+    pub fn parse_rule(input: &str) -> Result<Self, ParseRuleError> {
+        ParseNtLife::parse_rule(input)
     }
 }
 
