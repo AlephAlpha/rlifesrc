@@ -65,7 +65,7 @@ impl SearchWindow {
             format!(
                 "Gen: {}  Cells: {}  Confl: {}",
                 self.gen,
-                search.cell_count(self.gen),
+                search.cell_count_gen(self.gen),
                 search.conflicts()
             ),
         );

@@ -23,7 +23,7 @@ use rlifesrc_lib::{Config, Status};
 let config = Config::new(16, 5, 3).set_translate(0, 1);
 
 // 创建世界。
-let mut search = config.set_world().unwrap();
+let mut search = config.world().unwrap();
 
 // 搜索并显示结果的第 0 代。
 if let Status::Found = search.search(None) {
