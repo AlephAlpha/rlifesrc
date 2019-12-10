@@ -2,7 +2,7 @@
 
 use crate::{
     cells::{CellRef, State},
-    config::NewState,
+    config::{Config, NewState},
     rules::Rule,
     world::World,
 };
@@ -245,8 +245,8 @@ pub trait Search {
     /// * **Unknown** cells are represented by `?`.
     fn display_gen(&self, t: isize) -> String;
 
-    /// Period of the pattern.
-    fn period(&self) -> isize;
+    /// World configuration.
+    fn config(&self) -> Config;
 
     /// Number of known living cells in some generation.
     fn cell_count_gen(&self, t: isize) -> usize;
@@ -279,8 +279,8 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.display_gen(t)
     }
 
-    fn period(&self) -> isize {
-        self.config.period
+    fn config(&self) -> Config {
+        self.config.clone()
     }
 
     fn cell_count_gen(&self, t: isize) -> usize {

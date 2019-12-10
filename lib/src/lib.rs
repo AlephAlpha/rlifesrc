@@ -57,3 +57,6 @@ pub use cells::State;
 pub use config::{Config, NewState, SearchOrder, Symmetry, Transform};
 pub use search::{Search, Status};
 pub use world::World;
+
+#[cfg(feature = "serialize")]
+pub use save::{SetCellErr, WorldSer};

@@ -6,11 +6,14 @@ use rlifesrc_lib::{
 };
 use std::time::Duration;
 use yew::{
+    format::Json,
     html,
     html::ChangeData,
-    services::{DialogService, IntervalService, Task},
+    services::{storage::Area, DialogService, IntervalService, StorageService, Task},
     *,
 };
+
+const KEY: &str = "rlifesrc.world";
 
 pub struct Model {
     config: Config,
@@ -20,6 +23,7 @@ pub struct Model {
     world: String,
     period: isize,
     worker: Box<dyn Bridge<Worker>>,
+    storage: StorageService,
     job: Job,
 }
 
@@ -43,6 +47,8 @@ pub enum Msg {
     SetFront,
     SetReduce,
     Reset,
+    Store,
+    Restore,
     DataReceived(Response),
     None,
 }
@@ -89,6 +95,7 @@ impl Component for Model {
         let job = Job::new(&mut link);
         let callback = link.send_back(Msg::DataReceived);
         let worker = Worker::bridge(callback);
+        let storage = StorageService::new(Area::Local);
 
         let world = String::from(
             "????????????????\n\
@@ -118,6 +125,7 @@ impl Component for Model {
             world,
             period,
             worker,
+            storage,
             job,
         }
     }
@@ -130,9 +138,11 @@ impl Component for Model {
             }
             Msg::Start => {
                 self.worker.send(Request::Start);
+                return false;
             }
             Msg::Pause => {
                 self.worker.send(Request::Pause);
+                return false;
             }
             Msg::IncGen => {
                 self.gen += 1;
@@ -197,6 +207,9 @@ impl Component for Model {
                     self.world = world;
                     self.cells = cells;
                 }
+                Response::UpdateConfig(config) => {
+                    self.config = config;
+                }
                 Response::UpdateStatus(status) => {
                     let old_status = self.status;
                     if self.status != status {
@@ -213,7 +226,21 @@ impl Component for Model {
                     dialog.alert("Invalid rule!");
                     return false;
                 }
+                Response::Store(world_ser) => {
+                    self.storage.store(KEY, Json(&world_ser));
+                    return false;
+                }
             },
+            Msg::Store => {
+                self.worker.send(Request::Store);
+                return false;
+            }
+            Msg::Restore => {
+                if let Json(Ok(world_ser)) = self.storage.restore(KEY) {
+                    self.worker.send(Request::Restore(world_ser));
+                }
+                return false;
+            }
             Msg::None => return false,
         }
         true
@@ -224,6 +251,7 @@ impl Component for Model {
             <div id="rlifesrc">
                 { self.header() }
                 { self.main() }
+                { self.footer() }
             </div>
         }
     }
@@ -252,6 +280,23 @@ impl Model {
                     </tr>
                 </table>
             </header>
+        }
+    }
+
+    fn footer(&self) -> Html<Self> {
+        html! {
+            <footer id="footer" class="mui-container-fluid">
+                <div class="mui--text-caption mui--text-center">
+                    { "Powered by " }
+                    <a href="https://yew.rs">
+                        { "Yew" }
+                    </a>
+                    { " & " }
+                    <a href="https://www.muicss.com">
+                        { "MUI CSS" }
+                    </a>
+                </div>
+            </footer>
         }
     }
 
@@ -327,7 +372,7 @@ impl Model {
         html! {
             <div id="buttons">
                 <button class="mui-btn mui-btn--raised"
-                    disabled={self.status == Status::Searching }
+                    disabled={ self.status == Status::Searching }
                     onclick=|_| Msg::Start>
                     <i class="fas fa-play"></i>
                     <span class="mui--hidden-xs">
@@ -335,7 +380,7 @@ impl Model {
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    disabled={self.status != Status::Searching }
+                    disabled={ self.status != Status::Searching }
                     onclick=|_| Msg::Pause>
                     <i class="fas fa-pause"></i>
                     <span class="mui--hidden-xs">
@@ -344,10 +389,29 @@ impl Model {
                 </button>
                 <button class="mui-btn mui-btn--raised"
                     onclick=|_| Msg::Reset>
-                    <i class="fas fa-redo"></i>
+                    <i class="fas fa-check"></i>
                     <span class="mui--hidden-xs">
-                        <abbr title="Apply the settings and restart.">
-                            { "Set World" }
+                        <abbr title="Apply the settings and restart the search.">
+                            { "Apply Settings" }
+                        </abbr>
+                    </span>
+                </button>
+                <button class="mui-btn mui-btn--raised"
+                    disabled={ self.status == Status::Searching }
+                    onclick=|_| Msg::Store>
+                    <i class="fas fa-save"></i>
+                    <span class="mui--hidden-xs">
+                        <abbr title="Store the search status in the browser.">
+                            { "Save" }
+                        </abbr>
+                    </span>
+                </button>
+                <button class="mui-btn mui-btn--raised"
+                    onclick=|_| Msg::Restore>
+                    <i class="fas fa-sync"></i>
+                    <span class="mui--hidden-xs">
+                        <abbr title="Load the saved search status.">
+                            { "Load" }
                         </abbr>
                     </span>
                 </button>

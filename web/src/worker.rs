@@ -1,4 +1,4 @@
-use rlifesrc_lib::{Config, Search, Status};
+use rlifesrc_lib::{Config, Search, Status, WorldSer};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::{
@@ -54,13 +54,17 @@ pub enum Request {
     Pause,
     SetWorld(Config),
     DisplayGen(isize),
+    Store,
+    Restore(WorldSer),
 }
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {
     UpdateWorld((String, usize)),
     UpdateStatus(Status),
+    UpdateConfig(Config),
     InvalidRule,
+    Store(WorldSer),
 }
 
 pub struct Step;
@@ -76,6 +80,10 @@ impl Worker {
 
     fn update_status(&mut self, id: HandlerId) {
         let status = self.status;
+        if Status::Found == status && self.search.config().reduce_max {
+            self.link
+                .response(id, Response::UpdateConfig(self.search.config()));
+        }
         self.link.response(id, Response::UpdateStatus(status));
     }
 }
@@ -134,6 +142,22 @@ impl Agent for Worker {
             }
             Request::DisplayGen(gen) => {
                 self.update_world(id, gen);
+            }
+            Request::Store => {
+                let world_ser = self.search.ser();
+                self.link.response(id, Response::Store(world_ser));
+            }
+            Request::Restore(world_ser) => {
+                self.job.stop();
+                self.status = Status::Paused;
+                if let Ok(search) = world_ser.world() {
+                    self.search = search;
+                    self.link
+                        .response(id, Response::UpdateConfig(self.search.config()));
+                    self.update_world(id, 0);
+                } else {
+                    self.link.response(id, Response::InvalidRule);
+                }
             }
         }
     }
