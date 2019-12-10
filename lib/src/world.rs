@@ -10,8 +10,6 @@ use crate::{
 /// The world.
 pub struct World<'a, R: Rule> {
     /// World configuration.
-    ///
-    /// I don't know why I put it here.
     pub(crate) config: Config,
 
     /// The rule of the cellular automaton.
@@ -24,7 +22,7 @@ pub struct World<'a, R: Rule> {
     // So the unsafe code below is actually safe.
     cells: Vec<LifeCell<'a, R>>,
 
-    /// A list of references of cells sorted by the search order.search
+    /// A list of references to cells sorted by the search order.
     ///
     /// Used to find unknown cells.
     search_list: Vec<CellRef<'a, R>>,
@@ -32,15 +30,15 @@ pub struct World<'a, R: Rule> {
     /// Number of known living cells in each generation.
     pub(crate) cell_count: Vec<usize>,
 
-    /// Number of unknown or living cells in the front.
+    /// Number of unknown or living cells on the first row or column.
     pub(crate) front_cell_count: usize,
 
     /// Number of conflicts during the search.
     pub(crate) conflicts: u64,
 
-    /// A stack to records the cells whose values are set during the search.
+    /// A stack to record the cells whose values are set during the search.
     ///
-    /// The cells in this table always have known states.
+    /// The cells in this stack always have known states.
     ///
     /// It is used in the backtracking.
     pub(crate) set_stack: Vec<SetCell<'a, R>>,
@@ -50,7 +48,9 @@ pub struct World<'a, R: Rule> {
     /// See `proceed` for details.
     pub(crate) check_index: usize,
 
-    /// The position in the `search_list` of the last decided cell.
+    /// The starting position in the `search_list` to look for an unknown cell.
+    ///
+    /// Cells before this position are all known.
     pub(crate) search_index: usize,
 }
 
@@ -98,8 +98,12 @@ impl<'a, R: Rule> World<'a, R> {
         for x in -1..=config.width {
             for y in -1..=config.height {
                 for t in 0..config.period {
-                    let state = if rule.b0() && t % 2 == 1 { Alive } else { Dead };
-                    let mut cell = LifeCell::new((x, y, t), state, rule.b0(), t as usize);
+                    let state = if rule.has_b0() && t % 2 == 1 {
+                        Alive
+                    } else {
+                        Dead
+                    };
+                    let mut cell = LifeCell::new((x, y, t), state, rule.has_b0());
                     match search_order {
                         SearchOrder::ColumnFirst => {
                             if front_gen0 {
@@ -184,7 +188,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Links a cell to its predecessor and successor.
     ///
     /// If the predecessor is out of the search range,
-    /// then sets the state of the current cell to `default`.
+    /// then marks the current cell as known.
     ///
     /// If the successor is out of the search range,
     /// then sets it to `None`.
@@ -266,7 +270,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Links a cell to the symmetric cells.
     ///
     /// If some symmetric cell is out of the search range,
-    /// then sets the current cell to `default`.
+    /// then  marks the current cell as known.
     fn init_sym(mut self, symmetry: Symmetry) -> Self {
         for x in -1..=self.config.width {
             for y in -1..=self.config.height {
@@ -336,6 +340,9 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Sets states for the cells.
+    ///
+    /// All cells are set to unknown unless they are on the boundary,
+    /// or are marked as known in `init_pred_succ` or `init_sym`.
     fn init_state(mut self) -> Self {
         for x in 0..self.config.width {
             for y in 0..self.config.height {
@@ -351,8 +358,6 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Sets the search order.
-    ///
-    /// This method will be called only once, inside `World::new`.
     fn init_search_order(mut self, search_order: SearchOrder) -> Self {
         match search_order {
             SearchOrder::ColumnFirst => {
@@ -379,8 +384,7 @@ impl<'a, R: Rule> World<'a, R> {
         self
     }
 
-    /// Finds a cell by its coordinates. Returns a reference that lives
-    /// as long as the world.
+    /// Finds a cell by its coordinates. Returns a `CellRef`.
     pub(crate) fn find_cell(&self, coord: Coord) -> Option<CellRef<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1 && x <= self.config.width && y >= -1 && y <= self.config.height {
@@ -415,7 +419,7 @@ impl<'a, R: Rule> World<'a, R> {
         let mut result = true;
         cell.update_desc(None, Some(state));
         if let Alive = state {
-            self.cell_count[cell.gen] += 1;
+            self.cell_count[cell.coord.2 as usize] += 1;
             if let Some(max) = self.config.max_cell_count {
                 if *self.cell_count.iter().min().unwrap() > max {
                     result = false;
@@ -439,7 +443,7 @@ impl<'a, R: Rule> World<'a, R> {
         if old_state != None {
             cell.update_desc(old_state, None);
             if old_state == Some(Alive) {
-                self.cell_count[cell.gen] -= 1;
+                self.cell_count[cell.coord.2 as usize] -= 1;
             }
             if cell.is_front && old_state == Some(Dead) {
                 self.front_cell_count += 1;

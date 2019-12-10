@@ -25,7 +25,7 @@ pub trait Rule: Sized {
     ///
     /// In other words, whether a cell would become `Alive` in the next
     /// generation, if all its neighbors in this generation are dead.
-    fn b0(&self) -> bool;
+    fn has_b0(&self) -> bool;
 
     /// Generates a neighborhood descriptor which says that all neighboring
     /// cells have states `state`, and the successor has state `succ_state`.

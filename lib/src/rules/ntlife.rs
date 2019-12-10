@@ -224,7 +224,7 @@ impl NtLife {
 impl Rule for NtLife {
     type Desc = NbhdDesc;
 
-    fn b0(&self) -> bool {
+    fn has_b0(&self) -> bool {
         self.b0
     }
 

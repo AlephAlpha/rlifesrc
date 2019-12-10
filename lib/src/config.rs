@@ -270,6 +270,10 @@ pub enum SearchOrder {
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum NewState {
     /// Chooses the given state.
+    ///
+    /// For rules with `B0`, `Choose(Dead)` actually means
+    /// choosing the background, i.e., `Dead` in even generations,
+    /// `Alive` in odd generations.
     Choose(State),
     /// Random. The probability of either state is 1/2.
     Random,

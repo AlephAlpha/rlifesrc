@@ -64,9 +64,10 @@ pub type Coord = (isize, isize, isize);
 /// [`std::cell::Cell`](https://doc.rust-lang.org/std/cell/struct.Cell.html).
 pub struct LifeCell<'a, R: Rule> {
     /// The coordinates of a cell.
-    /// The background state of the cell.
     pub coord: Coord,
 
+    /// The background state of the cell.
+    ///
     /// For rules without `B0`, it is always dead.
     /// For rules with `B0`, it is dead on even generations,
     /// alive on odd generations.
@@ -97,8 +98,6 @@ pub struct LifeCell<'a, R: Rule> {
     /// with this cell because of the symmetry.
     pub(crate) sym: Vec<CellRef<'a, R>>,
 
-    /// The generation of the cell.
-    pub(crate) gen: usize,
     /// Whether the cell is on the first row or column.
     ///
     /// Here the choice of row or column depends on the search order.
@@ -110,7 +109,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `first_gen` and `first_col` are set to `false`.
-    pub(crate) fn new(coord: Coord, background: State, b0: bool, gen: usize) -> Self {
+    pub(crate) fn new(coord: Coord, background: State, b0: bool) -> Self {
         let succ_state = if b0 { !background } else { background };
         LifeCell {
             coord,
@@ -121,7 +120,6 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             succ: Default::default(),
             nbhd: Default::default(),
             sym: Default::default(),
-            gen,
             is_front: false,
         }
     }
@@ -148,7 +146,12 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Copy(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Copy(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub struct CellRef<'a, R: Rule> {
     cell: *const LifeCell<'a, R>,
     phantom: PhantomData<&'a LifeCell<'a, R>>,
@@ -168,16 +171,8 @@ impl<'a, R: Rule> Deref for CellRef<'a, R> {
     }
 }
 
-impl<'a, R: Rule> PartialEq for CellRef<'a, R> {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.cell, other.cell)
-    }
-}
-
-impl<'a, R: Rule> Eq for CellRef<'a, R> {}
-
 impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for CellRef<'a, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(f, "CellRef {{ cell: {:?} }}", self.cell)
+        write!(f, "CellRef {{ coord: {:?} }}", self.coord)
     }
 }
