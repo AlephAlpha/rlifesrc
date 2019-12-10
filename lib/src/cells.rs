@@ -9,11 +9,12 @@ use rand::{
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
+    marker::PhantomData,
     ops::{Deref, Not},
 };
 pub use State::{Alive, Dead};
 
-#[cfg(feature = "stdweb")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
 /// Possible states of a known cell.
@@ -21,7 +22,7 @@ use serde::{Deserialize, Serialize};
 /// During the search, the state of a cell is represented by `Option<State>`,
 /// where `None` means that the state of the cell is unknown.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum State {
     Alive = 0b01,
     Dead = 0b10,
@@ -51,13 +52,21 @@ impl Distribution<State> for Standard {
     }
 }
 
+/// The coordinates of a cell.
+///
+/// `(x-coordinate, y-coordinate, time)`.
+/// All three coordinates are 0-indexed.
+pub type Coord = (isize, isize, isize);
+
 /// A cell in the cellular automaton.
 ///
 /// The name `LifeCell` is chosen to avoid ambiguity with
 /// [`std::cell::Cell`](https://doc.rust-lang.org/std/cell/struct.Cell.html).
 pub struct LifeCell<'a, R: Rule> {
-    /// The background state of a cell.
-    ///
+    /// The coordinates of a cell.
+    /// The background state of the cell.
+    pub coord: Coord,
+
     /// For rules without `B0`, it is always dead.
     /// For rules with `B0`, it is dead on even generations,
     /// alive on odd generations.
@@ -101,9 +110,10 @@ impl<'a, R: Rule> LifeCell<'a, R> {
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `first_gen` and `first_col` are set to `false`.
-    pub(crate) fn new(background: State, b0: bool, gen: usize) -> Self {
+    pub(crate) fn new(coord: Coord, background: State, b0: bool, gen: usize) -> Self {
         let succ_state = if b0 { !background } else { background };
         LifeCell {
+            coord,
             background,
             state: Cell::new(Some(background)),
             desc: Cell::new(R::new_desc(background, succ_state)),
@@ -116,9 +126,12 @@ impl<'a, R: Rule> LifeCell<'a, R> {
         }
     }
 
-    pub(crate) unsafe fn to_ref(&self) -> CellRef<'a, R> {
-        let cell = (self as *const LifeCell<'a, R>).as_ref().unwrap();
-        CellRef { cell }
+    /// Returns a `CellRef` from a `LifeCell`.
+    pub(crate) fn borrow(&self) -> CellRef<'a, R> {
+        CellRef {
+            cell: self as *const LifeCell<'a, R>,
+            phantom: PhantomData,
+        }
     }
 }
 
@@ -126,7 +139,8 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(
             f,
-            "LifeCell {{ state: {:?}, desc: {:?} }}",
+            "LifeCell {{ coord: {:?}, state: {:?}, desc: {:?} }}",
+            self.coord,
             self.state.get(),
             self.desc.get()
         )
@@ -136,7 +150,8 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Copy(bound = ""))]
 pub struct CellRef<'a, R: Rule> {
-    cell: &'a LifeCell<'a, R>,
+    cell: *const LifeCell<'a, R>,
+    phantom: PhantomData<&'a LifeCell<'a, R>>,
 }
 
 impl<'a, R: Rule> CellRef<'a, R> {
@@ -149,7 +164,7 @@ impl<'a, R: Rule> Deref for CellRef<'a, R> {
     type Target = LifeCell<'a, R>;
 
     fn deref(&self) -> &Self::Target {
-        self.cell
+        unsafe { self.cell.as_ref().unwrap() }
     }
 }
 

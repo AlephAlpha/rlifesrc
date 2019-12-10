@@ -50,6 +50,9 @@ pub mod rules;
 mod search;
 mod world;
 
+#[cfg(feature = "serialize")]
+mod save;
+
 pub use cells::State;
 pub use config::{Config, NewState, SearchOrder, Symmetry, Transform};
 pub use search::{Search, Status};

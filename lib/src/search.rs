@@ -7,12 +7,14 @@ use crate::{
     world::World,
 };
 
-#[cfg(feature = "stdweb")]
+#[cfg(feature = "serialize")]
+use crate::save::WorldSer;
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
 /// Search status.
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "stdweb", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Status {
     /// A result is found.
     Found,
@@ -25,7 +27,8 @@ pub enum Status {
 }
 
 /// Reasons for setting a cell.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub(crate) enum Reason {
     /// Decides the state of a cell by choice,
     /// and remembers its position in the `search_list` of the world.
@@ -177,7 +180,7 @@ impl<'a, R: Rule> World<'a, R> {
     fn decide(&mut self) -> Option<bool> {
         if let Some((i, cell)) = self.get_unknown(self.search_index) {
             self.search_index = i + 1;
-            let state = match self.new_state {
+            let state = match self.config.new_state {
                 NewState::Choose(State::Dead) => cell.background,
                 NewState::Choose(State::Alive) => !cell.background,
                 NewState::Random => rand::random(),
@@ -205,9 +208,8 @@ impl<'a, R: Rule> World<'a, R> {
                     return Status::None;
                 }
             } else if self.nontrivial() {
-                if self.reduce_max {
-                    let cell_count = *self.cell_count.iter().min().unwrap();
-                    self.max_cell_count = Some(cell_count - 1);
+                if self.config.reduce_max {
+                    self.config.max_cell_count = Some(self.cell_count() - 1);
                 }
                 return Status::Found;
             } else if !self.backup() {
@@ -260,6 +262,11 @@ pub trait Search {
     /// Currently this is the only parameter that you can change
     /// during the search.
     fn set_max_cell_count(&mut self, max_cell_count: Option<usize>);
+
+    #[cfg(feature = "serialize")]
+    /// Saves the world as a `WorldSer`,
+    /// which can be easily serialized.
+    fn ser(&self) -> WorldSer;
 }
 
 /// The `Search` trait is implemented for every `World`.
@@ -273,7 +280,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
     }
 
     fn period(&self) -> isize {
-        self.period
+        self.config.period
     }
 
     fn cell_count_gen(&self, t: isize) -> usize {
@@ -289,13 +296,18 @@ impl<'a, R: Rule> Search for World<'a, R> {
     }
 
     fn set_max_cell_count(&mut self, max_cell_count: Option<usize>) {
-        self.max_cell_count = max_cell_count;
-        if let Some(max) = self.max_cell_count {
+        self.config.max_cell_count = max_cell_count;
+        if let Some(max) = self.config.max_cell_count {
             while self.cell_count() > max {
                 if !self.backup() {
                     break;
                 }
             }
         }
+    }
+
+    #[cfg(feature = "serialize")]
+    fn ser(&self) -> WorldSer {
+        self.ser()
     }
 }

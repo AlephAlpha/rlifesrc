@@ -19,4 +19,5 @@ serde = { version = "1.0.103", features = ["derive"], optional = true }
 
 [features]
 default = []
-stdweb = ["serde", "rand/stdweb"]
+serialize = ["serde"]
+stdweb = ["serialize", "rand/stdweb"]

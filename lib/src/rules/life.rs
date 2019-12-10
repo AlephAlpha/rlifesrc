@@ -23,7 +23,7 @@ use ca_rules::{ParseLife, ParseRuleError};
 /// * `0b_10` means dead,
 /// * `0b_01` means alive,
 /// * `0b_00` means unknown.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct NbhdDesc(usize);
 
 bitflags! {
