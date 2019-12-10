@@ -59,4 +59,4 @@ pub use search::{Search, Status};
 pub use world::World;
 
 #[cfg(feature = "serialize")]
-pub use save::{SetCellErr, WorldSer};
+pub use save::{SetCellError, WorldSer};

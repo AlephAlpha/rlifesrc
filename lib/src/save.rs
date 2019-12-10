@@ -14,7 +14,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-/// A representation of `SetCell` that can be easily serialized.
+/// A representation of `SetCell` which can be easily serialized.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct SetCellSer {
     /// The coordinates of the set cell.
@@ -37,12 +37,10 @@ impl<'a, R: Rule> SetCell<'a, R> {
     }
 }
 
-/// A representation of the world that can be easily serialized.
+/// A representation of the world which can be easily serialized.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldSer {
     /// World configuration.
-    ///
-    /// I don't know why I put it here.
     config: Config,
 
     /// Number of conflicts during the search.
@@ -74,10 +72,10 @@ impl WorldSer {
             reason,
         } in self.set_stack.iter()
         {
-            let cell = world.find_cell(coord).ok_or(SetCellErr { coord })?;
+            let cell = world.find_cell(coord).ok_or(SetCellError { coord })?;
             if let Some(old_state) = cell.state.get() {
                 if old_state != state {
-                    return Err(Box::new(SetCellErr { coord }));
+                    return Err(Box::new(SetCellError { coord }));
                 }
             } else {
                 world.set_cell(cell, state, reason);
@@ -115,15 +113,16 @@ impl<'a, R: Rule> World<'a, R> {
     }
 }
 
+/// Errors when trying to set a cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SetCellErr {
+pub struct SetCellError {
     coord: Coord,
 }
 
-impl Display for SetCellErr {
+impl Display for SetCellError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "Unable to set cell at {:?}.", self.coord)
     }
 }
 
-impl Error for SetCellErr {}
+impl Error for SetCellError {}
