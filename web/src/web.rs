@@ -311,6 +311,7 @@ impl Model {
                             { self.buttons() }
                         </div>
                         <div class="mui-panel">
+                            { self.apply_button() }
                             { self.settings() }
                         </div>
                     </div>
@@ -370,7 +371,7 @@ impl Model {
 
     fn buttons(&self) -> Html<Self> {
         html! {
-            <div id="buttons">
+            <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
                     disabled={ self.status == Status::Searching }
                     onclick=|_| Msg::Start>
@@ -388,15 +389,6 @@ impl Model {
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    onclick=|_| Msg::Reset>
-                    <i class="fas fa-check"></i>
-                    <span class="mui--hidden-xs">
-                        <abbr title="Apply the settings and restart the search.">
-                            { "Apply Settings" }
-                        </abbr>
-                    </span>
-                </button>
-                <button class="mui-btn mui-btn--raised"
                     disabled={ self.status == Status::Searching }
                     onclick=|_| Msg::Store>
                     <i class="fas fa-save"></i>
@@ -408,10 +400,26 @@ impl Model {
                 </button>
                 <button class="mui-btn mui-btn--raised"
                     onclick=|_| Msg::Restore>
-                    <i class="fas fa-sync"></i>
+                    <i class="fas fa-file-import"></i>
                     <span class="mui--hidden-xs">
                         <abbr title="Load the saved search status.">
                             { "Load" }
+                        </abbr>
+                    </span>
+                </button>
+            </div>
+        }
+    }
+
+    fn apply_button(&self) -> Html<Self> {
+        html! {
+            <div class="buttons">
+                <button class="mui-btn mui-btn--raised"
+                    onclick=|_| Msg::Reset>
+                    <i class="fas fa-check"></i>
+                    <span class="mui--hidden-xs">
+                        <abbr title="Apply the settings and restart the search.">
+                            { "Apply Settings" }
                         </abbr>
                     </span>
                 </button>

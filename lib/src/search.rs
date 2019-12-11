@@ -246,7 +246,7 @@ pub trait Search {
     fn display_gen(&self, t: isize) -> String;
 
     /// World configuration.
-    fn config(&self) -> Config;
+    fn config(&self) -> &Config;
 
     /// Number of known living cells in some generation.
     fn cell_count_gen(&self, t: isize) -> usize;
@@ -279,8 +279,8 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.display_gen(t)
     }
 
-    fn config(&self) -> Config {
-        self.config.clone()
+    fn config(&self) -> &Config {
+        &self.config
     }
 
     fn cell_count_gen(&self, t: isize) -> usize {

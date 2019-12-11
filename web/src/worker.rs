@@ -82,7 +82,7 @@ impl Worker {
         let status = self.status;
         if Status::Found == status && self.search.config().reduce_max {
             self.link
-                .response(id, Response::UpdateConfig(self.search.config()));
+                .response(id, Response::UpdateConfig(self.search.config().clone()));
         }
         self.link.response(id, Response::UpdateStatus(status));
     }
@@ -153,7 +153,7 @@ impl Agent for Worker {
                 if let Ok(search) = world_ser.world() {
                     self.search = search;
                     self.link
-                        .response(id, Response::UpdateConfig(self.search.config()));
+                        .response(id, Response::UpdateConfig(self.search.config().clone()));
                     self.update_world(id, 0);
                 } else {
                     self.link.response(id, Response::InvalidRule);
