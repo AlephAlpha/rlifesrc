@@ -9,7 +9,6 @@ use rand::{
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
-    marker::PhantomData,
     ops::{Deref, Not},
 };
 pub use State::{Alive, Dead};
@@ -126,10 +125,8 @@ impl<'a, R: Rule> LifeCell<'a, R> {
 
     /// Returns a `CellRef` from a `LifeCell`.
     pub(crate) fn borrow(&self) -> CellRef<'a, R> {
-        CellRef {
-            cell: self as *const LifeCell<'a, R>,
-            phantom: PhantomData,
-        }
+        let cell = unsafe { (self as *const LifeCell<'a, R>).as_ref().unwrap() };
+        CellRef { cell }
     }
 }
 
@@ -146,15 +143,9 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
 }
 
 #[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Copy(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = "")
-)]
+#[derivative(Clone(bound = ""), Copy(bound = ""))]
 pub struct CellRef<'a, R: Rule> {
-    cell: *const LifeCell<'a, R>,
-    phantom: PhantomData<&'a LifeCell<'a, R>>,
+    cell: &'a LifeCell<'a, R>,
 }
 
 impl<'a, R: Rule> CellRef<'a, R> {
@@ -163,11 +154,19 @@ impl<'a, R: Rule> CellRef<'a, R> {
     }
 }
 
+impl<'a, R: Rule> PartialEq for CellRef<'a, R> {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.cell, other.cell)
+    }
+}
+
+impl<'a, R: Rule> Eq for CellRef<'a, R> {}
+
 impl<'a, R: Rule> Deref for CellRef<'a, R> {
     type Target = LifeCell<'a, R>;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { self.cell.as_ref().unwrap() }
+        self.cell
     }
 }
 
