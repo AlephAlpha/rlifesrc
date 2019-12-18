@@ -1,9 +1,5 @@
 use crate::worker::{Request, Response, Worker};
-use rlifesrc_lib::{
-    Config, NewState, SearchOrder,
-    State::{Alive, Dead},
-    Status, Symmetry, Transform,
-};
+use rlifesrc_lib::{Config, NewState, SearchOrder, Status, Symmetry, Transform};
 use std::time::Duration;
 use yew::{
     format::Json,
@@ -810,8 +806,8 @@ impl Model {
                     onchange=|e| {
                         if let ChangeData::Select(s) = e {
                             match s.raw_value().as_ref() {
-                                "Dead" => Msg::SetChoose(NewState::Choose(Dead)),
-                                "Alive" => Msg::SetChoose(NewState::Choose(Alive)),
+                                "Dead" => Msg::SetChoose(NewState::ChooseDead),
+                                "Alive" => Msg::SetChoose(NewState::ChooseAlive),
                                 "Random" => Msg::SetChoose(NewState::Random),
                                 _ => Msg::None,
                             }

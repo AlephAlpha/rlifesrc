@@ -1,55 +1,12 @@
 //! Cells in the cellular automaton.
 
-use crate::rules::Rule;
+use crate::{rules::Rule, states::State};
 use derivative::Derivative;
-use rand::{
-    distributions::{Distribution, Standard},
-    Rng,
-};
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
-    ops::{Deref, Not},
+    ops::Deref,
 };
-pub use State::{Alive, Dead};
-
-#[cfg(feature = "serialize")]
-use serde::{Deserialize, Serialize};
-
-/// Possible states of a known cell.
-///
-/// During the search, the state of a cell is represented by `Option<State>`,
-/// where `None` means that the state of the cell is unknown.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
-pub enum State {
-    Alive = 0b01,
-    Dead = 0b10,
-}
-
-/// Flips the state.
-impl Not for State {
-    type Output = State;
-
-    fn not(self) -> Self::Output {
-        match self {
-            Alive => Dead,
-            Dead => Alive,
-        }
-    }
-}
-
-/// Randomly chooses between `Alive` and `Dead`.
-///
-/// The probability of either state is 1/2.
-impl Distribution<State> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> State {
-        match rng.gen_range(0, 2) {
-            0 => Dead,
-            _ => Alive,
-        }
-    }
-}
 
 /// The coordinates of a cell.
 ///

@@ -48,14 +48,15 @@ mod cells;
 mod config;
 pub mod rules;
 mod search;
+mod states;
 mod world;
 
 #[cfg(feature = "serialize")]
 mod save;
 
-pub use cells::State;
 pub use config::{Config, NewState, SearchOrder, Symmetry, Transform};
 pub use search::{Search, Status};
+pub use states::{State, ALIVE, DEAD};
 pub use world::World;
 
 #[cfg(feature = "serialize")]

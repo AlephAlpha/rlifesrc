@@ -1,7 +1,6 @@
 //! World configuration.
 
 use crate::{
-    cells::State,
     rules::{Life, NtLife},
     search::Search,
     world::World,
@@ -269,19 +268,29 @@ pub enum SearchOrder {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum NewState {
-    /// Chooses the given state.
+    /// Choosing the background state.
     ///
-    /// For rules with `B0`, `Choose(Dead)` actually means
-    /// choosing the background, i.e., `Dead` in even generations,
+    /// For rules with `B0`, it chooses `Dead` in even generations,
     /// `Alive` in odd generations.
-    Choose(State),
-    /// Random. The probability of either state is 1/2.
+    ///
+    /// For other rules, it always chooese `Dead`.
+    ChooseDead,
+    /// Choosing the oposite of the background state.
+    ///
+    /// For rules with `B0`, it chooses `Alive` in even generations,
+    /// `Dead` in odd generations.
+    ///
+    /// For other rules, it always chooese `Alive`.
+    ChooseAlive,
+    /// Random.
+    ///
+    /// For life-like rules, the probability of either state is 1/2.
     Random,
 }
 
 impl Default for NewState {
     fn default() -> Self {
-        NewState::Choose(State::Alive)
+        NewState::ChooseAlive
     }
 }
 

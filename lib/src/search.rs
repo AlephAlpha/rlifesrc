@@ -1,11 +1,12 @@
 //! The search process.
-
 use crate::{
-    cells::{CellRef, State},
+    cells::CellRef,
     config::{Config, NewState},
     rules::Rule,
+    states::State,
     world::World,
 };
+use rand::{thread_rng, Rng};
 
 #[cfg(feature = "serialize")]
 use crate::save::WorldSer;
@@ -181,9 +182,9 @@ impl<'a, R: Rule> World<'a, R> {
         if let Some((i, cell)) = self.get_unknown(self.search_index) {
             self.search_index = i + 1;
             let state = match self.config.new_state {
-                NewState::Choose(State::Dead) => cell.background,
-                NewState::Choose(State::Alive) => !cell.background,
-                NewState::Random => rand::random(),
+                NewState::ChooseDead => cell.background,
+                NewState::ChooseAlive => !cell.background,
+                NewState::Random => State(thread_rng().gen_range(0, 2)),
             };
             Some(self.set_cell(cell, state, Reason::Decide(i)))
         } else {
@@ -309,5 +310,44 @@ impl<'a, R: Rule> Search for World<'a, R> {
     #[cfg(feature = "serialize")]
     fn ser(&self) -> WorldSer {
         self.ser()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{rules::Life, states::DEAD};
+
+    macro_rules! consistify {
+        ($world: expr, $cell: expr) => {
+            assert!(
+                $world.consistify($cell),
+                "Fail to consistify cell {:?}",
+                $cell
+            );
+        };
+    }
+
+    #[test]
+    fn test_world() {
+        let rule = Life::parse_rule(&"B3/S23").unwrap();
+        let config = Config::new(3, 3, 2);
+        let mut world = World::new(&config, rule);
+
+        let cell = world.find_cell((0, 0, 0)).unwrap();
+        assert_eq!(cell.background, DEAD);
+        assert_eq!(cell.state.get(), None);
+        assert_eq!(cell.desc.get().0, 5 << 8 | 0 << 4 | 0 << 2 | 0);
+
+        assert_eq!(world.decide(), Some(true));
+        consistify!(world, cell);
+        if let Some(pred) = cell.pred {
+            consistify!(world, pred);
+        }
+        for &neigh in cell.nbhd.iter() {
+            if let Some(neigh) = neigh {
+                consistify!(world, neigh);
+            }
+        }
     }
 }

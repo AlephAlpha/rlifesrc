@@ -2,10 +2,11 @@
 //! Saves the world.
 
 use crate::{
-    cells::{Coord, State},
+    cells::Coord,
     config::Config,
     rules::{Life, NtLife, Rule},
     search::{Reason, Search, SetCell},
+    states::State,
     world::World,
 };
 use serde::{Deserialize, Serialize};

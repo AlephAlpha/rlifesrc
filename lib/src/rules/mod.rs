@@ -6,10 +6,7 @@
 mod life;
 mod ntlife;
 
-use crate::{
-    cells::{CellRef, State},
-    world::World,
-};
+use crate::{cells::CellRef, states::State, world::World};
 pub use life::Life;
 pub use ntlife::NtLife;
 

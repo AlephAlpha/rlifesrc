@@ -1,10 +1,7 @@
 use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
-    rules::NtLife,
-    Config, NewState, Search, SearchOrder,
-    State::{Alive, Dead},
-    Status, Symmetry, Transform,
+    rules::NtLife, Config, NewState, Search, SearchOrder, Status, Symmetry, Transform,
 };
 
 fn is_positive(s: &str) -> bool {
@@ -247,10 +244,10 @@ pub fn parse_args() -> Option<Args> {
         _ => None,
     };
     let new_state = match matches.value_of("CHOOSE").unwrap() {
-        "dead" | "d" => NewState::Choose(Dead),
-        "alive" | "a" => NewState::Choose(Alive),
+        "dead" | "d" => NewState::ChooseDead,
+        "alive" | "a" => NewState::ChooseAlive,
         "random" | "r" => NewState::Random,
-        _ => NewState::Choose(Dead),
+        _ => NewState::ChooseAlive,
     };
     let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
     let max_cell_count = match max_cell_count {

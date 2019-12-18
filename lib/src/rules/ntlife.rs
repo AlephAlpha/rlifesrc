@@ -1,9 +1,10 @@
 //! Non-totalistic life-like rules.
 
 use crate::{
-    cells::{Alive, CellRef, Dead, State},
+    cells::CellRef,
     rules::Rule,
     search::Reason,
+    states::{State, ALIVE, DEAD},
     world::World,
 };
 use bitflags::bitflags;
@@ -21,7 +22,7 @@ use ca_rules::{ParseNtLife, ParseRuleError};
 /// * `0b_01` means alive,
 /// * `0b_00` means unknown.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct NbhdDesc(usize);
+pub struct NbhdDesc(pub(crate) usize);
 
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
@@ -87,12 +88,12 @@ impl NtLife {
         for alives in 0..=0xff {
             let desc = (0xff & !alives) << 12 | alives << 4;
             let alives = alives as u8;
-            self.impl_table[desc | Dead as usize] |= if b.contains(&alives) {
+            self.impl_table[desc | 0b10] |= if b.contains(&alives) {
                 ImplFlags::SUCC_ALIVE
             } else {
                 ImplFlags::SUCC_DEAD
             };
-            self.impl_table[desc | Alive as usize] |= if s.contains(&alives) {
+            self.impl_table[desc | 0b01] |= if s.contains(&alives) {
                 ImplFlags::SUCC_ALIVE
             } else {
                 ImplFlags::SUCC_DEAD
@@ -115,7 +116,7 @@ impl NtLife {
                 let desc0 = (0xff & !alives & !unknowns | n) << 12 | alives << 4;
                 let desc1 = (0xff & !alives & !unknowns) << 12 | (alives | n) << 4;
 
-                for &state in [Dead as usize, Alive as usize, 0].iter() {
+                for state in 0..=2 {
                     let trans0 = self.impl_table[desc0 | state];
 
                     if trans0 == self.impl_table[desc1 | state] {
@@ -131,13 +132,13 @@ impl NtLife {
     /// Deduces the conflicts.
     fn init_conflict(mut self) -> Self {
         for nbhd_state in 0..0xffff {
-            for &state in [Dead as usize, Alive as usize, 0].iter() {
+            for state in 0..=2 {
                 let desc = nbhd_state << 4 | state;
 
                 if self.impl_table[desc].contains(ImplFlags::SUCC_ALIVE) {
-                    self.impl_table[desc | (Dead as usize) << 2] = ImplFlags::CONFLICT;
+                    self.impl_table[desc | 0b10 << 2] = ImplFlags::CONFLICT;
                 } else if self.impl_table[desc].contains(ImplFlags::SUCC_DEAD) {
-                    self.impl_table[desc | (Alive as usize) << 2] = ImplFlags::CONFLICT;
+                    self.impl_table[desc | 0b01 << 2] = ImplFlags::CONFLICT;
                 }
             }
         }
@@ -150,15 +151,15 @@ impl NtLife {
             for alives in (0..=0xff).filter(|a| a & unknowns == 0) {
                 let desc = (0xff & !alives & !unknowns) << 12 | alives << 4;
 
-                for &succ_state in [Dead as usize, Alive as usize].iter() {
-                    let flag = if succ_state == Dead as usize {
+                for succ_state in 1..=2 {
+                    let flag = if succ_state == 0b10 {
                         ImplFlags::SUCC_ALIVE | ImplFlags::CONFLICT
                     } else {
                         ImplFlags::SUCC_DEAD | ImplFlags::CONFLICT
                     };
 
-                    let possibly_dead = !self.impl_table[desc | Dead as usize].intersects(flag);
-                    let possibly_alive = !self.impl_table[desc | Alive as usize].intersects(flag);
+                    let possibly_dead = !self.impl_table[desc | 0b10].intersects(flag);
+                    let possibly_alive = !self.impl_table[desc | 0b01].intersects(flag);
 
                     let index = desc | succ_state << 2;
                     if possibly_dead && !possibly_alive {
@@ -185,8 +186,8 @@ impl NtLife {
                     let desc0 = (0xff & !alives & !unknowns | n) << 12 | alives << 4;
                     let desc1 = (0xff & !alives & !unknowns) << 12 | (alives | n) << 4;
 
-                    for &succ_state in [Dead as usize, Alive as usize].iter() {
-                        let flag = if succ_state == Dead as usize {
+                    for succ_state in 1..=2 {
+                        let flag = if succ_state == 0b10 {
                             ImplFlags::SUCC_ALIVE | ImplFlags::CONFLICT
                         } else {
                             ImplFlags::SUCC_DEAD | ImplFlags::CONFLICT
@@ -194,7 +195,7 @@ impl NtLife {
 
                         let index = desc | succ_state << 2;
 
-                        for &state in [Dead as usize, Alive as usize, 0].iter() {
+                        for state in 0..=2 {
                             let possibly_dead = !self.impl_table[desc0 | state].intersects(flag);
                             let possibly_alive = !self.impl_table[desc1 | state].intersects(flag);
 
@@ -230,17 +231,26 @@ impl Rule for NtLife {
 
     fn new_desc(state: State, succ_state: State) -> Self::Desc {
         let nbhd_state = match state {
-            Dead => 0xff00,
-            Alive => 0x00ff,
+            ALIVE => 0x00ff,
+            _ => 0xff00,
         };
-        NbhdDesc(nbhd_state << 4 | (succ_state as usize) << 2 | state as usize)
+        let succ_state = match succ_state {
+            ALIVE => 0b01,
+            _ => 0b10,
+        };
+        let state = match state {
+            ALIVE => 0b01,
+            _ => 0b10,
+        };
+        NbhdDesc(nbhd_state << 4 | succ_state << 2 | state)
     }
 
     fn update_desc(cell: CellRef<Self>, old_state: Option<State>, state: Option<State>) {
         let nbhd_change_num = match (state, old_state) {
-            (Some(Dead), Some(Alive)) | (Some(Alive), Some(Dead)) => 0x0101,
-            (Some(Dead), None) | (None, Some(Dead)) => 0x0100,
-            (Some(Alive), None) | (None, Some(Alive)) => 0x0001,
+            (Some(ALIVE), Some(ALIVE)) => 0x0000,
+            (Some(_), Some(ALIVE)) | (Some(ALIVE), Some(_)) => 0x0101,
+            (Some(ALIVE), None) | (None, Some(ALIVE)) => 0x0001,
+            (Some(_), None) | (None, Some(_)) => 0x0100,
             _ => 0x0000,
         };
         for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
@@ -251,9 +261,10 @@ impl Rule for NtLife {
         }
 
         let change_num = match (state, old_state) {
-            (Some(Dead), Some(Alive)) | (Some(Alive), Some(Dead)) => 0b11,
-            (Some(Dead), None) | (None, Some(Dead)) => 0b10,
-            (Some(Alive), None) | (None, Some(Alive)) => 0b01,
+            (Some(ALIVE), Some(ALIVE)) => 0,
+            (Some(_), Some(ALIVE)) | (Some(ALIVE), Some(_)) => 0b11,
+            (Some(ALIVE), None) | (None, Some(ALIVE)) => 0b01,
+            (Some(_), None) | (None, Some(_)) => 0b10,
             _ => 0,
         };
         if let Some(pred) = cell.pred {
@@ -275,9 +286,9 @@ impl Rule for NtLife {
 
         if flags.intersects(ImplFlags::SUCC_DEAD | ImplFlags::SUCC_ALIVE) {
             let state = if flags.contains(ImplFlags::SUCC_DEAD) {
-                Dead
+                DEAD
             } else {
-                Alive
+                ALIVE
             };
             let succ = cell.succ.unwrap();
             return world.set_cell(succ, state, Reason::Deduce);
@@ -285,9 +296,9 @@ impl Rule for NtLife {
 
         if flags.intersects(ImplFlags::SELF_DEAD | ImplFlags::SELF_ALIVE) {
             let state = if flags.contains(ImplFlags::SELF_DEAD) {
-                Dead
+                DEAD
             } else {
-                Alive
+                ALIVE
             };
             if !world.set_cell(cell, state, Reason::Deduce) {
                 return false;
@@ -300,9 +311,9 @@ impl Rule for NtLife {
                     if let Some(neigh) = neigh {
                         let state =
                             if flags.contains(ImplFlags::from_bits(1 << (2 * i + 7)).unwrap()) {
-                                Dead
+                                DEAD
                             } else {
-                                Alive
+                                ALIVE
                             };
                         if !world.set_cell(neigh, state, Reason::Deduce) {
                             return false;

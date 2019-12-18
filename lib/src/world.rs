@@ -1,10 +1,11 @@
 //! The world.
 
 use crate::{
-    cells::{Alive, CellRef, Coord, Dead, LifeCell, State},
+    cells::{CellRef, Coord, LifeCell},
     config::{Config, SearchOrder, Symmetry, Transform},
     rules::Rule,
     search::{Reason, SetCell},
+    states::{State, ALIVE, DEAD},
 };
 
 /// The world.
@@ -99,9 +100,9 @@ impl<'a, R: Rule> World<'a, R> {
             for y in -1..=config.height {
                 for t in 0..config.period {
                     let state = if rule.has_b0() && t % 2 == 1 {
-                        Alive
+                        ALIVE
                     } else {
-                        Dead
+                        DEAD
                     };
                     let mut cell = LifeCell::new((x, y, t), state, rule.has_b0());
                     match search_order {
@@ -387,7 +388,13 @@ impl<'a, R: Rule> World<'a, R> {
     /// Finds a cell by its coordinates. Returns a `CellRef`.
     pub(crate) fn find_cell(&self, coord: Coord) -> Option<CellRef<'a, R>> {
         let (x, y, t) = coord;
-        if x >= -1 && x <= self.config.width && y >= -1 && y <= self.config.height {
+        if x >= -1
+            && x <= self.config.width
+            && y >= -1
+            && y <= self.config.height
+            && t >= 0
+            && t < self.config.period
+        {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
             let cell = &self.cells[index as usize];
             Some(cell.borrow())
@@ -399,7 +406,13 @@ impl<'a, R: Rule> World<'a, R> {
     /// Finds a cell by its coordinates. Returns a mutable pointer.
     fn find_cell_mut(&mut self, coord: Coord) -> Option<*mut LifeCell<'a, R>> {
         let (x, y, t) = coord;
-        if x >= -1 && x <= self.config.width && y >= -1 && y <= self.config.height {
+        if x >= -1
+            && x <= self.config.width
+            && y >= -1
+            && y <= self.config.height
+            && t >= 0
+            && t < self.config.period
+        {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
             Some(&mut self.cells[index as usize])
         } else {
@@ -418,7 +431,7 @@ impl<'a, R: Rule> World<'a, R> {
         cell.state.set(Some(state));
         let mut result = true;
         cell.update_desc(None, Some(state));
-        if let Alive = state {
+        if state == ALIVE {
             self.cell_count[cell.coord.2 as usize] += 1;
             if let Some(max) = self.config.max_cell_count {
                 if *self.cell_count.iter().min().unwrap() > max {
@@ -426,7 +439,7 @@ impl<'a, R: Rule> World<'a, R> {
                 }
             }
         }
-        if cell.is_front && state == Dead {
+        if cell.is_front && state == DEAD {
             self.front_cell_count -= 1;
             if self.config.non_empty_front && self.front_cell_count == 0 {
                 result = false;
@@ -442,10 +455,10 @@ impl<'a, R: Rule> World<'a, R> {
         let old_state = cell.state.take();
         if old_state != None {
             cell.update_desc(old_state, None);
-            if old_state == Some(Alive) {
+            if old_state == Some(ALIVE) {
                 self.cell_count[cell.coord.2 as usize] -= 1;
             }
-            if cell.is_front && old_state == Some(Dead) {
+            if cell.is_front && old_state == Some(DEAD) {
                 self.front_cell_count += 1;
             }
         }
@@ -463,8 +476,9 @@ impl<'a, R: Rule> World<'a, R> {
             for x in 0..self.config.width {
                 let state = self.find_cell((x, y, t)).unwrap().state.get();
                 let s = match state {
-                    Some(Dead) => '.',
-                    Some(Alive) => 'O',
+                    Some(DEAD) => '.',
+                    Some(ALIVE) => 'O',
+                    Some(_) => 'o',
                     None => '?',
                 };
                 str.push(s);
