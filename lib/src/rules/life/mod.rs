@@ -1,4 +1,6 @@
-//! Totalistic life-like rules.
+//! Totalistic Life-like rules.
+
+pub mod gen;
 
 use crate::{
     cells::CellRef,
@@ -25,7 +27,7 @@ use ca_rules::{ParseLife, ParseRuleError};
 /// * `0b_01` means alive,
 /// * `0b_00` means unknown.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct NbhdDesc(pub(crate) usize);
+pub struct NbhdDesc(usize);
 
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
@@ -68,7 +70,7 @@ impl Default for ImplFlags {
     }
 }
 
-/// Totalistic life-like rules.
+/// Totalistic Life-like rules.
 pub struct Life {
     /// Whether the rule contains `B0`.
     b0: bool,
@@ -230,6 +232,10 @@ impl Rule for Life {
 
     fn has_b0(&self) -> bool {
         self.b0
+    }
+
+    fn gen(&self) -> usize {
+        2
     }
 
     fn new_desc(state: State, succ_state: State) -> Self::Desc {

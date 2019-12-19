@@ -4,7 +4,7 @@
 use crate::{
     cells::Coord,
     config::Config,
-    rules::{Life, NtLife, Rule},
+    rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
     search::{Reason, Search, SetCell},
     states::State,
     world::World,
@@ -93,10 +93,28 @@ impl WorldSer {
         if let Ok(rule) = Life::parse_rule(&self.config.rule_string) {
             let world = self.world_with_rule(rule)?;
             Ok(Box::new(world))
-        } else {
-            let rule = NtLife::parse_rule(&self.config.rule_string)?;
+        } else if let Ok(rule) = NtLife::parse_rule(&self.config.rule_string) {
             let world = self.world_with_rule(rule)?;
             Ok(Box::new(world))
+        } else if let Ok(rule) = LifeGen::parse_rule(&self.config.rule_string) {
+            if rule.gen() > 2 {
+                let world = self.world_with_rule(rule)?;
+                Ok(Box::new(world))
+            } else {
+                let rule = rule.to_non_gen();
+                let world = self.world_with_rule(rule)?;
+                Ok(Box::new(world))
+            }
+        } else {
+            let rule = NtLifeGen::parse_rule(&self.config.rule_string)?;
+            if rule.gen() > 2 {
+                let world = self.world_with_rule(rule)?;
+                Ok(Box::new(world))
+            } else {
+                let rule = rule.to_non_gen();
+                let world = self.world_with_rule(rule)?;
+                Ok(Box::new(world))
+            }
         }
     }
 }

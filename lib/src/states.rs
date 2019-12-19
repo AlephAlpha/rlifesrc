@@ -12,7 +12,7 @@ pub const ALIVE: State = State(1);
 /// where `None` means that the state of the cell is unknown.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
-pub struct State(pub(crate) u8);
+pub struct State(pub(crate) usize);
 
 /// Flips the state.
 impl Not for State {

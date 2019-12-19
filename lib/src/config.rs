@@ -1,7 +1,7 @@
 //! World configuration.
 
 use crate::{
-    rules::{Life, NtLife},
+    rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
     search::Search,
     world::World,
 };
@@ -468,9 +468,23 @@ impl Config {
     pub fn world(&self) -> Result<Box<dyn Search>, Box<dyn Error>> {
         if let Ok(rule) = Life::parse_rule(&self.rule_string) {
             Ok(Box::new(World::new(&self, rule)))
-        } else {
-            let rule = NtLife::parse_rule(&self.rule_string)?;
+        } else if let Ok(rule) = NtLife::parse_rule(&self.rule_string) {
             Ok(Box::new(World::new(&self, rule)))
+        } else if let Ok(rule) = LifeGen::parse_rule(&self.rule_string) {
+            if rule.gen() > 2 {
+                Ok(Box::new(World::new(&self, rule)))
+            } else {
+                let rule = rule.to_non_gen();
+                Ok(Box::new(World::new(&self, rule)))
+            }
+        } else {
+            let rule = NtLifeGen::parse_rule(&self.rule_string)?;
+            if rule.gen() > 2 {
+                Ok(Box::new(World::new(&self, rule)))
+            } else {
+                let rule = rule.to_non_gen();
+                Ok(Box::new(World::new(&self, rule)))
+            }
         }
     }
 }

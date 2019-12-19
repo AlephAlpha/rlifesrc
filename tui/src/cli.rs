@@ -1,7 +1,7 @@
 use crate::tui::search_with_tui;
 use clap::{App, AppSettings, Arg, Error, ErrorKind};
 use rlifesrc_lib::{
-    rules::NtLife, Config, NewState, Search, SearchOrder, Status, Symmetry, Transform,
+    rules::NtLifeGen, Config, NewState, Search, SearchOrder, Status, Symmetry, Transform,
 };
 
 fn is_positive(s: &str) -> bool {
@@ -120,7 +120,7 @@ pub fn parse_args() -> Option<Args> {
                 .takes_value(true)
                 .default_value("B3/S23")
                 .validator(|d| {
-                    NtLife::parse_rule(&d)
+                    NtLifeGen::parse_rule(&d)
                         .map(|_| ())
                         .map_err(|e| e.to_string())
                 }),

@@ -7,6 +7,7 @@ use crate::{
     search::{Reason, SetCell},
     states::{State, ALIVE, DEAD},
 };
+use std::fmt::Write;
 
 /// The world.
 pub struct World<'a, R: Rule> {
@@ -471,18 +472,27 @@ impl<'a, R: Rule> World<'a, R> {
     /// * **Unknown** cells are represented by `?`.
     pub(crate) fn display_gen(&self, t: isize) -> String {
         let mut str = String::new();
+        writeln!(
+            str,
+            "x = {}, y = {}, rule = {}",
+            self.config.width, self.config.height, self.config.rule_string
+        )
+        .unwrap();
         let t = t % self.config.period;
         for y in 0..self.config.height {
             for x in 0..self.config.width {
                 let state = self.find_cell((x, y, t)).unwrap().state.get();
-                let s = match state {
-                    Some(DEAD) => '.',
-                    Some(ALIVE) => 'O',
-                    Some(_) => 'o',
-                    None => '?',
+                match state {
+                    Some(DEAD) => str.push('.'),
+                    Some(State(i)) => str.push((b'A' + i as u8 - 1) as char),
+                    _ => str.push('?'),
                 };
-                str.push(s);
             }
+            if y == self.config.height - 1 {
+                str.push('!')
+            } else {
+                str.push('$')
+            };
             str.push('\n');
         }
         str

@@ -1,4 +1,6 @@
-//! Non-totalistic life-like rules.
+//! Non-totalistic Life-like rules.
+
+pub mod gen;
 
 use crate::{
     cells::CellRef,
@@ -53,10 +55,10 @@ bitflags! {
     }
 }
 
-/// Non-totalistic life-like rules.
+/// Non-totalistic Life-like rules.
 ///
 /// This includes any rule that can be converted to a non-totalistic
-/// life-like rule: isotropic non-totalistic rules,
+/// Life-like rule: isotropic non-totalistic rules,
 /// non-isotropic rules, hexagonal rules, rules with von Neumann
 /// neighborhoods, etc.
 pub struct NtLife {
@@ -227,6 +229,10 @@ impl Rule for NtLife {
 
     fn has_b0(&self) -> bool {
         self.b0
+    }
+
+    fn gen(&self) -> usize {
+        2
     }
 
     fn new_desc(state: State, succ_state: State) -> Self::Desc {

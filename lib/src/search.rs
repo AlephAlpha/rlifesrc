@@ -37,6 +37,13 @@ pub(crate) enum Reason {
 
     /// Determines the state of a cell by other cells.
     Deduce,
+
+    /// Tries another state of a cell when the original state
+    /// leads to a conflict.
+    ///
+    /// Remembers its position in the `search_list` of the world,
+    /// and the number of remaining states to try.
+    TryAnother(usize, usize),
 }
 
 /// Records the cells whose values are set and their reasons.
@@ -131,9 +138,31 @@ impl<'a, R: Rule> World<'a, R> {
                 Reason::Decide(i) => {
                     self.check_index = self.set_stack.len();
                     self.search_index = i + 1;
-                    let state = !cell.state.get().unwrap();
+                    let State(j) = cell.state.get().unwrap();
+                    let state = State((j + 1) % self.rule.gen());
                     self.clear_cell(cell);
-                    if self.set_cell(cell, state, Reason::Deduce) {
+                    if self.rule.gen() == 2 {
+                        if self.set_cell(cell, state, Reason::Deduce) {
+                            return true;
+                        }
+                    } else {
+                        if self.set_cell(cell, state, Reason::TryAnother(i, self.rule.gen() - 2)) {
+                            return true;
+                        }
+                    }
+                }
+                Reason::TryAnother(i, n) => {
+                    self.check_index = self.set_stack.len();
+                    self.search_index = i + 1;
+                    let State(j) = cell.state.get().unwrap();
+                    let state = State((j + 1) % self.rule.gen());
+                    self.clear_cell(cell);
+                    let reason = if n == 1 {
+                        Reason::Deduce
+                    } else {
+                        Reason::TryAnother(i, n - 1)
+                    };
+                    if self.set_cell(cell, state, reason) {
                         return true;
                     }
                 }
@@ -184,7 +213,7 @@ impl<'a, R: Rule> World<'a, R> {
             let state = match self.config.new_state {
                 NewState::ChooseDead => cell.background,
                 NewState::ChooseAlive => !cell.background,
-                NewState::Random => State(thread_rng().gen_range(0, 2)),
+                NewState::Random => State(thread_rng().gen_range(0, self.rule.gen())),
             };
             Some(self.set_cell(cell, state, Reason::Decide(i)))
         } else {
@@ -337,7 +366,6 @@ mod test {
         let cell = world.find_cell((0, 0, 0)).unwrap();
         assert_eq!(cell.background, DEAD);
         assert_eq!(cell.state.get(), None);
-        assert_eq!(cell.desc.get().0, 5 << 8 | 0 << 4 | 0 << 2 | 0);
 
         assert_eq!(world.decide(), Some(true));
         consistify!(world, cell);

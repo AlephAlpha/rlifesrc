@@ -7,8 +7,8 @@ mod life;
 mod ntlife;
 
 use crate::{cells::CellRef, states::State, world::World};
-pub use life::Life;
-pub use ntlife::NtLife;
+pub use life::{gen::LifeGen, Life};
+pub use ntlife::{gen::NtLifeGen, NtLife};
 
 /// A cellular automaton rule.
 pub trait Rule: Sized {
@@ -23,6 +23,9 @@ pub trait Rule: Sized {
     /// In other words, whether a cell would become `Alive` in the next
     /// generation, if all its neighbors in this generation are dead.
     fn has_b0(&self) -> bool;
+
+    /// The number of states.
+    fn gen(&self) -> usize;
 
     /// Generates a neighborhood descriptor which says that all neighboring
     /// cells have states `state`, and the successor has state `succ_state`.
