@@ -145,10 +145,9 @@ impl<'a, R: Rule> World<'a, R> {
                         if self.set_cell(cell, state, Reason::Deduce) {
                             return true;
                         }
-                    } else {
-                        if self.set_cell(cell, state, Reason::TryAnother(i, self.rule.gen() - 2)) {
-                            return true;
-                        }
+                    } else if self.set_cell(cell, state, Reason::TryAnother(i, self.rule.gen() - 2))
+                    {
+                        return true;
                     }
                 }
                 Reason::TryAnother(i, n) => {

@@ -50,7 +50,7 @@ impl LifeGen {
     }
 
     /// Converts to the corresponding non-Generations rule.
-    pub fn to_non_gen(self) -> Life {
+    pub fn non_gen(self) -> Life {
         Life {
             b0: self.b0,
             impl_table: self.impl_table,
@@ -161,11 +161,7 @@ impl Rule for LifeGen {
             Some(State(i)) => {
                 assert!(i >= 2);
                 if let Some(State(j)) = desc.succ_state {
-                    if j == (i + 1) % gen {
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    return j == (i + 1) % gen;
                 } else {
                     let succ = cell.succ.unwrap();
                     return world.set_cell(succ, State((i + 1) % gen), Reason::Deduce);

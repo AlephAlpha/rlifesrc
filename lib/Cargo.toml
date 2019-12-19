@@ -12,10 +12,10 @@ keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
 bitflags = "1.2.1"
-ca-rules = "0.3.0"
+ca-rules = "0.3.1"
 derivative = "1.0.3"
 rand = "0.7.2"
-serde = { version = "1.0.103", features = ["derive"], optional = true }
+serde = { version = "1.0.104", features = ["derive"], optional = true }
 
 [features]
 default = []

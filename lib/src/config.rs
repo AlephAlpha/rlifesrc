@@ -474,7 +474,7 @@ impl Config {
             if rule.gen() > 2 {
                 Ok(Box::new(World::new(&self, rule)))
             } else {
-                let rule = rule.to_non_gen();
+                let rule = rule.non_gen();
                 Ok(Box::new(World::new(&self, rule)))
             }
         } else {
@@ -482,7 +482,7 @@ impl Config {
             if rule.gen() > 2 {
                 Ok(Box::new(World::new(&self, rule)))
             } else {
-                let rule = rule.to_non_gen();
+                let rule = rule.non_gen();
                 Ok(Box::new(World::new(&self, rule)))
             }
         }

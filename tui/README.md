@@ -4,7 +4,7 @@
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
-支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。
+支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。还支持 [Generations](https://www.conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。
 
 这里是 rlifesrc 的命令行界面和文本界面。网页版的说明见[`web/`](../web/README.md) 目录中的 `README.md`。
 
@@ -150,25 +150,34 @@ ARGS:
 
 命令行界面是最简单的界面，功能只有输入命令，输出结果，不会显示搜索过程。
 
-结果以 [Plaintext](http://conwaylife.com/wiki/Plaintext) 格式输出，用 `.` 表示死细胞，`O` 表示活细胞。
+结果的输出综合了 [Plaintext](https://www.conwaylife.com/wiki/Plaintext) 和 [RLE](https://www.conwaylife.com/wiki/Rle)两种格式，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 27 种状态的 Generations 规则。
 
 比如说，输入
 
 ```bash
-./target/release/rlifesrc-tui 26 8 4 0 1 -c a --no-tui
+./target/release/rlifesrc-tui 20 16 7 3 0 -r '3457/357/5' -s 'D2-' --no-tui
 ```
 
 会显示以下结果：
 
 ```plaintext
-.O........................
-.O.......OOO...........OOO
-O.O....OO.....OOO.........
-.......OOOOO.OOOOO....O..O
-.....O.O..O..O...O.....O..
-.OOOOOO...O..OO....OOOOOO.
-..OO......O.O..OO...O.....
-............O......O......
+x = 20, y = 16, rule = 3457/357/5
+....................$
+..........B...AAA...$
+........ACAC.AAAB.D.$
+.......AABDB.AACDC..$
+.....ABACCCDA.BAAC..$
+....DABACCCBAAABA...$
+...AA..AAABDDBAAD...$
+..AAA...AA.CDAB.....$
+..AAA...AA.CDAB.....$
+...AA..AAABDDBAAD...$
+....DABACCCBAAABA...$
+.....ABACCCDA.BAAC..$
+.......AABDB.AACDC..$
+........ACAC.AAAB.D.$
+..........B...AAA...$
+....................!
 ```
 
 加上命令行选项 `--all` 会一个一个地输出所有的结果。
@@ -177,11 +186,11 @@ O.O....OO.....OOO.........
 
 文本界面也十分简陋，但可以显示搜索过程和搜索所用的时间。
 
-刚进入文本界面的时候，大概是这个样子（以 `./target/release/rlifesrc-tui 26 8 4 0 1 -c a` 为例）：
+刚进入文本界面的时候，大概是这个样子（以 `./target/release/rlifesrc-tui 20 16 7 3 0 -r '3457/357/5' -s 'D2-'` 为例）：
 
 ![](screenshots/Screenshot_0.png)
 
-其中 `?` 表示未知的细胞。`Cells` 表示第 0 代中已知的活细胞数。
+其中 `?` 表示未知的细胞。`Cells` 表示当前代中已知的活细胞数。`Confl` 表示搜索中经历的总冲突数，可以理解为搜索的步数。
 
 然后按空格键或回车键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一代/下一代。注意此用法和原版的 lifesrc 并不一样。
 

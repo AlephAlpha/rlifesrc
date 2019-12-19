@@ -53,9 +53,9 @@ cp static/* some_folder/
 
 搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Set World” 来重置世界。
 
-搜索的过程与结果以 [Plaintext](http://conwaylife.com/wiki/Plaintext) 格式显示，用 `.` 表示死细胞，`O` 表示活细胞，`?` 表示未知的细胞。
+搜索的过程与结果综合了 [Plaintext](https://www.conwaylife.com/wiki/Plaintext) 和 [RLE](https://www.conwaylife.com/wiki/Rle)两种格式，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 27 种状态的 Generations 规则。
 
-点击左上角的 “Generation” 右边的加减号可以切换显示的代数。注意 “Cell count” 指的是第 __0__ 代的活细胞个数。
+点击左上角的 “Generation” 右边的加减号可以切换显示的代数。“Cell count” 指的是当前代的活细胞个数。
 
 以下是各种参数的具体说明：
 

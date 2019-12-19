@@ -101,7 +101,7 @@ impl WorldSer {
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))
             } else {
-                let rule = rule.to_non_gen();
+                let rule = rule.non_gen();
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))
             }
@@ -111,7 +111,7 @@ impl WorldSer {
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))
             } else {
-                let rule = rule.to_non_gen();
+                let rule = rule.non_gen();
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))
             }

@@ -467,8 +467,11 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Displays the whole world in some generation.
     ///
+    /// Uses a mix of [Plaintext](https://www.conwaylife.com/wiki/Plaintext) and
+    /// [RLE](https://www.conwaylife.com/wiki/Rle) format.
+    ///
     /// * **Dead** cells are represented by `.`;
-    /// * **Living** cells are represented by `O`;
+    /// * **Living** cells are represented by `A`;
     /// * **Unknown** cells are represented by `?`.
     pub(crate) fn display_gen(&self, t: isize) -> String {
         let mut str = String::new();

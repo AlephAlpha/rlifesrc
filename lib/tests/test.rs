@@ -45,11 +45,12 @@ fn p3_spaceship() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         search.display_gen(0),
         String::from(
-            "........O.......\n\
-             .OO.OOO.OOO.....\n\
-             .OO....O..OO.OO.\n\
-             O..O.OO...O..OO.\n\
-             ............O..O\n"
+            "x = 16, y = 5, rule = B3/S23\n\
+             ........A.......$\n\
+             .AA.AAA.AAA.....$\n\
+             .AA....A..AA.AA.$\n\
+             A..A.AA...A..AA.$\n\
+             ............A..A!\n"
         )
     );
     Ok(())
