@@ -3,10 +3,9 @@
 pub mod gen;
 
 use crate::{
-    cells::CellRef,
+    cells::{CellRef, State, ALIVE, DEAD},
     rules::Rule,
     search::Reason,
-    states::{State, ALIVE, DEAD},
     world::World,
 };
 use bitflags::bitflags;
@@ -52,6 +51,12 @@ bitflags! {
 
         /// The state of at least one unknown neighbor is implied.
         const NBHD = 0xffff << 6;
+    }
+}
+
+impl Default for ImplFlags {
+    fn default() -> Self {
+        ImplFlags::empty()
     }
 }
 

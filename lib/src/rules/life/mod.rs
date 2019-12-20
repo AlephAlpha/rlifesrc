@@ -3,10 +3,9 @@
 pub mod gen;
 
 use crate::{
-    cells::CellRef,
+    cells::{CellRef, State, ALIVE, DEAD},
     rules::Rule,
     search::Reason,
-    states::{State, ALIVE, DEAD},
     world::World,
 };
 use bitflags::bitflags;

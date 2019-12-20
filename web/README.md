@@ -2,9 +2,9 @@
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
-由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 javascript 的情况下弄成一个网页，写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
+由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 JavaScript 的情况下弄成一个网页，写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
-支持 [Life-like](http://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。
+支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://www.conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
 
 [点此试用。](https://alephalpha.github.io/rlifesrc/)
 
@@ -17,7 +17,12 @@
 
 这是用 Rust 写的。没有 Rust 的话，先安装 [Rust](https://www.rust-lang.org/)。
 
-网页版无法编译成机器码，只能编译成 WebAssembly，因此需要还要安装 [cargo-web](https://github.com/koute/cargo-web)。
+编译网页版还要先安装 [cargo-web](https://github.com/koute/cargo-web)：
+
+
+```bash
+cargo install cargo-web
+```
 
 准备好了之后，就可以用 `git clone` 下载：
 
@@ -51,9 +56,13 @@ cp static/* some_folder/
 
 进入页面后按照说明调整图样的宽度、高度、周期、平移等参数，然后点击 “Set World” 来确定这些参数。然后点 “Start” 开始搜索。如果没有反应，可能是 wasm 未加载完成，可以等一下再按一次 “Start”。
 
-搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Set World” 来重置世界。
+搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Apply Settings” 来重置世界。
 
-搜索的过程与结果综合了 [Plaintext](https://www.conwaylife.com/wiki/Plaintext) 和 [RLE](https://www.conwaylife.com/wiki/Rle)两种格式，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 27 种状态的 Generations 规则。
+搜索所需的时间可能很长。点击 “Save” 可以通过 [Web Storage API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Storage_API) 把当前的搜索状态保存在浏览器中，点 “Load” 可以读取。关闭浏览器，保存的搜索状态不会消失。目前尚不支持自动保存/读取。
+
+输出的结果用 Golly 的 [Extended RLE](http://golly.sourceforge.net/Help/formats.html#rle) 格式显示；但不会合并相邻的相同符号，而是采用类似于 [Plaintext](https://conwaylife.com/wiki/Plaintext) 格式的排版。
+
+对于两种状态的规则，用 `.` 表示死细胞，`o` 表示活细胞；对于超过两种状态的 Generations 规则，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 25 种状态的 Generations 规则。
 
 点击左上角的 “Generation” 右边的加减号可以切换显示的代数。“Cell count” 指的是当前代的活细胞个数。
 
@@ -130,7 +139,7 @@ cp static/* some_folder/
   <dd>
   如何为未知的细胞选取状态。
 
-  有先选活、先选死、随机选取三种选项。
+  有先选活、先选死、随机选取三种选项。搜索振荡子时随机选取可能效果更佳。
 
   <dt>Non empty front</dt>
   <dd>

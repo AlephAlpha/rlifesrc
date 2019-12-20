@@ -4,7 +4,7 @@
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
-支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。还支持 [Generations](https://www.conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。
+支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://www.conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
 
 这里是 rlifesrc 的命令行界面和文本界面。网页版的说明见[`web/`](../web/README.md) 目录中的 `README.md`。
 
@@ -150,7 +150,9 @@ ARGS:
 
 命令行界面是最简单的界面，功能只有输入命令，输出结果，不会显示搜索过程。
 
-结果的输出综合了 [Plaintext](https://www.conwaylife.com/wiki/Plaintext) 和 [RLE](https://www.conwaylife.com/wiki/Rle)两种格式，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 27 种状态的 Generations 规则。
+输出的结果用 Golly 的 [Extended RLE](http://golly.sourceforge.net/Help/formats.html#rle) 格式显示；但不会合并相邻的相同符号，而是采用类似于 [Plaintext](https://conwaylife.com/wiki/Plaintext) 格式的排版。
+
+对于两种状态的规则，用 `.` 表示死细胞，`o` 表示活细胞；对于超过两种状态的 Generations 规则，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 25 种状态的 Generations 规则。
 
 比如说，输入
 

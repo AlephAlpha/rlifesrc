@@ -2,10 +2,9 @@
 
 use super::{ImplFlags, NbhdDesc, NtLife};
 use crate::{
-    cells::CellRef,
+    cells::{CellRef, State, ALIVE, DEAD},
     rules::Rule,
     search::Reason,
-    states::{State, ALIVE, DEAD},
     world::World,
 };
 use ca_rules::{ParseNtLifeGen, ParseRuleError};

@@ -46,11 +46,11 @@ fn p3_spaceship() -> Result<(), Box<dyn Error>> {
         search.display_gen(0),
         String::from(
             "x = 16, y = 5, rule = B3/S23\n\
-             ........A.......$\n\
-             .AA.AAA.AAA.....$\n\
-             .AA....A..AA.AA.$\n\
-             A..A.AA...A..AA.$\n\
-             ............A..A!\n"
+             ........o.......$\n\
+             .oo.ooo.ooo.....$\n\
+             .oo....o..oo.oo.$\n\
+             o..o.oo...o..oo.$\n\
+             ............o..o!\n"
         )
     );
     Ok(())
@@ -85,6 +85,14 @@ fn turtle() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn p3_2333() -> Result<(), Box<dyn Error>> {
+    let config = Config::new(4, 4, 3).set_rule_string("23/3/3".to_owned());
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+    Ok(())
+}
+
+#[test]
 #[cfg(feature = "serialize")]
 fn ser() -> Result<(), Box<dyn Error>> {
     let config = Config::new(16, 5, 3).set_translate(0, 1);
@@ -99,11 +107,11 @@ fn ser() -> Result<(), Box<dyn Error>> {
         new_search.display_gen(0),
         String::from(
             "x = 16, y = 5, rule = B3/S23\n\
-             ........A.......$\n\
-             .AA.AAA.AAA.....$\n\
-             .AA....A..AA.AA.$\n\
-             A..A.AA...A..AA.$\n\
-             ............A..A!\n"
+             ........o.......$\n\
+             .oo.ooo.ooo.....$\n\
+             .oo....o..oo.oo.$\n\
+             o..o.oo...o..oo.$\n\
+             ............o..o!\n"
         )
     );
     Ok(())

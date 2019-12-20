@@ -1,11 +1,10 @@
 //! The world.
 
 use crate::{
-    cells::{CellRef, Coord, LifeCell},
+    cells::{CellRef, Coord, LifeCell, State, ALIVE, DEAD},
     config::{Config, SearchOrder, Symmetry, Transform},
     rules::Rule,
     search::{Reason, SetCell},
-    states::{State, ALIVE, DEAD},
 };
 use std::fmt::Write;
 
@@ -471,7 +470,9 @@ impl<'a, R: Rule> World<'a, R> {
     /// [RLE](https://www.conwaylife.com/wiki/Rle) format.
     ///
     /// * **Dead** cells are represented by `.`;
-    /// * **Living** cells are represented by `A`;
+    /// * **Living** cells are represented by `o` for rules with 2 states,
+    ///   `A` for rules with more states;
+    /// * **Dying** cells are represented by uppercase letters starting from `B`;
     /// * **Unknown** cells are represented by `?`.
     pub(crate) fn display_gen(&self, t: isize) -> String {
         let mut str = String::new();
@@ -487,6 +488,13 @@ impl<'a, R: Rule> World<'a, R> {
                 let state = self.find_cell((x, y, t)).unwrap().state.get();
                 match state {
                     Some(DEAD) => str.push('.'),
+                    Some(ALIVE) => {
+                        if self.rule.gen() == 2 {
+                            str.push('o')
+                        } else {
+                            str.push('A')
+                        }
+                    }
                     Some(State(i)) => str.push((b'A' + i as u8 - 1) as char),
                     _ => str.push('?'),
                 };

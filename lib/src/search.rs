@@ -1,9 +1,8 @@
 //! The search process.
 use crate::{
-    cells::CellRef,
+    cells::{CellRef, State},
     config::{Config, NewState},
     rules::Rule,
-    states::State,
     world::World,
 };
 use rand::{thread_rng, Rng};
@@ -344,7 +343,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{rules::Life, states::DEAD};
+    use crate::{cells::DEAD, rules::Life};
 
     macro_rules! consistify {
         ($world: expr, $cell: expr) => {

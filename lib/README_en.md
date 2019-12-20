@@ -35,9 +35,9 @@ Search result:
 
 ```plaintext
 x = 16, y = 5, rule = B3/S23
-........A.......$
-.AA.AAA.AAA.....$
-.AA....A..AA.AA.$
-A..A.AA...A..AA.$
-............A..A!
+........o.......$
+.oo.ooo.ooo.....$
+.oo....o..oo.oo.$
+o..o.oo...o..oo.$
+............o..o!
 ```

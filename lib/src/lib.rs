@@ -37,26 +37,26 @@
 //! Search result:
 //!
 //! ``` plaintext
-//! ........O.......
-//! .OO.OOO.OOO.....
-//! .OO....O..OO.OO.
-//! O..O.OO...O..OO.
-//! ............O..O
+//! x = 16, y = 5, rule = B3/S23
+//! ........o.......$
+//! .oo.ooo.ooo.....$
+//! .oo....o..oo.oo.$
+//! o..o.oo...o..oo.$
+//! ............o..o!
 //! ```
 
 mod cells;
 mod config;
 pub mod rules;
 mod search;
-mod states;
 mod world;
 
 #[cfg(feature = "serialize")]
 mod save;
 
+pub use cells::{State, ALIVE, DEAD};
 pub use config::{Config, NewState, SearchOrder, Symmetry, Transform};
 pub use search::{Search, Status};
-pub use states::{State, ALIVE, DEAD};
 pub use world::World;
 
 #[cfg(feature = "serialize")]
