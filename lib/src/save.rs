@@ -89,13 +89,13 @@ impl WorldSer {
 
     /// Restores the world from the `WorldSer`.
     pub fn world(&self) -> Result<Box<dyn Search>, Box<dyn Error>> {
-        if let Ok(rule) = Life::parse_rule(&self.config.rule_string) {
+        if let Ok(rule) = self.config.rule_string.parse::<Life>() {
             let world = self.world_with_rule(rule)?;
             Ok(Box::new(world))
-        } else if let Ok(rule) = NtLife::parse_rule(&self.config.rule_string) {
+        } else if let Ok(rule) = self.config.rule_string.parse::<NtLife>() {
             let world = self.world_with_rule(rule)?;
             Ok(Box::new(world))
-        } else if let Ok(rule) = LifeGen::parse_rule(&self.config.rule_string) {
+        } else if let Ok(rule) = self.config.rule_string.parse::<LifeGen>() {
             if rule.gen() > 2 {
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))
@@ -105,7 +105,7 @@ impl WorldSer {
                 Ok(Box::new(world))
             }
         } else {
-            let rule = NtLifeGen::parse_rule(&self.config.rule_string)?;
+            let rule = self.config.rule_string.parse::<NtLifeGen>()?;
             if rule.gen() > 2 {
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))

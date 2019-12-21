@@ -1,7 +1,5 @@
 //! Totalistic Life-like rules.
 
-pub mod gen;
-
 use crate::{
     cells::{CellRef, State, ALIVE, DEAD},
     rules::Rule,
@@ -9,7 +7,8 @@ use crate::{
     world::World,
 };
 use bitflags::bitflags;
-use ca_rules::{ParseLife, ParseRuleError};
+use ca_rules::{ParseLife, ParseLifeGen, ParseRuleError};
+use std::str::FromStr;
 
 /// The neighborhood descriptor.
 ///
@@ -220,8 +219,19 @@ impl Life {
 
         self
     }
+}
 
-    pub fn parse_rule(input: &str) -> Result<Self, ParseRuleError> {
+/// A parser for the rule.
+impl ParseLife for Life {
+    fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
+        Self::new(b, s)
+    }
+}
+
+impl FromStr for Life {
+    type Err = ParseRuleError;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
         ParseLife::parse_rule(input)
     }
 }
@@ -339,9 +349,44 @@ impl Rule for Life {
     }
 }
 
-/// A parser for the rule.
-impl ParseLife for Life {
-    fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
-        Self::new(b, s)
+generations! {
+    /// Totalistic Life-like Generations rules.
+    pub struct LifeGen {
+        Rule: Life,
+        Parser: ParseLifeGen,
+        impl_table: [ImplFlags; 1 << 12],
+    }
+
+    fn update_desc(cell, old_state, state, change_num) {
+        let old_state_num = match old_state {
+            Some(ALIVE) => 0x01,
+            Some(_) => 0x10,
+            None => 0,
+        };
+        let state_num = match state {
+            Some(ALIVE) => 0x01,
+            Some(_) => 0x10,
+            None => 0,
+        };
+        for &neigh in cell.nbhd.iter() {
+            let neigh = neigh.unwrap();
+            let mut desc = neigh.desc.get();
+            desc.desc.0 -= old_state_num << 4;
+            desc.desc.0 += state_num << 4;
+            neigh.desc.set(desc);
+        }
+    }
+
+    fn consistify<'a>(world, cell, flags) {
+        if flags.intersects(ImplFlags::NBHD_ALIVE) {
+            for &neigh in cell.nbhd.iter() {
+                if let Some(neigh) = neigh {
+                    if neigh.state.get().is_none() && !world.set_cell(neigh, ALIVE, Reason::Deduce)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
     }
 }

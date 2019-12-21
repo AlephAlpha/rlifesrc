@@ -411,7 +411,7 @@ mod test {
 
     #[test]
     fn test_world() {
-        let rule = Life::parse_rule(&"B3/S23").unwrap();
+        let rule = "B3/S23".parse::<Life>().unwrap();
         let config = Config::new(3, 3, 2);
         let mut world = World::new(&config, rule);
 

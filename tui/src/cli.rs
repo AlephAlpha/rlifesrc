@@ -120,7 +120,7 @@ pub fn parse_args() -> Option<Args> {
                 .takes_value(true)
                 .default_value("B3/S23")
                 .validator(|d| {
-                    NtLifeGen::parse_rule(&d)
+                    d.parse::<NtLifeGen>()
                         .map(|_| ())
                         .map_err(|e| e.to_string())
                 }),

@@ -3,6 +3,7 @@
 //! For the notations of rule strings, please see
 //! [this article on LifeWiki](https://www.conwaylife.com/wiki/Rulestring).
 
+mod generations;
 mod life;
 mod ntlife;
 
@@ -10,8 +11,8 @@ use crate::{
     cells::{CellRef, State},
     world::World,
 };
-pub use life::{gen::LifeGen, Life};
-pub use ntlife::{gen::NtLifeGen, NtLife};
+pub use life::{Life, LifeGen};
+pub use ntlife::{NtLife, NtLifeGen};
 
 /// A cellular automaton rule.
 pub trait Rule: Sized {

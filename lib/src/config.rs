@@ -505,11 +505,11 @@ impl Config {
     /// the first generation, applying the transformation first,
     /// and then the translation defined by `dx` and `dy`.
     pub fn world(&self) -> Result<Box<dyn Search>, Box<dyn Error>> {
-        if let Ok(rule) = Life::parse_rule(&self.rule_string) {
+        if let Ok(rule) = self.rule_string.parse::<Life>() {
             Ok(Box::new(World::new(&self, rule)))
-        } else if let Ok(rule) = NtLife::parse_rule(&self.rule_string) {
+        } else if let Ok(rule) = self.rule_string.parse::<NtLife>() {
             Ok(Box::new(World::new(&self, rule)))
-        } else if let Ok(rule) = LifeGen::parse_rule(&self.rule_string) {
+        } else if let Ok(rule) = self.rule_string.parse::<LifeGen>() {
             if rule.gen() > 2 {
                 Ok(Box::new(World::new(&self, rule)))
             } else {
@@ -517,7 +517,7 @@ impl Config {
                 Ok(Box::new(World::new(&self, rule)))
             }
         } else {
-            let rule = NtLifeGen::parse_rule(&self.rule_string)?;
+            let rule = self.rule_string.parse::<NtLifeGen>()?;
             if rule.gen() > 2 {
                 Ok(Box::new(World::new(&self, rule)))
             } else {

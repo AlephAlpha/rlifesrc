@@ -1,7 +1,5 @@
 //! Non-totalistic Life-like rules.
 
-pub mod gen;
-
 use crate::{
     cells::{CellRef, State, ALIVE, DEAD},
     rules::Rule,
@@ -9,7 +7,8 @@ use crate::{
     world::World,
 };
 use bitflags::bitflags;
-use ca_rules::{ParseNtLife, ParseRuleError};
+use ca_rules::{ParseNtLife, ParseNtLifeGen, ParseRuleError};
+use std::str::FromStr;
 
 /// The neighborhood descriptor.
 ///
@@ -223,8 +222,19 @@ impl NtLife {
 
         self
     }
+}
 
-    pub fn parse_rule(input: &str) -> Result<Self, ParseRuleError> {
+/// A parser for the rule.
+impl ParseNtLife for NtLife {
+    fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
+        Self::new(b, s)
+    }
+}
+
+impl FromStr for NtLife {
+    type Err = ParseRuleError;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
         ParseNtLife::parse_rule(input)
     }
 }
@@ -340,9 +350,41 @@ impl Rule for NtLife {
     }
 }
 
-/// A parser for the rule.
-impl ParseNtLife for NtLife {
-    fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
-        Self::new(b, s)
+generations! {
+    /// Totalistic Life-like Generations rules.
+    pub struct NtLifeGen {
+        Rule: NtLife,
+        Parser: ParseNtLifeGen,
+        impl_table: Vec<ImplFlags>,
+    }
+
+    fn update_desc(cell, old_state, state, change_num) {
+        let nbhd_change_num = match (state, old_state) {
+            (Some(ALIVE), Some(ALIVE)) => 0x0000,
+            (Some(_), Some(ALIVE)) | (Some(ALIVE), Some(_)) => 0x0101,
+            (Some(ALIVE), None) | (None, Some(ALIVE)) => 0x0001,
+            (Some(_), None) | (None, Some(_)) => 0x0100,
+            _ => 0x0000,
+        };
+        for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
+            let neigh = neigh.unwrap();
+            let mut desc = neigh.desc.get();
+            desc.desc.0 ^= nbhd_change_num << i << 4;
+            neigh.desc.set(desc);
+        }
+    }
+
+    fn consistify<'a>(world, cell, flags) {
+        if flags.intersects(ImplFlags::NBHD) {
+            for (i, &neigh) in cell.nbhd.iter().enumerate() {
+                if flags.intersects(ImplFlags::from_bits(1 << (2 * i + 6)).unwrap()) {
+                    if let Some(neigh) = neigh {
+                        if !world.set_cell(neigh, ALIVE, Reason::Deduce) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
     }
 }
