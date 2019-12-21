@@ -3,7 +3,21 @@ rust:
   - stable
   - beta
   - nightly
-matrix:
+cache: cargo
+jobs:
   allow_failures:
     - rust: nightly
   fast_finish: true
+before_install:
+  - rustup component add rustfmt
+  - rustup component add clippy
+  - rustup target add wasm32-unknown-unknown
+install:
+  - cargo install cargo-web
+script:
+  - cargo fmt --all -- --check
+  - cargo clippy -- --deny=warnings
+  - cargo build --verbose
+  - cargo test --verbose --all-features
+  - cd web; cargo web build --verbose; cd ..
+  - cd web; cargo web test --verbose; cd ..
