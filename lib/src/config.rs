@@ -1,6 +1,7 @@
 //! World configuration.
 
 use crate::{
+    cells::Coord,
     rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
     search::Search,
     world::World,
@@ -453,6 +454,44 @@ impl Config {
                 }
             }
         })
+    }
+
+    /// Applies the transformation and translation to a coord.
+    pub(crate) fn translate(&self, coord: Coord) -> Coord {
+        let (mut x, mut y, mut t) = coord;
+        while t < 0 {
+            t += self.period;
+            let (new_x, new_y) = match self.transform {
+                Transform::Id => (x, y),
+                Transform::Rotate90 => (self.height - 1 - y, x),
+                Transform::Rotate180 => (self.width - 1 - x, self.height - 1 - y),
+                Transform::Rotate270 => (y, self.width - 1 - x),
+                Transform::FlipRow => (x, self.height - 1 - y),
+                Transform::FlipCol => (self.width - 1 - x, y),
+                Transform::FlipDiag => (y, x),
+                Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
+            };
+            x = new_x - self.dx;
+            y = new_y - self.dy;
+        }
+        while t >= self.period {
+            t -= self.period;
+            x += self.dx;
+            y += self.dy;
+            let (new_x, new_y) = match self.transform {
+                Transform::Id => (x, y),
+                Transform::Rotate90 => (y, self.width - 1 - x),
+                Transform::Rotate180 => (self.width - 1 - x, self.height - 1 - y),
+                Transform::Rotate270 => (self.height - 1 - y, x),
+                Transform::FlipRow => (x, self.height - 1 - y),
+                Transform::FlipCol => (self.width - 1 - x, y),
+                Transform::FlipDiag => (y, x),
+                Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
+            };
+            x = new_x;
+            y = new_y;
+        }
+        (x, y, t)
     }
 
     /// Creates a new world from the configuration.

@@ -6,7 +6,6 @@ use crate::{
     rules::Rule,
     search::{Reason, SetCell},
 };
-use std::fmt::Write;
 
 /// The world.
 pub struct World<'a, R: Rule> {
@@ -149,8 +148,8 @@ impl<'a, R: Rule> World<'a, R> {
             search_index: 0,
         }
         .init_nbhd()
-        .init_pred_succ(config.dx, config.dy, config.transform)
-        .init_sym(config.symmetry)
+        .init_pred_succ()
+        .init_sym()
         .init_state()
         .init_search_order(search_order)
     }
@@ -193,7 +192,7 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// If the successor is out of the search range,
     /// then sets it to `None`.
-    fn init_pred_succ(mut self, dx: isize, dy: isize, transform: Transform) -> Self {
+    fn init_pred_succ(mut self) -> Self {
         for x in -1..=self.config.width {
             for y in -1..=self.config.height {
                 for t in 0..self.config.period {
@@ -206,21 +205,7 @@ impl<'a, R: Rule> World<'a, R> {
                             cell.pred = self.find_cell((x, y, t - 1));
                         }
                     } else {
-                        let (new_x, new_y) = match transform {
-                            Transform::Id => (x, y),
-                            Transform::Rotate90 => (self.config.height - 1 - y, x),
-                            Transform::Rotate180 => {
-                                (self.config.width - 1 - x, self.config.height - 1 - y)
-                            }
-                            Transform::Rotate270 => (y, self.config.width - 1 - x),
-                            Transform::FlipRow => (x, self.config.height - 1 - y),
-                            Transform::FlipCol => (self.config.width - 1 - x, y),
-                            Transform::FlipDiag => (y, x),
-                            Transform::FlipAntidiag => {
-                                (self.config.height - 1 - y, self.config.width - 1 - x)
-                            }
-                        };
-                        let pred = self.find_cell((new_x - dx, new_y - dy, self.config.period - 1));
+                        let pred = self.find_cell(self.config.translate((x, y, t - 1)));
                         if pred.is_some() {
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();
@@ -242,24 +227,9 @@ impl<'a, R: Rule> World<'a, R> {
                             cell.succ = self.find_cell((x, y, t + 1));
                         }
                     } else {
-                        let (x, y) = (x + dx, y + dy);
-                        let (new_x, new_y) = match transform {
-                            Transform::Id => (x, y),
-                            Transform::Rotate90 => (y, self.config.width - 1 - x),
-                            Transform::Rotate180 => {
-                                (self.config.width - 1 - x, self.config.height - 1 - y)
-                            }
-                            Transform::Rotate270 => (self.config.height - 1 - y, x),
-                            Transform::FlipRow => (x, self.config.height - 1 - y),
-                            Transform::FlipCol => (self.config.width - 1 - x, y),
-                            Transform::FlipDiag => (y, x),
-                            Transform::FlipAntidiag => {
-                                (self.config.height - 1 - y, self.config.width - 1 - x)
-                            }
-                        };
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
-                            cell.succ = self.find_cell((new_x, new_y, 0));
+                            cell.succ = self.find_cell(self.config.translate((x, y, t + 1)));
                         }
                     }
                 }
@@ -272,14 +242,14 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// If some symmetric cell is out of the search range,
     /// then  marks the current cell as known.
-    fn init_sym(mut self, symmetry: Symmetry) -> Self {
+    fn init_sym(mut self) -> Self {
         for x in -1..=self.config.width {
             for y in -1..=self.config.height {
                 for t in 0..self.config.period {
                     let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
 
-                    let sym_coords = match symmetry {
+                    let sym_coords = match self.config.symmetry {
                         Symmetry::C1 => vec![],
                         Symmetry::C2 => {
                             vec![(self.config.width - 1 - x, self.config.height - 1 - y, t)]
@@ -464,51 +434,6 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Displays the whole world in some generation.
-    ///
-    /// Uses a mix of [Plaintext](https://www.conwaylife.com/wiki/Plaintext) and
-    /// [RLE](https://www.conwaylife.com/wiki/Rle) format.
-    ///
-    /// * **Dead** cells are represented by `.`;
-    /// * **Living** cells are represented by `o` for rules with 2 states,
-    ///   `A` for rules with more states;
-    /// * **Dying** cells are represented by uppercase letters starting from `B`;
-    /// * **Unknown** cells are represented by `?`.
-    pub(crate) fn display_gen(&self, t: isize) -> String {
-        let mut str = String::new();
-        writeln!(
-            str,
-            "x = {}, y = {}, rule = {}",
-            self.config.width, self.config.height, self.config.rule_string
-        )
-        .unwrap();
-        let t = t % self.config.period;
-        for y in 0..self.config.height {
-            for x in 0..self.config.width {
-                let state = self.find_cell((x, y, t)).unwrap().state.get();
-                match state {
-                    Some(DEAD) => str.push('.'),
-                    Some(ALIVE) => {
-                        if self.rule.gen() == 2 {
-                            str.push('o')
-                        } else {
-                            str.push('A')
-                        }
-                    }
-                    Some(State(i)) => str.push((b'A' + i as u8 - 1) as char),
-                    _ => str.push('?'),
-                };
-            }
-            if y == self.config.height - 1 {
-                str.push('!')
-            } else {
-                str.push('$')
-            };
-            str.push('\n');
-        }
-        str
-    }
-
     /// Gets a references to the first unknown cell since `index` in the `search_list`.
     pub(crate) fn get_unknown(&self, index: usize) -> Option<(usize, CellRef<'a, R>)> {
         self.search_list[index..]
@@ -534,5 +459,12 @@ impl<'a, R: Rule> World<'a, R> {
                         .chunks(self.config.period as usize)
                         .any(|c| c[0].state.get() != c[t as usize].state.get())
             })
+    }
+
+    /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
+    pub fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, ()> {
+        self.find_cell(self.config.translate(coord))
+            .map(|cell| cell.state.get())
+            .ok_or(())
     }
 }

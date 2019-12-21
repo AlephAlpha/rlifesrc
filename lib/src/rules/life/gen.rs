@@ -65,6 +65,8 @@ impl LifeGen {
 impl Rule for LifeGen {
     type Desc = NbhdDescGen;
 
+    const IS_GEN: bool = true;
+
     fn has_b0(&self) -> bool {
         self.b0
     }

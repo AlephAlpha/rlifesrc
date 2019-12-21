@@ -229,6 +229,8 @@ impl Life {
 impl Rule for Life {
     type Desc = NbhdDesc;
 
+    const IS_GEN: bool = false;
+
     fn has_b0(&self) -> bool {
         self.b0
     }

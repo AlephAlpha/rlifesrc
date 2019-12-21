@@ -232,6 +232,8 @@ impl NtLife {
 impl Rule for NtLife {
     type Desc = NbhdDesc;
 
+    const IS_GEN: bool = false;
+
     fn has_b0(&self) -> bool {
         self.b0
     }

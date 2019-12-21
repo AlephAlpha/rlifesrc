@@ -21,6 +21,9 @@ pub trait Rule: Sized {
     /// and is used to determine the state of the cell in the next generation.
     type Desc: Copy;
 
+    /// Whether the rule is a Generations rule.
+    const IS_GEN: bool;
+
     /// Whether the rule contains `B0`.
     ///
     /// In other words, whether a cell would become `Alive` in the next

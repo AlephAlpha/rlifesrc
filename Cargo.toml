@@ -1,2 +1,3 @@
 [workspace]
 members = ["lib", "tui", "web"]
+default-members = ["lib", "tui"]

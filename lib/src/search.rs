@@ -1,11 +1,12 @@
 //! The search process.
 use crate::{
-    cells::{CellRef, State},
+    cells::{CellRef, Coord, State, ALIVE, DEAD},
     config::{Config, NewState},
     rules::Rule,
     world::World,
 };
 use rand::{thread_rng, Rng};
+use std::fmt::Write;
 
 #[cfg(feature = "serialize")]
 use crate::save::WorldSer;
@@ -137,16 +138,19 @@ impl<'a, R: Rule> World<'a, R> {
                 Reason::Decide(i) => {
                     self.check_index = self.set_stack.len();
                     self.search_index = i + 1;
-                    let State(j) = cell.state.get().unwrap();
-                    let state = State((j + 1) % self.rule.gen());
-                    self.clear_cell(cell);
-                    if self.rule.gen() == 2 {
+                    if R::IS_GEN {
+                        let State(j) = cell.state.get().unwrap();
+                        let state = State((j + 1) % self.rule.gen());
+                        self.clear_cell(cell);
+                        if self.set_cell(cell, state, Reason::TryAnother(i, self.rule.gen() - 2)) {
+                            return true;
+                        }
+                    } else {
+                        let state = !cell.state.get().unwrap();
+                        self.clear_cell(cell);
                         if self.set_cell(cell, state, Reason::Deduce) {
                             return true;
                         }
-                    } else if self.set_cell(cell, state, Reason::TryAnother(i, self.rule.gen() - 2))
-                    {
-                        return true;
                     }
                 }
                 Reason::TryAnother(i, n) => {
@@ -266,15 +270,14 @@ pub trait Search {
     /// and no results are found.
     fn search(&mut self, max_step: Option<u64>) -> Status;
 
-    /// Displays the whole world in some generation.
-    ///
-    /// * **Dead** cells are represented by `.`;
-    /// * **Living** cells are represented by `O`;
-    /// * **Unknown** cells are represented by `?`.
-    fn display_gen(&self, t: isize) -> String;
+    /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
+    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, ()>;
 
     /// World configuration.
     fn config(&self) -> &Config;
+
+    /// Whether the rule is a Generations rule.
+    fn is_gen_rule(&self) -> bool;
 
     /// Number of known living cells in some generation.
     fn cell_count_gen(&self, t: isize) -> usize;
@@ -295,6 +298,53 @@ pub trait Search {
     /// Saves the world as a `WorldSer`,
     /// which can be easily serialized.
     fn ser(&self) -> WorldSer;
+
+    /// Displays the whole world in some generation.
+    ///
+    /// Uses a mix of [Plaintext](https://www.conwaylife.com/wiki/Plaintext) and
+    /// [RLE](https://www.conwaylife.com/wiki/Rle) format.
+    ///
+    /// * **Dead** cells are represented by `.`;
+    /// * **Living** cells are represented by `o` for rules with 2 states,
+    ///   `A` for rules with more states;
+    /// * **Dying** cells are represented by uppercase letters starting from `B`;
+    /// * **Unknown** cells are represented by `?`.
+    fn display_gen(&self, t: isize) -> String {
+        let mut str = String::new();
+        writeln!(
+            str,
+            "x = {}, y = {}, rule = {}",
+            self.config().width,
+            self.config().height,
+            self.config().rule_string
+        )
+        .unwrap();
+        let t = t % self.config().period;
+        for y in 0..self.config().height {
+            for x in 0..self.config().width {
+                let state = self.get_cell_state((x, y, t)).unwrap();
+                match state {
+                    Some(DEAD) => str.push('.'),
+                    Some(ALIVE) => {
+                        if self.is_gen_rule() {
+                            str.push('A')
+                        } else {
+                            str.push('o')
+                        }
+                    }
+                    Some(State(i)) => str.push((b'A' + i as u8 - 1) as char),
+                    _ => str.push('?'),
+                };
+            }
+            if y == self.config().height - 1 {
+                str.push('!')
+            } else {
+                str.push('$')
+            };
+            str.push('\n');
+        }
+        str
+    }
 }
 
 /// The `Search` trait is implemented for every `World`.
@@ -303,12 +353,16 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.search(max_step)
     }
 
-    fn display_gen(&self, t: isize) -> String {
-        self.display_gen(t)
+    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, ()> {
+        self.get_cell_state(coord)
     }
 
     fn config(&self) -> &Config {
         &self.config
+    }
+
+    fn is_gen_rule(&self) -> bool {
+        R::IS_GEN
     }
 
     fn cell_count_gen(&self, t: isize) -> usize {

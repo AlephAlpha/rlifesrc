@@ -65,6 +65,8 @@ impl NtLifeGen {
 impl Rule for NtLifeGen {
     type Desc = NbhdDescGen;
 
+    const IS_GEN: bool = true;
+
     fn has_b0(&self) -> bool {
         self.b0
     }
