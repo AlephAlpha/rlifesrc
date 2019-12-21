@@ -47,6 +47,7 @@
 
 mod cells;
 mod config;
+mod error;
 pub mod rules;
 mod search;
 mod world;
@@ -56,8 +57,9 @@ mod save;
 
 pub use cells::{State, ALIVE, DEAD};
 pub use config::{Config, NewState, SearchOrder, Symmetry, Transform};
+pub use error::Error;
 pub use search::{Search, Status};
 pub use world::World;
 
 #[cfg(feature = "serialize")]
-pub use save::{SetCellError, WorldSer};
+pub use save::WorldSer;

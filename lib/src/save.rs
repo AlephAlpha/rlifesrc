@@ -4,15 +4,12 @@
 use crate::{
     cells::{Coord, State},
     config::Config,
+    error::Error,
     rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
     search::{Reason, Search, SetCell},
     world::World,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    error::Error,
-    fmt::{self, Display, Formatter},
-};
 
 /// A representation of `SetCell` which can be easily serialized.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,7 +61,7 @@ pub struct WorldSer {
 
 impl WorldSer {
     /// Restores the world from the `WorldSer`, with the given rule.
-    fn world_with_rule<'a, R: Rule>(&self, rule: R) -> Result<World<'a, R>, Box<dyn Error>> {
+    fn world_with_rule<'a, R: Rule>(&self, rule: R) -> Result<World<'a, R>, Error> {
         let mut world = World::new(&self.config, rule);
         for &SetCellSer {
             coord,
@@ -72,10 +69,10 @@ impl WorldSer {
             reason,
         } in self.set_stack.iter()
         {
-            let cell = world.find_cell(coord).ok_or(SetCellError { coord })?;
+            let cell = world.find_cell(coord).ok_or(Error::SetCellError(coord))?;
             if let Some(old_state) = cell.state.get() {
                 if old_state != state {
-                    return Err(Box::new(SetCellError { coord }));
+                    return Err(Error::SetCellError(coord));
                 }
             } else {
                 world.set_cell(cell, state, reason);
@@ -88,7 +85,7 @@ impl WorldSer {
     }
 
     /// Restores the world from the `WorldSer`.
-    pub fn world(&self) -> Result<Box<dyn Search>, Box<dyn Error>> {
+    pub fn world(&self) -> Result<Box<dyn Search>, Error> {
         if let Ok(rule) = self.config.rule_string.parse::<Life>() {
             let world = self.world_with_rule(rule)?;
             Ok(Box::new(world))
@@ -105,7 +102,11 @@ impl WorldSer {
                 Ok(Box::new(world))
             }
         } else {
-            let rule = self.config.rule_string.parse::<NtLifeGen>()?;
+            let rule = self
+                .config
+                .rule_string
+                .parse::<NtLifeGen>()
+                .map_err(Error::ParseRuleError)?;
             if rule.gen() > 2 {
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))
@@ -130,17 +131,3 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 }
-
-/// Errors when trying to set a cell.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SetCellError {
-    coord: Coord,
-}
-
-impl Display for SetCellError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "Unable to set cell at {:?}.", self.coord)
-    }
-}
-
-impl Error for SetCellError {}

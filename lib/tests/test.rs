@@ -1,15 +1,14 @@
-use rlifesrc_lib::{Config, Status, Symmetry, Transform};
-use std::error::Error;
+use rlifesrc_lib::{Config, Error, Status, Symmetry, Transform};
 
 #[test]
-fn default() -> Result<(), Box<dyn Error>> {
+fn default() -> Result<(), Error> {
     let mut search = Config::default().world()?;
     assert_eq!(search.search(None), Status::Found);
     Ok(())
 }
 
 #[test]
-fn not_found() -> Result<(), Box<dyn Error>> {
+fn not_found() -> Result<(), Error> {
     let config = Config::new(5, 5, 3);
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::None);
@@ -17,7 +16,7 @@ fn not_found() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn max_cell_count() -> Result<(), Box<dyn Error>> {
+fn max_cell_count() -> Result<(), Error> {
     let config = Config::new(5, 5, 1).set_max_cell_count(Some(5));
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
@@ -27,7 +26,7 @@ fn max_cell_count() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn reduce_max() -> Result<(), Box<dyn Error>> {
+fn reduce_max() -> Result<(), Error> {
     let config = Config::new(5, 5, 1)
         .set_max_cell_count(Some(5))
         .set_reduce_max(true);
@@ -38,7 +37,7 @@ fn reduce_max() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn p3_spaceship() -> Result<(), Box<dyn Error>> {
+fn p3_spaceship() -> Result<(), Error> {
     let config = Config::new(16, 5, 3).set_translate(0, 1);
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
@@ -57,7 +56,7 @@ fn p3_spaceship() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn lwss() -> Result<(), Box<dyn Error>> {
+fn lwss() -> Result<(), Error> {
     let config = Config::new(6, 6, 4).set_translate(0, 2);
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
@@ -65,7 +64,7 @@ fn lwss() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn lwss_flip() -> Result<(), Box<dyn Error>> {
+fn lwss_flip() -> Result<(), Error> {
     let config = Config::new(5, 5, 2)
         .set_translate(0, 1)
         .set_transform(Transform::FlipCol);
@@ -75,7 +74,7 @@ fn lwss_flip() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn turtle() -> Result<(), Box<dyn Error>> {
+fn turtle() -> Result<(), Error> {
     let config = Config::new(12, 13, 3)
         .set_translate(0, 1)
         .set_symmetry(Symmetry::D2Col);
@@ -85,7 +84,7 @@ fn turtle() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn p3_2333() -> Result<(), Box<dyn Error>> {
+fn p3_2333() -> Result<(), Error> {
     let config = Config::new(4, 4, 3).set_rule_string("23/3/3".to_owned());
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
@@ -94,7 +93,7 @@ fn p3_2333() -> Result<(), Box<dyn Error>> {
 
 #[test]
 #[cfg(feature = "serialize")]
-fn ser() -> Result<(), Box<dyn Error>> {
+fn ser() -> Result<(), Error> {
     let config = Config::new(16, 5, 3).set_translate(0, 1);
     let mut search = config.world()?;
     assert_eq!(search.search(Some(100)), Status::Searching);

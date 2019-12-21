@@ -2,6 +2,7 @@
 use crate::{
     cells::{CellRef, Coord, State, ALIVE, DEAD},
     config::{Config, NewState},
+    error::Error,
     rules::Rule,
     world::World,
 };
@@ -271,7 +272,7 @@ pub trait Search {
     fn search(&mut self, max_step: Option<u64>) -> Status;
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
-    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, ()>;
+    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error>;
 
     /// World configuration.
     fn config(&self) -> &Config;
@@ -353,7 +354,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.search(max_step)
     }
 
-    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, ()> {
+    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error> {
         self.get_cell_state(coord)
     }
 

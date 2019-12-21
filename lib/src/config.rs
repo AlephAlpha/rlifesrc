@@ -2,6 +2,7 @@
 
 use crate::{
     cells::Coord,
+    error::Error,
     rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
     search::Search,
     world::World,
@@ -9,7 +10,6 @@ use crate::{
 use derivative::Derivative;
 use std::{
     cmp::Ordering,
-    error::Error,
     fmt::{self, Debug, Formatter},
     str::FromStr,
 };
@@ -504,7 +504,7 @@ impl Config {
     /// After the last generation, the pattern will return to
     /// the first generation, applying the transformation first,
     /// and then the translation defined by `dx` and `dy`.
-    pub fn world(&self) -> Result<Box<dyn Search>, Box<dyn Error>> {
+    pub fn world(&self) -> Result<Box<dyn Search>, Error> {
         if let Ok(rule) = self.rule_string.parse::<Life>() {
             Ok(Box::new(World::new(&self, rule)))
         } else if let Ok(rule) = self.rule_string.parse::<NtLife>() {
@@ -517,7 +517,10 @@ impl Config {
                 Ok(Box::new(World::new(&self, rule)))
             }
         } else {
-            let rule = self.rule_string.parse::<NtLifeGen>()?;
+            let rule = self
+                .rule_string
+                .parse::<NtLifeGen>()
+                .map_err(Error::ParseRuleError)?;
             if rule.gen() > 2 {
                 Ok(Box::new(World::new(&self, rule)))
             } else {

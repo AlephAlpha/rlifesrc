@@ -3,6 +3,7 @@
 use crate::{
     cells::{CellRef, Coord, LifeCell, State, ALIVE, DEAD},
     config::{Config, SearchOrder, Symmetry, Transform},
+    error::Error,
     rules::Rule,
     search::{Reason, SetCell},
 };
@@ -462,9 +463,9 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
-    pub fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, ()> {
+    pub fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error> {
         self.find_cell(self.config.translate(coord))
             .map(|cell| cell.state.get())
-            .ok_or(())
+            .ok_or(Error::GetCellError(coord))
     }
 }
