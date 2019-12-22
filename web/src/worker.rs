@@ -2,8 +2,8 @@ use rlifesrc_lib::{Config, Search, Status, WorldSer};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::{
+    agent::{Agent, AgentLink, HandlerId, Public},
     services::{Task, TimeoutService},
-    worker::*,
     Callback,
 };
 
@@ -95,7 +95,7 @@ impl Agent for Worker {
     type Output = Response;
 
     fn create(link: AgentLink<Self>) -> Self {
-        let config: Config = Default::default();
+        let config: Config = Config::default();
         let search = config.world().unwrap();
 
         let status = Status::Paused;

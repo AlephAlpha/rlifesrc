@@ -1,7 +1,7 @@
 //! Cellular automata rules.
 //!
 //! For the notations of rule strings, please see
-//! [this article on LifeWiki](https://www.conwaylife.com/wiki/Rulestring).
+//! [this article on LifeWiki](https://conwaylife.com/wiki/Rulestring).
 
 mod generations;
 mod life;

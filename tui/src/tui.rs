@@ -26,7 +26,7 @@ impl SearchWindow {
         let gen = 0;
         let status = Status::Paused;
         let start_time: Option<Instant> = None;
-        let timing = Default::default();
+        let timing = Duration::default();
         let window = pancurses::initscr();
         let (win_y, win_x) = window.get_max_yx();
         let top_bar = window.subwin(1, win_x, 0, 0).unwrap();
@@ -175,7 +175,7 @@ pub fn search_with_tui(mut search: Box<dyn Search>, reset: bool) {
                     search_win.update(&search);
                     if reset {
                         search_win.start_time = None;
-                        search_win.timing = Default::default();
+                        search_win.timing = Duration::default();
                     }
                 }
             },

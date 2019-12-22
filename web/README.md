@@ -4,7 +4,7 @@
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 JavaScript 的情况下弄成一个网页，写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
-支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://www.conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
+支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
 
 [点此试用。](https://alephalpha.github.io/rlifesrc/)
 
@@ -73,7 +73,7 @@ cp static/* some_folder/
   <dd>
   元胞自动机的规则
 
-  支持 Life-like 和 Isotropic non-totalistic 的规则
+  支持 Life-like 和 Isotropic non-totalistic 的规则，以及相应的 Generations 规则
   </dd>
 
   <dt>Width</dt>
@@ -107,7 +107,7 @@ cp static/* some_folder/
 
   图样在一个周期中的变化相当于先进行此变换，再进行平移。
 
-  8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`Rotate` 表示旋转， 后面的数字表示逆时针旋转的角度。`Flip` 表示翻转， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://www.conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `Flip |`。
+  8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`Rotate` 表示旋转， 后面的数字表示逆时针旋转的角度。`Flip` 表示翻转， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `Flip |`。
 
   注意有些变换要求世界是正方形。
   </dd>

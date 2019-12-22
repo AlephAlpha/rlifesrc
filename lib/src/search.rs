@@ -302,8 +302,8 @@ pub trait Search {
 
     /// Displays the whole world in some generation.
     ///
-    /// Uses a mix of [Plaintext](https://www.conwaylife.com/wiki/Plaintext) and
-    /// [RLE](https://www.conwaylife.com/wiki/Rle) format.
+    /// Uses a mix of [Plaintext](https://conwaylife.com/wiki/Plaintext) and
+    /// [RLE](https://conwaylife.com/wiki/Rle) format.
     ///
     /// * **Dead** cells are represented by `.`;
     /// * **Living** cells are represented by `o` for rules with 2 states,

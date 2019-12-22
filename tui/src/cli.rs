@@ -113,7 +113,8 @@ pub fn parse_args() -> Option<Args> {
                 .help("Rule of the cellular automaton")
                 .long_help(
                     "Rule of the cellular automaton\n\
-                     Supports Life-like and isotropic non-totalistic rules.\n",
+                     Supports Life-like and isotropic non-totalistic rules, \
+                     and the corresponding Generations rules.\n",
                 )
                 .short("r")
                 .long("rule")

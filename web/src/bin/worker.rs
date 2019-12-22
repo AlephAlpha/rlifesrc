@@ -1,4 +1,4 @@
-use rlifesrc_web::worker::Worker;
+use rlifesrc_web::Worker;
 use yew::agent::Threaded;
 
 fn main() {

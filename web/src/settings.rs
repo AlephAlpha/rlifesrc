@@ -1,34 +1,24 @@
-use crate::worker::{Request, Response, Worker};
-use rlifesrc_lib::{Config, NewState, SearchOrder, Status, Symmetry, Transform};
-use std::time::Duration;
+use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
 use yew::{
-    format::Json,
-    html,
-    html::ChangeData,
-    services::{storage::Area, DialogService, IntervalService, StorageService, Task},
-    *,
+    html, html::ChangeData, Callback, Component, ComponentLink, Html, Properties, ShouldRender,
 };
 
-const KEY: &str = "rlifesrc.world";
-
-pub struct Model {
+pub struct Settings {
+    callback: Callback<Config>,
     config: Config,
-    status: Status,
-    gen: isize,
-    cells: usize,
-    world: String,
-    period: isize,
-    worker: Box<dyn Bridge<Worker>>,
-    storage: StorageService,
-    job: Job,
+    rule_is_valid: bool,
+}
+
+#[derive(Properties)]
+pub struct Props {
+    #[props(required)]
+    pub config: Config,
+    #[props(required)]
+    pub callback: Callback<Config>,
 }
 
 pub enum Msg {
-    Tick,
-    Start,
-    Pause,
-    IncGen,
-    DecGen,
+    Apply,
     SetWidth(isize),
     SetHeight(isize),
     SetPeriod(isize),
@@ -42,113 +32,24 @@ pub enum Msg {
     SetMax(Option<usize>),
     SetFront,
     SetReduce,
-    Reset,
-    Store,
-    Restore,
-    DataReceived(Response),
     None,
 }
 
-struct Job {
-    interval: IntervalService,
-    callback: Callback<()>,
-    task: Option<Box<dyn Task>>,
-}
-
-impl Job {
-    fn new(link: &mut ComponentLink<Model>) -> Self {
-        let interval = IntervalService::new();
-        let callback = link.send_back(|_| Msg::Tick);
-        let task = None;
-        Job {
-            interval,
-            callback,
-            task,
-        }
-    }
-
-    fn start(&mut self) {
-        let handle = self
-            .interval
-            .spawn(Duration::from_millis(1000 / 60), self.callback.clone());
-        self.task = Some(Box::new(handle));
-    }
-
-    fn stop(&mut self) {
-        if let Some(mut task) = self.task.take() {
-            task.cancel();
-        }
-    }
-}
-
-impl Component for Model {
+impl Component for Settings {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Props;
 
-    fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let config: Config = Default::default();
-        let status = Status::Paused;
-        let job = Job::new(&mut link);
-        let callback = link.send_back(Msg::DataReceived);
-        let worker = Worker::bridge(callback);
-        let storage = StorageService::new(Area::Local);
-
-        let world = String::from(
-            "x = 16, y = 16, rule = B3/S23\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????$\n\
-             ????????????????!",
-        );
-        let period = config.period;
-
-        Model {
-            config,
-            status,
-            gen: 0,
-            cells: 0,
-            world,
-            period,
-            worker,
-            storage,
-            job,
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        let rule_is_valid = props.config.rule_string.parse::<NtLifeGen>().is_ok();
+        Settings {
+            callback: props.callback,
+            config: props.config,
+            rule_is_valid,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Tick => {
-                self.worker.send(Request::DisplayGen(self.gen));
-                return false;
-            }
-            Msg::Start => {
-                self.worker.send(Request::Start);
-                return false;
-            }
-            Msg::Pause => {
-                self.worker.send(Request::Pause);
-                return false;
-            }
-            Msg::IncGen => {
-                self.gen += 1;
-                self.worker.send(Request::DisplayGen(self.gen));
-            }
-            Msg::DecGen => {
-                self.gen -= 1;
-                self.worker.send(Request::DisplayGen(self.gen));
-            }
             Msg::SetWidth(width) => {
                 self.config.width = width;
                 if self.config.transform.square_world() || self.config.symmetry.square_world() {
@@ -177,6 +78,7 @@ impl Component for Model {
                 self.config.symmetry = symmetry;
             }
             Msg::SetRule(rule_string) => {
+                self.rule_is_valid = rule_string.parse::<NtLifeGen>().is_ok();
                 self.config.rule_string = rule_string;
             }
             Msg::SetOrder(search_order) => {
@@ -194,48 +96,8 @@ impl Component for Model {
             Msg::SetReduce => {
                 self.config.reduce_max ^= true;
             }
-            Msg::Reset => {
-                self.gen = 0;
-                self.period = self.config.period;
-                self.worker.send(Request::SetWorld(self.config.clone()));
-            }
-            Msg::DataReceived(response) => match response {
-                Response::UpdateWorld((world, cells)) => {
-                    self.world = world;
-                    self.cells = cells;
-                }
-                Response::UpdateConfig(config) => {
-                    self.config = config;
-                }
-                Response::UpdateStatus(status) => {
-                    let old_status = self.status;
-                    if self.status != status {
-                        match (old_status, status) {
-                            (Status::Searching, _) => self.job.stop(),
-                            (_, Status::Searching) => self.job.start(),
-                            _ => (),
-                        }
-                        self.status = status;
-                    }
-                }
-                Response::InvalidRule => {
-                    let mut dialog = DialogService::new();
-                    dialog.alert("Invalid rule!");
-                    return false;
-                }
-                Response::Store(world_ser) => {
-                    self.storage.store(KEY, Json(&world_ser));
-                    return false;
-                }
-            },
-            Msg::Store => {
-                self.worker.send(Request::Store);
-                return false;
-            }
-            Msg::Restore => {
-                if let Json(Ok(world_ser)) = self.storage.restore(KEY) {
-                    self.worker.send(Request::Restore(world_ser));
-                }
+            Msg::Apply => {
+                self.callback.emit(self.config.clone());
                 return false;
             }
             Msg::None => return false,
@@ -243,178 +105,32 @@ impl Component for Model {
         true
     }
 
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        self.config != props.config && {
+            self.config = props.config;
+            self.rule_is_valid = self.config.rule_string.parse::<NtLifeGen>().is_ok();
+            true
+        }
+    }
+
     fn view(&self) -> Html<Self> {
         html! {
-            <div id="rlifesrc">
-                { self.header() }
-                { self.main() }
-                { self.footer() }
+            <div>
+                { self.apply_button() }
+                { self.settings() }
             </div>
         }
     }
 }
 
-impl Model {
-    fn header(&self) -> Html<Self> {
-        html! {
-            <header id="appbar" class="mui-appbar mui--z1">
-                <table class="mui-container-fluid">
-                    <tr class="mui--appbar-height">
-                        <td>
-                            <span id="title" class="mui--text-headline">
-                                { "Rust Life Search" }
-                            </span>
-                            <span class="mui--text-subhead mui--hidden-xs">
-                                { "A Game of Life pattern searcher written in Rust." }
-                            </span>
-                        </td>
-                        <td class="mui--text-right">
-                            <a href="https://github.com/AlephAlpha/rlifesrc/"
-                                class="mui--text-headline">
-                                <i class="fab fa-github"></i>
-                            </a>
-                        </td>
-                    </tr>
-                </table>
-            </header>
-        }
-    }
-
-    fn footer(&self) -> Html<Self> {
-        html! {
-            <footer id="footer" class="mui-container-fluid">
-                <div class="mui--text-caption mui--text-center">
-                    { "Powered by " }
-                    <a href="https://yew.rs">
-                        { "Yew" }
-                    </a>
-                    { " & " }
-                    <a href="https://www.muicss.com">
-                        { "MUI CSS" }
-                    </a>
-                </div>
-            </footer>
-        }
-    }
-
-    fn main(&self) -> Html<Self> {
-        html! {
-            <main class="mui-container-fluid">
-                <div class="mui-row">
-                    <div class="mui-col-sm-10 mui-col-sm-offset-1 mui-col-lg-8 mui-col-lg-offset-2">
-                        <div class="mui-panel">
-                            { self.data() }
-                            { self.world() }
-                            { self.buttons() }
-                        </div>
-                        <div class="mui-panel">
-                            { self.apply_button() }
-                            { self.settings() }
-                        </div>
-                    </div>
-                </div>
-            </main>
-        }
-    }
-
-    fn world(&self) -> Html<Self> {
-        html! {
-            <pre id="world">
-                { self.world.clone() }
-            </pre>
-        }
-    }
-
-    fn data(&self) -> Html<Self> {
-        html! {
-            <ul id="data" class="mui-list--inline mui--text-body2">
-                <li>
-                    <abbr title="The displayed generation.">
-                        { "Generation" }
-                    </abbr>
-                    { ": " }
-                    { self.gen }
-                    <button class="mui-btn mui-btn--small btn-tiny"
-                        disabled={ self.gen == 0 }
-                        onclick=|_| Msg::DecGen>
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <button class="mui-btn mui-btn--small btn-tiny"
-                        disabled={ self.gen == self.period - 1 }
-                        onclick=|_| Msg::IncGen>
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </li>
-                <li>
-                    <abbr title="Number of known living cells in the current generation.">
-                        { "Cell count" }
-                    </abbr>
-                    { ": " }
-                    { self.cells }
-                </li>
-                <li>
-                    {
-                        match self.status {
-                            Status::Found => "Found a result.",
-                            Status::None => "No more result.",
-                            Status::Searching => "Searching...",
-                            Status::Paused => "Paused.",
-                        }
-                    }
-                </li>
-            </ul>
-        }
-    }
-
-    fn buttons(&self) -> Html<Self> {
-        html! {
-            <div class="buttons">
-                <button class="mui-btn mui-btn--raised"
-                    disabled={ self.status == Status::Searching }
-                    onclick=|_| Msg::Start>
-                    <i class="fas fa-play"></i>
-                    <span class="mui--hidden-xs">
-                        { "Start" }
-                    </span>
-                </button>
-                <button class="mui-btn mui-btn--raised"
-                    disabled={ self.status != Status::Searching }
-                    onclick=|_| Msg::Pause>
-                    <i class="fas fa-pause"></i>
-                    <span class="mui--hidden-xs">
-                        { "Pause" }
-                    </span>
-                </button>
-                <button class="mui-btn mui-btn--raised"
-                    disabled={ self.status == Status::Searching }
-                    onclick=|_| Msg::Store>
-                    <i class="fas fa-save"></i>
-                    <span class="mui--hidden-xs">
-                        <abbr title="Store the search status in the browser.">
-                            { "Save" }
-                        </abbr>
-                    </span>
-                </button>
-                <button class="mui-btn mui-btn--raised"
-                    onclick=|_| Msg::Restore>
-                    <i class="fas fa-file-import"></i>
-                    <span class="mui--hidden-xs">
-                        <abbr title="Load the saved search status.">
-                            { "Load" }
-                        </abbr>
-                    </span>
-                </button>
-            </div>
-        }
-    }
-
+impl Settings {
     fn apply_button(&self) -> Html<Self> {
         html! {
             <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
-                    onclick=|_| Msg::Reset>
+                    onclick=|_| Msg::Apply>
                     <i class="fas fa-check"></i>
-                    <span class="mui--hidden-xs">
+                    <span>
                         <abbr title="Apply the settings and restart the search.">
                             { "Apply Settings" }
                         </abbr>
@@ -448,14 +164,16 @@ impl Model {
         html! {
             <div class="mui-textfield">
                 <label for="set_rule">
-                    <abbr title = "Rule of the cellular automaton. \
-                        Supports Life-like and isotropic non-totalistic rules.">
+                    <abbr title="Rule of the cellular automaton. \
+                        Supports Life-like and isotropic non-totalistic rules, \
+                        and the corresponding Generations rules.">
                     { "Rule" }
                     </abbr>
                     { ":" }
                 </label>
                 <input id="set_rule"
                     type="text"
+                    class=if self.rule_is_valid { "" } else { "mui--is-invalid" }
                     value={ self.config.rule_string.clone() }
                     onchange=|e| {
                         if let ChangeData::Value(v) = e {
@@ -648,7 +366,7 @@ impl Model {
                         checked={ self.config.reduce_max },
                         onclick=|_| Msg::SetReduce/>
                     <abbr title="Reduce the max cell count when a result is found.\n\
-                        The new max cell count will be set to the cell count of\
+                        The new max cell count will be set to the cell count of \
                         the current result minus one.">
                     { "Reduce max cell count" }
                     </abbr>

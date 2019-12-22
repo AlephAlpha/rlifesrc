@@ -4,7 +4,7 @@
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
-支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://www.conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://www.conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://www.conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://www.conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
+支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
 
 这里是 rlifesrc 的命令行界面和文本界面。网页版的说明见[`web/`](../web/README.md) 目录中的 `README.md`。
 
@@ -93,7 +93,8 @@ OPTIONS:
 
     -r, --rule <RULE>
             元胞自动机的规则
-            支持 Life-like 和 Isotropic non-totalistic 的规则
+            支持 Life-like 和 Isotropic non-totalistic 的规则，
+            以及相应的 Generations 规则
              [默认: B3/S23]
 
     -s, --symmetry <SYMMETRY>
@@ -138,7 +139,7 @@ ARGS:
 
 10 种不同的对称性，对应二面体群 D8 的 10 个子群。对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](http://conwaylife.com/wiki/Symmetry)。
 
-8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。`F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://www.conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
+8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。`F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
 
 注意有些变换和对称性要求世界是正方形。在网页版中，如果世界的宽和高不一致，这些变换和对称性将无法选取；如果已经选取了这样的变换或对称性，在更改宽或高时另一个值也会随之变化。
 

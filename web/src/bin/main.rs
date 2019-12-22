@@ -1,5 +1,5 @@
-use rlifesrc_web::web;
+use rlifesrc_web::App;
 
 fn main() {
-    yew::start_app::<web::Model>();
+    yew::start_app::<App>();
 }
