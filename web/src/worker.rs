@@ -18,7 +18,7 @@ struct Job {
 impl Job {
     fn new(link: &AgentLink<Worker>) -> Self {
         let timeout = TimeoutService::new();
-        let callback = link.send_back(|_| Step);
+        let callback = link.send_back(|_| WorkerMsg::Step);
         let task = None;
         Job {
             timeout,
@@ -67,7 +67,9 @@ pub enum Response {
     Store(WorldSer),
 }
 
-pub struct Step;
+pub enum WorkerMsg {
+    Step,
+}
 
 impl Worker {
     fn update_world(&mut self, id: HandlerId, gen: isize) {
@@ -90,7 +92,7 @@ impl Worker {
 
 impl Agent for Worker {
     type Reach = Public;
-    type Message = Step;
+    type Message = WorkerMsg;
     type Input = Request;
     type Output = Response;
 
@@ -109,12 +111,16 @@ impl Agent for Worker {
         }
     }
 
-    fn update(&mut self, _msg: Self::Message) {
-        if let Status::Searching = self.status {
-            self.status = self.search.search(Some(VIEW_FREQ));
-            self.job.start();
-        } else {
-            self.job.stop();
+    fn update(&mut self, msg: Self::Message) {
+        match msg {
+            WorkerMsg::Step => {
+                if let Status::Searching = self.status {
+                    self.status = self.search.search(Some(VIEW_FREQ));
+                    self.job.start();
+                } else {
+                    self.job.stop();
+                }
+            }
         }
     }
 
