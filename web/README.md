@@ -54,9 +54,9 @@ cp static/* some_folder/
 
 这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。支持 Life-like 和 Isotropic non-totalistic 的规则。
 
-进入页面后按照说明调整图样的宽度、高度、周期、平移等参数，然后点击 “Set World” 来确定这些参数。然后点 “Start” 开始搜索。如果没有反应，可能是 wasm 未加载完成，可以等一下再按一次 “Start”。
+进入页面后在 “Settings” 标签下按照说明调整图样的宽度、高度、周期、平移等参数，然后点击 “Apply settings” 来确定这些参数。然后点 “Start” 开始搜索。如果没有反应，可能是 wasm 未加载完成，可以等一下再按一次 “Start”。
 
-搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Apply Settings” 来重置世界。
+搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Reset” 来重置世界。
 
 搜索所需的时间可能很长。点击 “Save” 可以通过 [Web Storage API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Storage_API) 把当前的搜索状态保存在浏览器中，点 “Load” 可以读取。关闭浏览器，保存的搜索状态不会消失。目前尚不支持自动保存/读取。
 
@@ -64,7 +64,7 @@ cp static/* some_folder/
 
 对于两种状态的规则，用 `.` 表示死细胞，`o` 表示活细胞；对于超过两种状态的 Generations 规则，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 25 种状态的 Generations 规则。
 
-点击左上角的 “Generation” 右边的加减号可以切换显示的代数。“Cell count” 指的是当前代的活细胞个数。
+点击左上角的 “Generation” 右边的加减号，或者在数字上滚动鼠标滚轮，可以切换显示的代数。“Cell count” 指的是当前代的活细胞个数。
 
 以下是各种参数的具体说明：
 
@@ -107,7 +107,7 @@ cp static/* some_folder/
 
   图样在一个周期中的变化相当于先进行此变换，再进行平移。
 
-  8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`Rotate` 表示旋转， 后面的数字表示逆时针旋转的角度。`Flip` 表示翻转， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `Flip |`。
+  8 种不同的变换，对应二面体群 _D_<sub>8</sub> 的 8 个元素。`Id` 表示恒等变换。`Rotate` 表示旋转， 后面的数字表示逆时针旋转的角度。`Flip` 表示翻转， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `Flip |`。
 
   注意有些变换要求世界是正方形。
   </dd>
@@ -116,7 +116,7 @@ cp static/* some_folder/
   <dd>
   图样的对称性。
 
-  10 种不同的对称性，对应二面体群 D8 的 10 个子群。这些对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样。详见 [Life Wiki 上的相应说明](http://conwaylife.com/wiki/Symmetry)。
+  10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。这些对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样。详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
 
   注意有些对称性要求世界是正方形。
   </dd>
@@ -146,5 +146,12 @@ cp static/* some_folder/
   强制要求第一行/第一列非空。具体是行还是列由搜索顺序决定。
 
   在搜索宽扁或者瘦高的不对称或沿长边 `C2` 对称的图样时，勾选此选项可去掉大量的重复搜索。
+  </dd>
+
+  <dt>Reduce max cell count</dt>
+  <dd>
+  搜到结果时自动缩小活细胞个数的上界。
+
+  新的上界会被设置为当前的活细胞个数减一（只考虑活细胞最少的一代）。
   </dd>
 </dl>

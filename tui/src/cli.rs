@@ -98,7 +98,7 @@ pub fn parse_args() -> Option<Args> {
                     "Symmetry of the pattern\n\
                      You may need to add quotation marks for some of the symmetries.\n\
                      The usages of these symmetries are the same as Oscar Cunningham's \
-                     Logic Life Search.\nSee http://conwaylife.com/wiki/Symmetry \n",
+                     Logic Life Search.\nSee https://conwaylife.com/wiki/Symmetry \n",
                 )
                 .short("s")
                 .long("symmetry")

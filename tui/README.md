@@ -101,7 +101,7 @@ OPTIONS:
             图样的对称性
             其中一些对称性可能需要加上引号。
             这些对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样。
-            详见 http://conwaylife.com/wiki/Symmetry
+            详见 https://conwaylife.com/wiki/Symmetry
              [默认: C1]  [可能的值: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
     -t, --transform <TRANSFORM>    
@@ -131,15 +131,15 @@ ARGS:
             竖直方向的平移 [默认: 0]
 ```
 
-比如说，要想找到 [25P3H1V0.1](http://conwaylife.com/wiki/25P3H1V0.1)，可以用：
+比如说，要想找到 [25P3H1V0.1](https://conwaylife.com/wiki/25P3H1V0.1)，可以用：
 
 ```bash
 ./target/release/rlifesrc 16 5 3 0 1
 ```
 
-10 种不同的对称性，对应二面体群 D8 的 10 个子群。对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](http://conwaylife.com/wiki/Symmetry)。
+10 种不同的对称性，对应二面体群 D8 的 10 个子群。对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
 
-8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。`F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](http://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
+8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。`F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
 
 注意有些变换和对称性要求世界是正方形。在网页版中，如果世界的宽和高不一致，这些变换和对称性将无法选取；如果已经选取了这样的变换或对称性，在更改宽或高时另一个值也会随之变化。
 
