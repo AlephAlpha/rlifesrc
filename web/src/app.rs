@@ -50,6 +50,7 @@ pub enum Msg {
     DecGen,
     Start,
     Pause,
+    Reset,
     Store,
     Restore,
     Apply(Config),
@@ -142,6 +143,10 @@ impl Component for App {
             }
             Msg::Pause => {
                 self.worker.send(Request::Pause);
+                return false;
+            }
+            Msg::Reset => {
+                self.worker.send(Request::SetWorld(self.config.clone()));
                 return false;
             }
             Msg::Store => {
@@ -348,6 +353,17 @@ impl App {
                         { "Pause" }
                     </span>
                 </button>
+                <button class="mui-btn mui-btn--raised"
+                    disabled={ self.status == Status::Searching }
+                    onclick=|_| Msg::Reset>
+                    <i class="fas fa-redo"></i>
+                    <span class="mui--hidden-xs">
+                        <abbr title="Reset the world.">
+                            { "Reset" }
+                        </abbr>
+                    </span>
+                </button>
+                <div class="mui--visible-xs-block"></div>
                 <button class="mui-btn mui-btn--raised"
                     disabled={ self.status == Status::Searching }
                     onclick=|_| Msg::Store>

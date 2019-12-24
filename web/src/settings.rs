@@ -1,4 +1,5 @@
 use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
+use stdweb::js;
 use yew::{
     html, html::ChangeData, Callback, Component, ComponentLink, Html, Properties, ShouldRender,
 };
@@ -115,7 +116,7 @@ impl Component for Settings {
 
     fn view(&self) -> Html<Self> {
         html! {
-            <div>
+            <div class="mui-form">
                 { self.apply_button() }
                 { self.settings() }
             </div>
@@ -128,7 +129,13 @@ impl Settings {
         html! {
             <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
-                    onclick=|_| Msg::Apply>
+                    type="submit"
+                    onclick=|_| {
+                        js!{ @(no_return)
+                            mui.tabs.activate("pane-world");
+                        };
+                        Msg::Apply
+                    }>
                     <i class="fas fa-check"></i>
                     <span>
                         <abbr title="Apply the settings and restart the search.">
@@ -142,7 +149,7 @@ impl Settings {
 
     fn settings(&self) -> Html<Self> {
         html! {
-            <div id="settings" class="mui-form">
+            <div id="settings">
                 { self.set_rule() }
                 { self.set_width() }
                 { self.set_height() }
