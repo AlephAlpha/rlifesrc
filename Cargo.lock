@@ -397,7 +397,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-lib"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ca-rules 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -408,18 +408,18 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-tui"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pancurses 0.16.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rlifesrc-lib 0.2.1",
+ "rlifesrc-lib 0.3.0",
 ]
 
 [[package]]
 name = "rlifesrc-web"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
- "rlifesrc-lib 0.2.1",
+ "rlifesrc-lib 0.3.0",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdweb 0.4.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "yew 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
