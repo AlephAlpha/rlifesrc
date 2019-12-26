@@ -287,13 +287,13 @@ pub fn search(args: Args) {
         if args.all {
             loop {
                 match search.search(None) {
-                    Status::Found => println!("{}", search.display_gen(0)),
+                    Status::Found => println!("{}", search.rle_gen(0)),
                     Status::None => break,
                     _ => (),
                 }
             }
         } else if let Status::Found = search.search(None) {
-            println!("{}", search.display_gen(0))
+            println!("{}", search.rle_gen(0))
         }
     } else {
         search_with_tui(search, args.reset)

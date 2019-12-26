@@ -27,7 +27,7 @@ let mut search = config.world().unwrap();
 
 // 搜索并显示结果的第 0 代。
 if let Status::Found = search.search(None) {
-    println!("{}", search.display_gen(0))
+    println!("{}", search.rle_gen(0))
 }
 ```
 

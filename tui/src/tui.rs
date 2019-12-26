@@ -56,7 +56,7 @@ impl SearchWindow {
 
     fn update(&self, search: &Box<dyn Search>) {
         self.world_win.erase();
-        self.world_win.mvprintw(0, 0, search.display_gen(self.gen));
+        self.world_win.mvprintw(0, 0, search.rle_gen(self.gen));
         self.world_win.refresh();
         self.top_bar.erase();
         self.top_bar.mvprintw(
@@ -183,5 +183,5 @@ pub fn search_with_tui(mut search: Box<dyn Search>, reset: bool) {
         };
     }
     pancurses::endwin();
-    println!("{}", search.display_gen(search_win.gen));
+    println!("{}", search.rle_gen(search_win.gen));
 }

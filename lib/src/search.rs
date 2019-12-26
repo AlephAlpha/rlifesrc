@@ -1,16 +1,12 @@
 //! The search process.
 use crate::{
-    cells::{CellRef, Coord, State, ALIVE, DEAD},
-    config::{Config, NewState},
-    error::Error,
+    cells::{CellRef, State},
+    config::NewState,
     rules::Rule,
     world::World,
 };
 use rand::{thread_rng, Rng};
-use std::fmt::Write;
 
-#[cfg(feature = "serialize")]
-use crate::save::WorldSer;
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -257,177 +253,15 @@ impl<'a, R: Rule> World<'a, R> {
         }
         Status::None
     }
-}
-
-/// A trait for `World`.
-///
-/// So that we can switch between different rule types using trait objects.
-pub trait Search {
-    /// The search function.
-    ///
-    /// Returns `Found` if a result is found,
-    /// `None` if such pattern does not exist,
-    /// `Searching` if the number of steps exceeds `max_step`
-    /// and no results are found.
-    fn search(&mut self, max_step: Option<u64>) -> Status;
-
-    /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
-    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error>;
-
-    /// World configuration.
-    fn config(&self) -> &Config;
-
-    /// Whether the rule is a Generations rule.
-    fn is_gen_rule(&self) -> bool;
-
-    /// Number of known living cells in some generation.
-    fn cell_count_gen(&self, t: isize) -> usize;
-
-    /// Minumum number of known living cells in all generation.
-    fn cell_count(&self) -> usize;
-
-    /// Number of conflicts during the search.
-    fn conflicts(&self) -> u64;
 
     /// Set the max cell counts.
-    ///
-    /// Currently this is the only parameter that you can change
-    /// during the search.
-    fn set_max_cell_count(&mut self, max_cell_count: Option<usize>);
-
-    #[cfg(feature = "serialize")]
-    /// Saves the world as a `WorldSer`,
-    /// which can be easily serialized.
-    fn ser(&self) -> WorldSer;
-
-    /// Displays the whole world in some generation.
-    ///
-    /// Uses a mix of [Plaintext](https://conwaylife.com/wiki/Plaintext) and
-    /// [RLE](https://conwaylife.com/wiki/Rle) format.
-    ///
-    /// * **Dead** cells are represented by `.`;
-    /// * **Living** cells are represented by `o` for rules with 2 states,
-    ///   `A` for rules with more states;
-    /// * **Dying** cells are represented by uppercase letters starting from `B`;
-    /// * **Unknown** cells are represented by `?`.
-    fn display_gen(&self, t: isize) -> String {
-        let mut str = String::new();
-        writeln!(
-            str,
-            "x = {}, y = {}, rule = {}",
-            self.config().width,
-            self.config().height,
-            self.config().rule_string
-        )
-        .unwrap();
-        let t = t % self.config().period;
-        for y in 0..self.config().height {
-            for x in 0..self.config().width {
-                let state = self.get_cell_state((x, y, t)).unwrap();
-                match state {
-                    Some(DEAD) => str.push('.'),
-                    Some(ALIVE) => {
-                        if self.is_gen_rule() {
-                            str.push('A')
-                        } else {
-                            str.push('o')
-                        }
-                    }
-                    Some(State(i)) => str.push((b'A' + i as u8 - 1) as char),
-                    _ => str.push('?'),
-                };
-            }
-            if y == self.config().height - 1 {
-                str.push('!')
-            } else {
-                str.push('$')
-            };
-            str.push('\n');
-        }
-        str
-    }
-}
-
-/// The `Search` trait is implemented for every `World`.
-impl<'a, R: Rule> Search for World<'a, R> {
-    fn search(&mut self, max_step: Option<u64>) -> Status {
-        self.search(max_step)
-    }
-
-    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error> {
-        self.get_cell_state(coord)
-    }
-
-    fn config(&self) -> &Config {
-        &self.config
-    }
-
-    fn is_gen_rule(&self) -> bool {
-        R::IS_GEN
-    }
-
-    fn cell_count_gen(&self, t: isize) -> usize {
-        self.cell_count[t as usize]
-    }
-
-    fn cell_count(&self) -> usize {
-        *self.cell_count.iter().min().unwrap()
-    }
-
-    fn conflicts(&self) -> u64 {
-        self.conflicts
-    }
-
-    fn set_max_cell_count(&mut self, max_cell_count: Option<usize>) {
+    pub(crate) fn set_max_cell_count(&mut self, max_cell_count: Option<usize>) {
         self.config.max_cell_count = max_cell_count;
         if let Some(max) = self.config.max_cell_count {
             while self.cell_count() > max {
                 if !self.backup() {
                     break;
                 }
-            }
-        }
-    }
-
-    #[cfg(feature = "serialize")]
-    fn ser(&self) -> WorldSer {
-        self.ser()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{cells::DEAD, rules::Life};
-
-    macro_rules! consistify {
-        ($world: expr, $cell: expr) => {
-            assert!(
-                $world.consistify($cell),
-                "Fail to consistify cell {:?}",
-                $cell
-            );
-        };
-    }
-
-    #[test]
-    fn test_world() {
-        let rule = "B3/S23".parse::<Life>().unwrap();
-        let config = Config::new(3, 3, 2);
-        let mut world = World::new(&config, rule);
-
-        let cell = world.find_cell((0, 0, 0)).unwrap();
-        assert_eq!(cell.background, DEAD);
-        assert_eq!(cell.state.get(), None);
-
-        assert_eq!(world.decide(), Some(true));
-        consistify!(world, cell);
-        if let Some(pred) = cell.pred {
-            consistify!(world, pred);
-        }
-        for &neigh in cell.nbhd.iter() {
-            if let Some(neigh) = neigh {
-                consistify!(world, neigh);
             }
         }
     }

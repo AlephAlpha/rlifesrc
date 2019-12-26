@@ -30,7 +30,7 @@
 //!
 //! // Searches and displays the generation 0 of the result.
 //! if let Status::Found = search.search(None) {
-//!     println!("{}", search.display_gen(0))
+//!     println!("{}", search.rle_gen(0))
 //! }
 //! ```
 //!
@@ -50,6 +50,7 @@ mod config;
 mod error;
 pub mod rules;
 mod search;
+mod traits;
 mod world;
 
 #[cfg(feature = "serialize")]
@@ -58,7 +59,8 @@ mod save;
 pub use cells::{State, ALIVE, DEAD};
 pub use config::{Config, NewState, SearchOrder, Symmetry, Transform};
 pub use error::Error;
-pub use search::{Search, Status};
+pub use search::Status;
+pub use traits::Search;
 pub use world::World;
 
 #[cfg(feature = "serialize")]

@@ -4,7 +4,7 @@ use crate::{
     cells::Coord,
     error::Error,
     rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
-    search::Search,
+    traits::Search,
     world::World,
 };
 use derivative::Derivative;

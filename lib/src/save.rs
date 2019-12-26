@@ -6,7 +6,8 @@ use crate::{
     config::Config,
     error::Error,
     rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
-    search::{Reason, Search, SetCell},
+    search::{Reason, SetCell},
+    traits::Search,
     world::World,
 };
 use serde::{Deserialize, Serialize};

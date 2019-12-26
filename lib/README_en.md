@@ -27,7 +27,7 @@ let mut search = config.world().unwrap();
 
 // Searches and displays the generation 0 of the result.
 if let Status::Found = search.search(None) {
-    println!("{}", search.display_gen(0))
+    println!("{}", search.rle_gen(0))
 }
 ```
 

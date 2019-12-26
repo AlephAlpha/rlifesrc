@@ -73,7 +73,7 @@ pub enum WorkerMsg {
 
 impl Worker {
     fn update_world(&mut self, id: HandlerId, gen: isize) {
-        let world = self.search.display_gen(gen);
+        let world = self.search.rle_gen(gen);
         let count = self.search.cell_count_gen(gen);
         self.link
             .response(id, Response::UpdateWorld((world, count)));

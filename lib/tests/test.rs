@@ -42,7 +42,7 @@ fn p3_spaceship() -> Result<(), Error> {
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
     assert_eq!(
-        search.display_gen(0),
+        search.rle_gen(0),
         String::from(
             "x = 16, y = 5, rule = B3/S23\n\
              ........o.......$\n\
@@ -103,7 +103,7 @@ fn ser() -> Result<(), Error> {
     assert_eq!(new_search.cell_count(), count);
     assert_eq!(new_search.search(None), Status::Found);
     assert_eq!(
-        new_search.display_gen(0),
+        new_search.rle_gen(0),
         String::from(
             "x = 16, y = 5, rule = B3/S23\n\
              ........o.......$\n\

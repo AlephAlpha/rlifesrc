@@ -468,4 +468,9 @@ impl<'a, R: Rule> World<'a, R> {
             .map(|cell| cell.state.get())
             .ok_or(Error::GetCellError(coord))
     }
+
+    /// Minumum number of known living cells in all generation.
+    pub(crate) fn cell_count(&self) -> usize {
+        *self.cell_count.iter().min().unwrap()
+    }
 }
