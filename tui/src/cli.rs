@@ -1,8 +1,9 @@
-use crate::tui::search_with_tui;
-use clap::{App, AppSettings, Arg, Error, ErrorKind};
+use crate::tui::tui;
+use clap::{App, AppSettings, Arg, Error, ErrorKind, Result as ClapResult};
 use rlifesrc_lib::{
     rules::NtLifeGen, Config, NewState, Search, SearchOrder, Status, Symmetry, Transform,
 };
+use std::process::exit;
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
@@ -15,7 +16,7 @@ pub struct Args {
     no_tui: bool,
 }
 
-pub fn parse_args() -> Option<Args> {
+pub fn parse_args() -> ClapResult<Args> {
     let app = App::new("rlifesrc")
         .about("Searching for patterns in Conway's Game of Life")
         .version("0.2.0")
@@ -201,7 +202,7 @@ pub fn parse_args() -> Option<Args> {
                 .long("no-tui"),
         );
 
-    let matches = app.get_matches();
+    let matches = app.get_matches_safe()?;
 
     let width = matches.value_of("X").unwrap().parse().unwrap();
     let height = matches.value_of("Y").unwrap().parse().unwrap();
@@ -215,24 +216,22 @@ pub fn parse_args() -> Option<Args> {
 
     if width != height {
         if transform.square_world() {
-            let error = Error::with_description(
+            return Err(Error::with_description(
                 &format!(
                     "The transformation '{:?}' is only valid for square worlds",
                     transform
                 ),
                 ErrorKind::InvalidValue,
-            );
-            error.exit();
+            ));
         }
         if symmetry.square_world() {
-            let error = Error::with_description(
+            return Err(Error::with_description(
                 &format!(
                     "The symmetry '{:?}' is only valid for square worlds",
                     symmetry
                 ),
                 ErrorKind::InvalidValue,
-            );
-            error.exit();
+            ));
         }
     }
 
@@ -271,9 +270,9 @@ pub fn parse_args() -> Option<Args> {
         .set_reduce_max(reduce_max)
         .set_rule_string(rule_string);
 
-    let search = config.world().ok()?;
+    let search = config.world().unwrap();
 
-    Some(Args {
+    Ok(Args {
         search,
         all,
         reset,
@@ -285,17 +284,28 @@ pub fn search(args: Args) {
     let mut search = args.search;
     if args.no_tui {
         if args.all {
+            let mut found = false;
             loop {
                 match search.search(None) {
-                    Status::Found => println!("{}", search.rle_gen(0)),
+                    Status::Found => {
+                        found = true;
+                        println!("{}", search.rle_gen(0))
+                    }
                     Status::None => break,
                     _ => (),
                 }
             }
+            if !found {
+                eprintln!("Not found.");
+                exit(1);
+            }
         } else if let Status::Found = search.search(None) {
-            println!("{}", search.rle_gen(0))
+            println!("{}", search.rle_gen(0));
+        } else {
+            eprintln!("Not found.");
+            exit(1);
         }
     } else {
-        search_with_tui(search, args.reset)
+        tui(search, args.reset).unwrap();
     }
 }
