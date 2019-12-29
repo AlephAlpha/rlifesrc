@@ -1,4 +1,4 @@
-# [rlifesrc-tui](https://alephalpha.github.io/rlifesrc/)
+# [rlifesrc](https://alephalpha.github.io/rlifesrc/)
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
@@ -8,42 +8,16 @@
 
 这里是 rlifesrc 的命令行界面和文本界面。网页版的说明见[`web/`](../web/README.md) 目录中的 `README.md`。
 
-* [编译](#编译)
 * [用法](#用法)
   * [命令行界面](#命令行)
   * [文本界面（TUI）](#文本界面)
-
-## 编译
-
-这是用 Rust 写的。没有 Rust 的话，先安装 [Rust](https://www.rust-lang.org/)。
-
-无论是编译，还是用 `cargo` 来运行，一定要记得加上 `--release`，不然会特别慢，相差大约一百倍。
-
-文本界面是用 [pancurses](https://github.com/ihalila/pancurses) 写的，在编译之前请参照 [ncurses-rc](https://github.com/jeaye/ncurses-rs)（Unix-like）或 [pdcurses-sys](https://github.com/ihalila/pdcurses-sys)（Windows） 的说明来安装相应的依赖。如果只需要网页版，不必安装这些依赖。
-
-准备好了之后，就可以用 `git clone` 下载：
-
-```bash
-git clone https://github.com/AlephAlpha/rlifesrc.git
-cd rlifesrc/
-```
-
-原生版（文本界面和命令行界面）在 `tui` 目录中，编译之前要先 `cd` 到该目录（否则会尝试把网页版编译成机器码，从而出错）。
-
-```bash
-cd tui/
-RUSTFLAGS="-C target-cpu=native" cargo build --release
-```
-
-编译需要一定时间，请耐心等待。
-
-编译好的文件是 `./target/release/rlifesrc-tui`。
+* [编译](#编译)
 
 ## 用法
 
 这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。支持 Life-like 和 Isotropic non-totalistic 的规则。
 
-原生版需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc-tui`。也可以在 `tui` 目录中用 `cargo run --release` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
+原生版需要[下载和编译](#编译)，它提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。编译好的文件是 `./target/release/rlifesrc`。也可以在 `tui` 目录中用 `cargo run --release` 来运行（不加 `--release` 的话会特别慢）。其用法如下：
 
 ```plaintext
 USAGE:
@@ -158,7 +132,7 @@ ARGS:
 比如说，输入
 
 ```bash
-./target/release/rlifesrc-tui 20 16 7 3 0 -r '3457/357/5' -s 'D2-' --no-tui
+./target/release/rlifesrc 20 16 7 3 0 -r '3457/357/5' -s 'D2-' --no-tui
 ```
 
 会显示以下结果：
@@ -189,13 +163,13 @@ x = 20, y = 16, rule = 3457/357/5
 
 文本界面也十分简陋，但可以显示搜索过程和搜索所用的时间。
 
-刚进入文本界面的时候，大概是这个样子（以 `./target/release/rlifesrc-tui 20 16 7 3 0 -r '3457/357/5' -s 'D2-'` 为例）：
+刚进入文本界面的时候，大概是这个样子（以 `./target/release/rlifesrc 20 16 7 3 0 -r '3457/357/5' -s 'D2-'` 为例）：
 
 ![](screenshots/Screenshot_0.png)
 
 其中 `?` 表示未知的细胞。`Cells` 表示当前代中已知的活细胞数。`Confl` 表示搜索中经历的总冲突数，可以理解为搜索的步数。
 
-然后按空格键或回车键开始/暂停搜索，按 q 键退出，按左右方向键显示图样的上一代/下一代。注意此用法和原版的 lifesrc 并不一样。
+然后按空格键或回车键开始/暂停搜索，按 q 键退出，按上下翻页键显示图样的上一代/下一代。注意此用法和原版的 lifesrc 并不一样。
 
 搜索到的结果同样以 Plaintext 格式显示，如下图：
 
@@ -205,5 +179,30 @@ x = 20, y = 16, rule = 3457/357/5
 
 搜索过程中不会显示搜索时间，若想知道时间可以暂停。搜索下一个结果时不会重置计时，除非加上命令行选项 `--reset-time`。
 
-如果搜索的图样比终端的窗口大小还要大，将无法完整显示。这是文本界面最主要的缺陷。此时可以使用网页版。
+如果搜索的图样比终端的窗口大小还要大，搜索过程中将无法完整显示。这是文本界面最主要的缺陷。但退出程序后会打印出完整的结果。
 
+## 编译
+
+这是用 Rust 写的。没有 Rust 的话，先安装 [Rust](https://www.rust-lang.org/)。
+
+无论是编译，还是用 `cargo` 来运行，一定要记得加上 `--release`，不然会特别慢，相差大约一百倍。
+
+文本界面是用 [crossterm](https://github.com/crossterm-rs/crossterm) 写的，理论上支持所有常见操作系统的终端，但我只在 Manjaro Linux 上的 Xfce Terminal 测试过。
+
+准备好了之后，就可以用 `git clone` 下载：
+
+```bash
+git clone https://github.com/AlephAlpha/rlifesrc.git
+cd rlifesrc/
+```
+
+原生版（文本界面和命令行界面）在 `tui` 目录中，编译之前要先 `cd` 到该目录（否则会尝试把网页版编译成机器码，从而出错）。
+
+```bash
+cd tui/
+RUSTFLAGS="-C target-cpu=native" cargo build --release
+```
+
+编译需要一定时间，请耐心等待。
+
+编译好的文件是 `./target/release/rlifesrc`。
