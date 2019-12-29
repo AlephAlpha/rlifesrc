@@ -62,7 +62,15 @@ cp static/* some_folder/
 
 输出的结果用 Golly 的 [Extended RLE](http://golly.sourceforge.net/Help/formats.html#rle) 格式显示；但不会合并相邻的相同符号，而是采用类似于 [Plaintext](https://conwaylife.com/wiki/Plaintext) 格式的排版。
 
-对于两种状态的规则，用 `.` 表示死细胞，`o` 表示活细胞；对于超过两种状态的 Generations 规则，用 `.` 表示死细胞，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞。目前无法正常显示大于 25 种状态的 Generations 规则。
+具体来说：
+
+* `.` 表示死细胞；
+* 对于两种状态的规则，`o` 表示活细胞；对于超过两种状态的 Generations 规则，`A` 表示活细胞，`B` 及以后的字母表示正在死亡的细胞；
+* `?` 表示搜索过程中未知的细胞；
+* 每行以 `$` 结尾；
+* 整个图样以 `!` 结尾。
+
+目前无法正常显示大于 25 种状态的 Generations 规则。
 
 点击左上角的 “Generation” 右边的加减号，或者在数字上滚动鼠标滚轮，可以切换显示的代数。“Cell count” 指的是当前代的活细胞个数。
 

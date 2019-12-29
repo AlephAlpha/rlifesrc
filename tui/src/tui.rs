@@ -331,7 +331,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 }
 
-pub fn tui(search: Box<dyn Search>, reset: bool) -> CrosstermResult<()> {
+pub(crate) fn tui(search: Box<dyn Search>, reset: bool) -> CrosstermResult<()> {
     let mut stdout = stdout();
     let mut app = App::new(search, reset, &mut stdout);
     app.init()?;

@@ -61,7 +61,9 @@ pub trait Search {
     /// * **Living** cells are represented by `o` for rules with 2 states,
     ///   `A` for rules with more states;
     /// * **Dying** cells are represented by uppercase letters starting from `B`;
-    /// * **Unknown** cells are represented by `?`.
+    /// * **Unknown** cells are represented by `?`;
+    /// * Each line is ended with `$`;
+    /// * The whole pattern is ended with `!`.
     fn rle_gen(&self, t: isize) -> String {
         let mut str = String::new();
         writeln!(

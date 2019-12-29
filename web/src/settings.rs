@@ -355,7 +355,7 @@ impl Settings {
                         checked={ self.config.non_empty_front },
                         onclick=|_| Msg::SetFront/>
                     <abbr title="Force the first row or column to be nonempty.\n\
-                        Here 'front' means the first row or column to search, \
+                        Here 'front' means the first row or column to be searched, \
                         according to the search order.">
                     { "Non empty front" }
                     </abbr>
