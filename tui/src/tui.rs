@@ -65,7 +65,10 @@ impl<'a, W: Write> App<'a, W> {
 
     fn quit(&mut self) -> CrosstermResult<()> {
         terminal::disable_raw_mode()?;
-        self.output.execute(Show)?.execute(LeaveAlternateScreen)?;
+        self.output
+            .execute(Show)?
+            .execute(ResetColor)?
+            .execute(LeaveAlternateScreen)?;
         Ok(())
     }
 
@@ -187,6 +190,8 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     async fn main_loop(&mut self) -> CrosstermResult<()> {
+        const ASK_QUIT: &str = "Are you sure to quit? [Y/n]";
+
         macro_rules! const_key {
             ($($name:ident => $key:expr),* $(,)?) => {
                 $(
@@ -224,7 +229,7 @@ impl<'a, W: Write> App<'a, W> {
                                 .queue(SetForegroundColor(Color::Black))?
                                 .queue(Print(format!(
                                     "{:1$}",
-                                    "Are you sure to quit? [Y/n]", self.term_size.0 as usize
+                                    ASK_QUIT, self.term_size.0 as usize
                                 )))?
                                 .flush()?;
                             if let Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) =
@@ -283,7 +288,7 @@ impl<'a, W: Write> App<'a, W> {
                                 .queue(SetForegroundColor(Color::Black))?
                                 .queue(Print(format!(
                                     "{:1$}",
-                                    "Are you sure to quit? [Y/n]", self.term_size.0 as usize
+                                    ASK_QUIT, self.term_size.0 as usize
                                 )))?
                                 .flush()?;
                             if let Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) =
