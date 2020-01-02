@@ -303,6 +303,10 @@ impl Rule for NtLife {
     fn consistify<'a>(world: &mut World<'a, Self>, cell: CellRef<'a, Self>) -> bool {
         let flags = world.rule.impl_table[cell.desc.get().0];
 
+        if flags.is_empty() {
+            return true;
+        }
+
         if flags.contains(ImplFlags::CONFLICT) {
             return false;
         }

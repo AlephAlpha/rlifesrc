@@ -201,6 +201,10 @@ macro_rules! generations {
                     },
                 }
 
+                if $flags.is_empty() {
+                    return true;
+                }
+
                 if $flags.contains(ImplFlags::CONFLICT) {
                     return false;
                 }
