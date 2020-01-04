@@ -7,6 +7,10 @@ use args::Args;
 use rlifesrc_lib::{Search, Status};
 use std::process::exit;
 
+/// Runs the search without TUI.
+///
+/// If `all` is true, it will print all possible results
+/// instead of only the first one.
 fn run_search(mut search: Box<dyn Search>, all: bool) {
     if all {
         let mut found = false;

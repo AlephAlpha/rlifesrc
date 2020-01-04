@@ -1,23 +1,38 @@
 # [rlifesrc](https://alephalpha.github.io/rlifesrc/)
 
+[![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc) [![Crates.io](https://img.shields.io/crates/v/rlifesrc)](https://crates.io/crates/rlifesrc) [![English](https://img.shields.io/badge/readme-English-brightgreen)](README_en.md)
+
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
 支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
 
-这里是 rlifesrc 的命令行界面和文本界面。网页版的说明见[`web/`](../web/README.md) 目录中的 `README.md`。
+这里是 rlifesrc 的命令行界面和文本界面。网页版的说明见[`web/`](../web/README.md) 目录。
 
+* [安装](#安装)
 * [用法](#用法)
   * [命令行界面](#命令行)
   * [文本界面（TUI）](#文本界面)
 * [编译](#编译)
 
+## 安装
+
+rlifesrc 是用 [Rust](https://www.rust-lang.org/) 写的。没有 Rust 的话，先安装 Rust。
+
+然后可以直接用 Rust 的包管理器 Cargo 来下载和安装。
+
+```bash
+cargo install rlifesrc
+```
+
+若需从源代码编译，请见[编译](#编译)部分。
+
 ## 用法
 
-这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。支持 Life-like 和 Isotropic non-totalistic 的规则。
+这个算法适合搜索小周期的宽扁或者瘦高的图样，但理论上也能搜别的图样。
 
-提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。使用前需要先[下载和编译](#编译)，编译好的文件是 `./target/release/rlifesrc`。也可以在 `tui` 目录中用 `cargo run --release` 来运行（不加 `--release` 的话会特别慢）。
+提供[命令行](#命令行)和[文本（TUI）](#文本界面)两种界面。
 
 其用法如下：
 
@@ -27,23 +42,23 @@ USAGE:
 
 FLAGS:
     -a, --all
-            搜索所有的满足条件的图样
+            输出所有的满足条件的图样，而非只输出第一个
             仅适用于命令行界面
+
+    -f, --front
+            强制要求第一行/第一列非空
 
     -n, --no-tui
             不进入文本界面，直接开始搜索
             此即命令行界面
 
-    -f, --front
-            强制要求第一行/第一列非空
+        --reduce
+            搜到结果时自动缩小活细胞个数的上界
+            新的上界会被设置为当前的活细胞个数减一（只考虑活细胞最少的一代）。
 
         --reset-time
             开始新的搜索时重置计时
             仅适用于文本界面
-
-        --reduce
-            搜到结果时自动缩小活细胞个数的上界
-            新的上界会被设置为当前的活细胞个数减一（只考虑活细胞最少的一代）。
 
     -h, --help
             显示此帮助信息的英文版
@@ -111,12 +126,16 @@ ARGS:
 比如说，要想找到 [25P3H1V0.1](https://conwaylife.com/wiki/25P3H1V0.1)，可以用：
 
 ```bash
-./target/release/rlifesrc 16 5 3 0 1
+rlifesrc 16 5 3 0 1
 ```
 
-10 种不同的对称性，对应二面体群 D8 的 10 个子群。对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样，详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
+10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)，详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
 
-8 种不同的变换，对应二面体群 D8 的 8 个元素。`Id` 表示恒等变换。`R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。`F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
+8 种不同的变换，对应二面体群 _D_<sub>8</sub> 的 8 个元素。
+* `Id` 表示恒等变换。
+* `R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。
+* `F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。
+比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
 
 注意有些变换和对称性要求世界是正方形。
 
@@ -140,7 +159,7 @@ ARGS:
 比如说，输入
 
 ```bash
-./target/release/rlifesrc 20 16 7 3 0 -r '3457/357/5' -s 'D2-' --no-tui
+rlifesrc 20 16 7 3 0 -r '3457/357/5' -s 'D2-' --no-tui
 ```
 
 会显示以下结果：
@@ -173,7 +192,7 @@ x = 20, y = 16, rule = 3457/357/5
 
 文本界面是用 [crossterm](https://github.com/crossterm-rs/crossterm) 写的，理论上支持所有常见操作系统的终端，但我只在 Manjaro Linux 上的 Xfce Terminal 测试过。
 
-刚进入文本界面的时候，大概是这个样子（以 `./target/release/rlifesrc 20 16 7 3 0 -r '3457/357/5' -s 'D2-'` 为例）：
+刚进入文本界面的时候，大概是这个样子（以 `rlifesrc 20 16 7 3 0 -r '3457/357/5' -s 'D2-'` 为例）：
 
 ![](screenshots/Screenshot_0.png)
 
@@ -195,19 +214,13 @@ x = 20, y = 16, rule = 3457/357/5
 
 ## 编译
 
-这是用 Rust 写的。没有 Rust 的话，先安装 [Rust](https://www.rust-lang.org/)。
+rlifesrc 是用 Rust 写的。没有 Rust 的话，先安装 [Rust](https://www.rust-lang.org/)。
 
-可以用 `git clone` 下载：
+然后就可以下载和编译了：
 
 ```bash
 git clone https://github.com/AlephAlpha/rlifesrc.git
 cd rlifesrc/
-```
-
-原生版（文本界面和命令行界面）在 `tui` 目录中，编译之前要先 `cd` 到该目录（否则会尝试把网页版编译成机器码，从而出错）。
-
-```bash
-cd tui/
 RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
 
@@ -215,6 +228,6 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release
 
 编译好的文件是 `./target/release/rlifesrc`。
 
-无论是编译，还是用 `cargo` 来运行，一定要记得加上 `--release`，不然会特别慢。
+无论是编译，还是用 `cargo run` 来运行，一定要记得加上 `--release`，不然会特别慢。
 
 如果不需要文本界面，只需要命令行界面，可以在编译时加上 `--no-default-features`。

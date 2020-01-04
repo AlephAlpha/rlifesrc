@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 /// the first generation, applying this transformation first,
 /// and then the translation defined by `dx` and `dy`.
 ///
-/// 8 different values corresponds to 8 elements of the dihedral group
+/// 8 different values correspond to 8 elements of the dihedral group
 /// _D_<sub>8</sub>.
 ///
 /// `Id` is the identity transformation.
@@ -126,11 +126,12 @@ impl Transform {
 
 /// Symmetries of the pattern.
 ///
-/// 10 different values corresponds to 10 subgroups of the dihedral group
+/// 10 different values correspond to 10 subgroups of the dihedral group
 /// _D_<sub>8</sub>.
 ///
-/// The notation is stolen from Oscar Cunningham's
+/// The notations are stolen from Oscar Cunningham's
 /// [Logic Life Search](https://github.com/OscarCunningham/logic-life-search).
+/// Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
 ///
 /// Some of the symmetries are only valid when the world is square.
 #[derive(Clone, Copy, Derivative, PartialEq, Eq)]

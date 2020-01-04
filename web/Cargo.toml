@@ -1,13 +1,17 @@
 [package]
 name = "rlifesrc-web"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["AlephAlpha <alephalpha911@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A Game of Life pattern searcher."
+homepage = "https://github.com/AlephAlpha/rlifesrc/tree/master/web"
+repository = "https://github.com/AlephAlpha/rlifesrc"
+license = "MIT"
+readme = "README_en.md"
+keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
-rlifesrc-lib = { path = "../lib/", version = "0.3.0", features = ["stdweb"] }
+rlifesrc-lib = { path = "../lib/", version = "0.3.1", features = ["stdweb"] }
 serde = { version = "1.0.104", features = ["derive"] }
 stdweb = "0.4.20"
 yew = "0.10.0"

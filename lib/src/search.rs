@@ -184,7 +184,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// `step`. A step consists of a `proceed` and a `backup`.
     ///
     /// The difference between `step` and `self.steps` is that the former
-    /// will be resetted in each `search`.
+    /// will be reset in each `search`.
     fn go(&mut self, step: &mut u64) -> bool {
         loop {
             *step += 1;

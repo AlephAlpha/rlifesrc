@@ -20,6 +20,18 @@ const VIEW_FREQ: u64 = 5000;
 #[cfg(not(debug_assertions))]
 const VIEW_FREQ: u64 = 100000;
 
+/// A macro to generate constant key events.
+macro_rules! const_key {
+    ($($name:ident => $key:expr),* $(,)?) => {
+        $(
+            const $name: Event = Event::Key(KeyEvent {
+                code: $key,
+                modifiers: KeyModifiers::empty(),
+            });
+        )*
+    };
+}
+
 struct App<'a, W: Write> {
     gen: isize,
     period: isize,
@@ -36,17 +48,14 @@ struct App<'a, W: Write> {
 impl<'a, W: Write> App<'a, W> {
     fn new(search: Box<dyn Search>, reset: bool, output: &'a mut W) -> Self {
         let period = search.config().period;
-        let status = Status::Paused;
-        let start_time: Option<Instant> = None;
-        let timing = Duration::default();
         let world_size = (search.config().width, search.config().height);
         App {
             gen: 0,
             period,
             search,
-            status,
-            start_time,
-            timing,
+            status: Status::Paused,
+            start_time: None,
+            timing: Duration::default(),
             reset,
             output,
             term_size: (80, 24),
@@ -54,6 +63,7 @@ impl<'a, W: Write> App<'a, W> {
         }
     }
 
+    /// Initializes the screen.
     fn init(&mut self) -> CrosstermResult<()> {
         self.output.execute(EnterAlternateScreen)?.execute(Hide)?;
         terminal::enable_raw_mode()?;
@@ -63,6 +73,7 @@ impl<'a, W: Write> App<'a, W> {
         self.update()
     }
 
+    /// Quits the program.
     fn quit(&mut self) -> CrosstermResult<()> {
         terminal::disable_raw_mode()?;
         self.output
@@ -72,6 +83,7 @@ impl<'a, W: Write> App<'a, W> {
         Ok(())
     }
 
+    /// Updates the header.
     fn update_header(&mut self) -> CrosstermResult<()> {
         self.output
             .queue(MoveTo(0, 0))?
@@ -95,6 +107,10 @@ impl<'a, W: Write> App<'a, W> {
         Ok(())
     }
 
+    /// Updates the main part of the screen.
+    /// Prints the pattern in a mix of
+    /// [Plaintext](https://conwaylife.com/wiki/Plaintext) and
+    /// [RLE](https://conwaylife.com/wiki/Rle) format.
     fn update_main(&mut self) -> CrosstermResult<()> {
         self.output
             .queue(MoveTo(0, 1))?
@@ -133,6 +149,7 @@ impl<'a, W: Write> App<'a, W> {
         Ok(())
     }
 
+    /// Updates the footer.
     fn update_footer(&mut self) -> CrosstermResult<()> {
         const FOUND: &str = "Found a result. Press [q] to quit or [space] to search for the next.";
         const NONE: &str = "No more result. Press [q] to quit.";
@@ -156,6 +173,7 @@ impl<'a, W: Write> App<'a, W> {
         Ok(())
     }
 
+    /// Updates the screen.
     fn update(&mut self) -> CrosstermResult<()> {
         self.update_header()?;
         self.update_main()?;
@@ -164,12 +182,15 @@ impl<'a, W: Write> App<'a, W> {
         Ok(())
     }
 
+    /// Searches for one step.
     fn step(&mut self) {
         match self.search.search(Some(VIEW_FREQ)) {
             Status::Searching => (),
             s => {
                 self.status = s;
-                self.pause();
+                if let Some(instant) = self.start_time.take() {
+                    self.timing += instant.elapsed();
+                }
                 if self.reset {
                     self.start_time = None;
                     self.timing = Duration::default();
@@ -178,30 +199,50 @@ impl<'a, W: Write> App<'a, W> {
         }
     }
 
+    /// Pauses.
     fn pause(&mut self) {
+        self.status = Status::Paused;
         if let Some(instant) = self.start_time.take() {
             self.timing += instant.elapsed();
         }
     }
 
+    /// Starts or resumes.
     fn start(&mut self) {
         self.status = Status::Searching;
         self.start_time = Some(Instant::now());
     }
 
-    async fn main_loop(&mut self) -> CrosstermResult<()> {
+    /// Asks whether to quit.
+    async fn ask_quit(&mut self, reader: &mut EventStream) -> CrosstermResult<bool> {
         const ASK_QUIT: &str = "Are you sure to quit? [Y/n]";
 
-        macro_rules! const_key {
-            ($($name:ident => $key:expr),* $(,)?) => {
-                $(
-                    const $name: Event = Event::Key(KeyEvent {
-                        code: $key,
-                        modifiers: KeyModifiers::empty(),
-                    });
-                )*
-            };
+        const_key! {
+            KEY_ENTER => KeyCode::Enter,
+            KEY_Y => KeyCode::Char('y'),
+            KEY_UPPER_Y => KeyCode::Char('Y'),
+        };
+
+        self.output
+            .queue(MoveTo(0, self.term_size.1 - 1))?
+            .queue(SetBackgroundColor(Color::White))?
+            .queue(SetForegroundColor(Color::Black))?
+            .queue(Print(format!("{:1$}", ASK_QUIT, self.term_size.0 as usize)))?
+            .flush()?;
+        if let Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) = reader.try_next().await? {
+            Ok(true)
+        } else {
+            Ok(false)
         }
+    }
+
+    /// Handles a key event. Return `true` to quit the program.
+    async fn handle(
+        &mut self,
+        event: Option<Event>,
+        reader: &mut EventStream,
+        is_searching: bool,
+    ) -> CrosstermResult<bool> {
         const_key! {
             KEY_Q => KeyCode::Char('q'),
             KEY_ESC => KeyCode::Esc,
@@ -209,138 +250,90 @@ impl<'a, W: Write> App<'a, W> {
             KEY_PAGEDOWN => KeyCode::PageDown,
             KEY_SPACE => KeyCode::Char(' '),
             KEY_ENTER => KeyCode::Enter,
-            KEY_Y => KeyCode::Char('y'),
-            KEY_UPPER_Y => KeyCode::Char('Y'),
         };
 
-        let mut reader = EventStream::new();
+        match event {
+            Some(KEY_Q) | Some(KEY_ESC) => {
+                if is_searching {
+                    self.pause();
+                }
+                self.update()?;
+                if let Status::Paused = self.status {
+                    if self.ask_quit(reader).await? {
+                        return Ok(true);
+                    } else {
+                        self.update()?;
+                    }
+                } else {
+                    return Ok(true);
+                }
+            }
+            Some(KEY_PAGEDOWN) => {
+                self.gen = (self.gen + 1) % self.period;
+                self.update()?;
+            }
+            Some(KEY_PAGEUP) => {
+                self.gen = (self.gen + self.period - 1) % self.period;
+                self.update()?;
+            }
+            Some(KEY_SPACE) | Some(KEY_ENTER) => {
+                if is_searching {
+                    self.pause();
+                } else {
+                    self.start();
+                }
+                self.update()?;
+            }
+            Some(Event::Resize(width, height)) => {
+                self.term_size = (width, height);
+                self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
+                self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
+                self.output
+                    .queue(ResetColor)?
+                    .queue(Clear(ClearType::All))?;
+                self.update()?;
+            }
+            Some(_) => (),
+            None => {
+                if is_searching {
+                    self.pause();
+                }
+                self.update()?;
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// The main loop.
+    async fn main_loop(&mut self, reader: &mut EventStream) -> CrosstermResult<()> {
         loop {
             if let Status::Searching = self.status {
-                let poll_event = poll!(reader.try_next())?;
-                if let Poll::Ready(maybe_event) = poll_event {
-                    match maybe_event {
-                        Some(KEY_Q) | Some(KEY_ESC) => {
-                            self.status = Status::Paused;
-                            self.pause();
-                            self.update()?;
-                            self.output
-                                .queue(MoveTo(0, self.term_size.1 - 1))?
-                                .queue(SetBackgroundColor(Color::White))?
-                                .queue(SetForegroundColor(Color::Black))?
-                                .queue(Print(format!(
-                                    "{:1$}",
-                                    ASK_QUIT, self.term_size.0 as usize
-                                )))?
-                                .flush()?;
-                            if let Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) =
-                                reader.try_next().await?
-                            {
-                                break;
-                            } else {
-                                self.update()?;
-                            }
-                        }
-                        Some(KEY_PAGEDOWN) => {
-                            self.gen = (self.gen + 1) % self.period;
-                            self.update()?;
-                        }
-                        Some(KEY_PAGEUP) => {
-                            self.gen = (self.gen + self.period - 1) % self.period;
-                            self.update()?;
-                        }
-                        Some(KEY_SPACE) | Some(KEY_ENTER) => {
-                            self.status = Status::Paused;
-                            self.pause();
-                            self.update()?;
-                        }
-                        Some(Event::Resize(width, height)) => {
-                            self.term_size = (width, height);
-                            self.world_size.0 =
-                                self.world_size.0.min(self.term_size.0 as isize - 1);
-                            self.world_size.1 =
-                                self.world_size.1.min(self.term_size.1 as isize - 3);
-                            self.output
-                                .queue(ResetColor)?
-                                .queue(Clear(ClearType::All))?;
-                            self.update()?;
-                        }
-                        Some(_) => (),
-                        None => {
-                            self.status = Status::Paused;
-                            self.pause();
-                            self.update()?;
-                            break;
-                        }
+                if let Poll::Ready(event) = poll!(reader.try_next())? {
+                    if self.handle(event, reader, true).await? {
+                        break;
                     }
                 }
                 self.step();
                 self.update()?;
-            } else {
-                let maybe_event = reader.try_next().await?;
-                match maybe_event {
-                    Some(KEY_Q) | Some(KEY_ESC) => {
-                        self.pause();
-                        self.update()?;
-                        if let Status::Paused = self.status {
-                            self.output
-                                .queue(MoveTo(0, self.term_size.1 - 1))?
-                                .queue(SetBackgroundColor(Color::White))?
-                                .queue(SetForegroundColor(Color::Black))?
-                                .queue(Print(format!(
-                                    "{:1$}",
-                                    ASK_QUIT, self.term_size.0 as usize
-                                )))?
-                                .flush()?;
-                            if let Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) =
-                                reader.try_next().await?
-                            {
-                                break;
-                            } else {
-                                self.update()?;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    Some(KEY_PAGEDOWN) => {
-                        self.gen = (self.gen + 1) % self.period;
-                        self.update()?;
-                    }
-                    Some(KEY_PAGEUP) => {
-                        self.gen = (self.gen + self.period - 1) % self.period;
-                        self.update()?;
-                    }
-                    Some(KEY_SPACE) | Some(KEY_ENTER) => {
-                        self.start();
-                        self.update()?;
-                    }
-                    Some(Event::Resize(width, height)) => {
-                        self.term_size = (width, height);
-                        self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
-                        self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
-                        self.output
-                            .queue(ResetColor)?
-                            .queue(Clear(ClearType::All))?;
-                        self.update()?;
-                    }
-                    Some(_) => (),
-                    None => {
-                        self.pause();
-                        self.update()?;
-                        break;
-                    }
-                }
+            } else if self.handle(reader.try_next().await?, reader, false).await? {
+                break;
             }
         }
         Ok(())
     }
 }
 
+/// Runs the search with a TUI.
+///
+/// If `reset` is true, the time will be reset when starting a new search.
 pub(crate) fn tui(search: Box<dyn Search>, reset: bool) -> CrosstermResult<()> {
     let mut stdout = stdout();
+    let mut reader = EventStream::new();
     let mut app = App::new(search, reset, &mut stdout);
     app.init()?;
-    task::block_on(app.main_loop())?;
+    task::block_on(app.main_loop(&mut reader))?;
     app.quit()?;
     println!("{}", app.search.rle_gen(app.gen));
     Ok(())

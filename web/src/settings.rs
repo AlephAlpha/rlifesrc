@@ -354,10 +354,10 @@ impl Settings {
                         type="checkbox",
                         checked={ self.config.non_empty_front },
                         onclick=|_| Msg::SetFront/>
-                    <abbr title="Force the first row or column to be nonempty.\n\
+                    <abbr title="Force the front to be nonempty.\n\
                         Here 'front' means the first row or column to be searched, \
                         according to the search order.">
-                    { "Non empty front" }
+                    { "Force the first row or column to be nonempty" }
                     </abbr>
                 </label>
             </div>
@@ -372,10 +372,9 @@ impl Settings {
                         type="checkbox",
                         checked={ self.config.reduce_max },
                         onclick=|_| Msg::SetReduce/>
-                    <abbr title="Reduce the max cell count when a result is found.\n\
-                        The new max cell count will be set to the cell count of \
+                    <abbr title="The new max cell count will be set to the cell count of \
                         the current result minus one.">
-                    { "Reduce max cell count" }
+                    { "Reduce the max cell count when a result is found" }
                     </abbr>
                 </label>
             </div>

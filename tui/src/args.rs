@@ -199,7 +199,7 @@ impl Args {
                     .long_help(
                         "Reduce the max cell count when a result is found\n\
                          The new max cell count will be set to the cell count of \
-                         the current result minus one",
+                         the current result minus one.",
                     )
                     .long("reduce"),
             );
@@ -209,9 +209,9 @@ impl Args {
             app = app
                 .arg(
                     Arg::with_name("ALL")
-                        .help("Searches for all possible pattern")
+                        .help("Prints all possible results instead of only the first one")
                         .long_help(
-                            "Searches for all possible pattern\n\
+                            "Prints all possible results instead of only the first one\n\
                              Only useful when --no-tui is set.\n",
                         )
                         .short("a")
