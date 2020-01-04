@@ -132,8 +132,13 @@ pub struct CellRef<'a, R: Rule> {
 }
 
 impl<'a, R: Rule> CellRef<'a, R> {
-    pub(crate) fn update_desc(self, old_state: Option<State>, state: Option<State>) {
-        R::update_desc(self, old_state, state);
+    /// Updates the neighborhood descriptors of all neighbors and the predecessor
+    /// when the state of one cell is changed.
+    ///
+    /// The `state` is the new state of the cell when `new` is true,
+    /// the old state when `new` is false.
+    pub(crate) fn update_desc(self, state: Option<State>, new: bool) {
+        R::update_desc(self, state, new);
     }
 }
 

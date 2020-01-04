@@ -3,7 +3,8 @@
 //! For the notations of rule strings, please see
 //! [this article on LifeWiki](https://conwaylife.com/wiki/Rulestring).
 
-mod generations;
+mod macros;
+
 mod life;
 mod ntlife;
 
@@ -40,7 +41,10 @@ pub trait Rule: Sized {
 
     /// Updates the neighborhood descriptors of all neighbors and the predecessor
     /// when the state of one cell is changed.
-    fn update_desc(cell: CellRef<Self>, old_state: Option<State>, state: Option<State>);
+    ///
+    /// The `state` is the new state of the cell when `new` is true,
+    /// the old state when `new` is false.
+    fn update_desc(cell: CellRef<Self>, state: Option<State>, new: bool);
 
     /// Consistifies a cell.
     ///

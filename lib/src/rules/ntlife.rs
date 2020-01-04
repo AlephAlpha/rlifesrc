@@ -10,22 +10,9 @@ use bitflags::bitflags;
 use ca_rules::{ParseNtLife, ParseNtLifeGen, ParseRuleError};
 use std::str::FromStr;
 
-/// The neighborhood descriptor.
-///
-/// It is a 20-bit integer of the form `0b_abcdefgh_ijklmnop_qr_st`,
-/// where:
-///
-/// * `0b_ai`, `0b_bj`, ..., `0b_hp` are the states of the eight neighbors,
-/// * `0b_qr` is the state of the successor.
-/// * `0b_st` is the state of the cell itself.
-/// * `0b_10` means dead,
-/// * `0b_01` means alive,
-/// * `0b_00` means unknown.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct NbhdDesc(pub(crate) usize);
-
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
+    #[derive(Default)]
     struct ImplFlags: u32 {
         /// A conflict is detected.
         const CONFLICT = 0b_0000_0001;
@@ -53,24 +40,89 @@ bitflags! {
     }
 }
 
-impl Default for ImplFlags {
-    fn default() -> Self {
-        ImplFlags::empty()
+impl_rule! {
+    /// The neighborhood descriptor.
+    ///
+    /// It is a 20-bit integer of the form `0b_abcdefgh_ijklmnop_qr_st`,
+    /// where:
+    ///
+    /// * `0b_ai`, `0b_bj`, ..., `0b_hp` are the states of the eight neighbors,
+    /// * `0b_qr` is the state of the successor.
+    /// * `0b_st` is the state of the cell itself.
+    /// * `0b_10` means dead,
+    /// * `0b_01` means alive,
+    /// * `0b_00` means unknown.
+    pub struct NbhdDesc(usize);
+
+    /// Non-totalistic Life-like rules.
+    ///
+    /// This includes any rule that can be converted to a non-totalistic
+    /// Life-like rule: isotropic non-totalistic rules,
+    /// non-isotropic rules, hexagonal rules, rules with von Neumann
+    /// neighborhoods, etc.
+    pub struct NtLife {
+        Parser: ParseNtLife,
+        impl_table: Vec<ImplFlags>,
     }
-}
 
-/// Non-totalistic Life-like rules.
-///
-/// This includes any rule that can be converted to a non-totalistic
-/// Life-like rule: isotropic non-totalistic rules,
-/// non-isotropic rules, hexagonal rules, rules with von Neumann
-/// neighborhoods, etc.
-pub struct NtLife {
-    /// Whether the rule contains `B0`.
-    b0: bool,
+    /// Non-totalistic Life-like Generations rules.
+    ///
+    /// This includes any rule that can be converted to a non-totalistic
+    /// Life-like Generations rule.
+    pub struct NtLifeGen {
+        Parser: ParseNtLifeGen,
+    }
 
-    /// An array of actions for all neighborhood descriptors.
-    impl_table: Vec<ImplFlags>,
+    fn new_desc {
+        ALIVE => 0x00ff,
+        DEAD => 0xff00,
+    }
+
+    fn update_desc(cell, state, _new, change_num) {
+        let nbhd_change_num = match state {
+            Some(ALIVE) => 0x0001,
+            Some(_) => 0x0100,
+            _ => 0x0000,
+        };
+        for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
+            let neigh = neigh.unwrap();
+            let mut desc = neigh.desc.get();
+            desc.0 ^= nbhd_change_num << i << 4;
+            neigh.desc.set(desc);
+        }
+    }
+
+    fn consistify<'a>(world, cell, flags) {
+        for (i, &neigh) in cell.nbhd.iter().enumerate() {
+            if flags.intersects(ImplFlags::from_bits(3 << (2 * i + 6)).unwrap()) {
+                if let Some(neigh) = neigh {
+                    let state =
+                        if flags.contains(ImplFlags::from_bits(1 << (2 * i + 7)).unwrap()) {
+                            DEAD
+                        } else {
+                            ALIVE
+                        };
+                    if !world.set_cell(neigh, state, Reason::Deduce) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+    fn consistify_gen<'a>(world, cell, flags) {
+        if flags.intersects(ImplFlags::NBHD) {
+            for (i, &neigh) in cell.nbhd.iter().enumerate() {
+                if flags.intersects(ImplFlags::from_bits(1 << (2 * i + 6)).unwrap()) {
+                    if let Some(neigh) = neigh {
+                        if !world.set_cell(neigh, ALIVE, Reason::Deduce) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl NtLife {
@@ -221,174 +273,5 @@ impl NtLife {
         }
 
         self
-    }
-}
-
-/// A parser for the rule.
-impl ParseNtLife for NtLife {
-    fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
-        Self::new(b, s)
-    }
-}
-
-impl FromStr for NtLife {
-    type Err = ParseRuleError;
-
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        ParseNtLife::parse_rule(input)
-    }
-}
-
-impl Rule for NtLife {
-    type Desc = NbhdDesc;
-
-    const IS_GEN: bool = false;
-
-    fn has_b0(&self) -> bool {
-        self.b0
-    }
-
-    fn gen(&self) -> usize {
-        2
-    }
-
-    fn new_desc(state: State, succ_state: State) -> Self::Desc {
-        let nbhd_state = match state {
-            ALIVE => 0x00ff,
-            _ => 0xff00,
-        };
-        let succ_state = match succ_state {
-            ALIVE => 0b01,
-            _ => 0b10,
-        };
-        let state = match state {
-            ALIVE => 0b01,
-            _ => 0b10,
-        };
-        NbhdDesc(nbhd_state << 4 | succ_state << 2 | state)
-    }
-
-    fn update_desc(cell: CellRef<Self>, old_state: Option<State>, state: Option<State>) {
-        let nbhd_change_num = match (state, old_state) {
-            (Some(ALIVE), Some(ALIVE)) => 0x0000,
-            (Some(_), Some(ALIVE)) | (Some(ALIVE), Some(_)) => 0x0101,
-            (Some(ALIVE), None) | (None, Some(ALIVE)) => 0x0001,
-            (Some(_), None) | (None, Some(_)) => 0x0100,
-            _ => 0x0000,
-        };
-        for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
-            let neigh = neigh.unwrap();
-            let mut desc = neigh.desc.get();
-            desc.0 ^= nbhd_change_num << i << 4;
-            neigh.desc.set(desc);
-        }
-
-        let change_num = match (state, old_state) {
-            (Some(ALIVE), Some(ALIVE)) => 0,
-            (Some(_), Some(ALIVE)) | (Some(ALIVE), Some(_)) => 0b11,
-            (Some(ALIVE), None) | (None, Some(ALIVE)) => 0b01,
-            (Some(_), None) | (None, Some(_)) => 0b10,
-            _ => 0,
-        };
-        if let Some(pred) = cell.pred {
-            let mut desc = pred.desc.get();
-            desc.0 ^= change_num << 2;
-            pred.desc.set(desc);
-        }
-        let mut desc = cell.desc.get();
-        desc.0 ^= change_num;
-        cell.desc.set(desc);
-    }
-
-    fn consistify<'a>(world: &mut World<'a, Self>, cell: CellRef<'a, Self>) -> bool {
-        let flags = world.rule.impl_table[cell.desc.get().0];
-
-        if flags.is_empty() {
-            return true;
-        }
-
-        if flags.contains(ImplFlags::CONFLICT) {
-            return false;
-        }
-
-        if flags.intersects(ImplFlags::SUCC_DEAD | ImplFlags::SUCC_ALIVE) {
-            let state = if flags.contains(ImplFlags::SUCC_DEAD) {
-                DEAD
-            } else {
-                ALIVE
-            };
-            let succ = cell.succ.unwrap();
-            return world.set_cell(succ, state, Reason::Deduce);
-        }
-
-        if flags.intersects(ImplFlags::SELF_DEAD | ImplFlags::SELF_ALIVE) {
-            let state = if flags.contains(ImplFlags::SELF_DEAD) {
-                DEAD
-            } else {
-                ALIVE
-            };
-            if !world.set_cell(cell, state, Reason::Deduce) {
-                return false;
-            }
-        }
-
-        if flags.intersects(ImplFlags::NBHD) {
-            for (i, &neigh) in cell.nbhd.iter().enumerate() {
-                if flags.intersects(ImplFlags::from_bits(3 << (2 * i + 6)).unwrap()) {
-                    if let Some(neigh) = neigh {
-                        let state =
-                            if flags.contains(ImplFlags::from_bits(1 << (2 * i + 7)).unwrap()) {
-                                DEAD
-                            } else {
-                                ALIVE
-                            };
-                        if !world.set_cell(neigh, state, Reason::Deduce) {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-
-        true
-    }
-}
-
-generations! {
-    /// Totalistic Life-like Generations rules.
-    pub struct NtLifeGen {
-        Rule: NtLife,
-        Parser: ParseNtLifeGen,
-        impl_table: Vec<ImplFlags>,
-    }
-
-    fn update_desc(cell, old_state, state, change_num) {
-        let nbhd_change_num = match (state, old_state) {
-            (Some(ALIVE), Some(ALIVE)) => 0x0000,
-            (Some(_), Some(ALIVE)) | (Some(ALIVE), Some(_)) => 0x0101,
-            (Some(ALIVE), None) | (None, Some(ALIVE)) => 0x0001,
-            (Some(_), None) | (None, Some(_)) => 0x0100,
-            _ => 0x0000,
-        };
-        for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
-            let neigh = neigh.unwrap();
-            let mut desc = neigh.desc.get();
-            desc.desc.0 ^= nbhd_change_num << i << 4;
-            neigh.desc.set(desc);
-        }
-    }
-
-    fn consistify<'a>(world, cell, flags) {
-        if flags.intersects(ImplFlags::NBHD) {
-            for (i, &neigh) in cell.nbhd.iter().enumerate() {
-                if flags.intersects(ImplFlags::from_bits(1 << (2 * i + 6)).unwrap()) {
-                    if let Some(neigh) = neigh {
-                        if !world.set_cell(neigh, ALIVE, Reason::Deduce) {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
     }
 }

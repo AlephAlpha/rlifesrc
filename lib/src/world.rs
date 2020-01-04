@@ -401,7 +401,7 @@ impl<'a, R: Rule> World<'a, R> {
     pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: Reason) -> bool {
         cell.state.set(Some(state));
         let mut result = true;
-        cell.update_desc(None, Some(state));
+        cell.update_desc(Some(state), true);
         if state == ALIVE {
             self.cell_count[cell.coord.2 as usize] += 1;
             if let Some(max) = self.config.max_cell_count {
@@ -425,7 +425,7 @@ impl<'a, R: Rule> World<'a, R> {
     pub(crate) fn clear_cell(&mut self, cell: CellRef<'a, R>) {
         let old_state = cell.state.take();
         if old_state != None {
-            cell.update_desc(old_state, None);
+            cell.update_desc(old_state, false);
             if old_state == Some(ALIVE) {
                 self.cell_count[cell.coord.2 as usize] -= 1;
             }
