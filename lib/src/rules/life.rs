@@ -61,7 +61,7 @@ impl_rule! {
     /// * `0b_10` means dead,
     /// * `0b_01` means alive,
     /// * `0b_00` means unknown.
-    pub struct NbhdDesc(usize);
+    pub struct NbhdDesc(u16);
 
     /// Totalistic Life-like rules.
     pub struct Life {

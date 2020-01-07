@@ -120,7 +120,7 @@ macro_rules! impl_rule {
             }
 
             fn consistify<$a>($world: &mut World<$a, Self>, $cell_cons: CellRef<$a, Self>) -> bool {
-                let $flags = $world.rule.impl_table[$cell_cons.desc.get().0];
+                let $flags = $world.rule.impl_table[$cell_cons.desc.get().0 as usize];
                 if $flags.is_empty() {
                     return true;
                 }
@@ -254,7 +254,7 @@ macro_rules! impl_rule {
                 $cell_cons_gen: CellRef<$a_gen, Self>,
             ) -> bool {
                 let desc = $cell_cons_gen.desc.get();
-                let $flags_gen = $world_gen.rule.impl_table[desc.0];
+                let $flags_gen = $world_gen.rule.impl_table[desc.0 as usize];
                 let gen = $world_gen.rule.gen;
                 match $cell_cons_gen.state.get() {
                     Some(DEAD) => {

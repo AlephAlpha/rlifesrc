@@ -5,12 +5,13 @@ use yew::{
 };
 
 pub struct Settings {
+    link: ComponentLink<Self>,
     callback: Callback<Config>,
     config: Config,
     rule_is_valid: bool,
 }
 
-#[derive(Properties)]
+#[derive(Clone, Properties)]
 pub struct Props {
     #[props(required)]
     pub config: Config,
@@ -40,9 +41,10 @@ impl Component for Settings {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let rule_is_valid = props.config.rule_string.parse::<NtLifeGen>().is_ok();
         Settings {
+            link,
             callback: props.callback,
             config: props.config,
             rule_is_valid,
@@ -114,7 +116,7 @@ impl Component for Settings {
         }
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div class="mui-form">
                 { self.apply_button() }
@@ -125,17 +127,18 @@ impl Component for Settings {
 }
 
 impl Settings {
-    fn apply_button(&self) -> Html<Self> {
+    fn apply_button(&self) -> Html {
+        let onclick = self.link.callback(|_| {
+            js! { @(no_return)
+                mui.tabs.activate("pane-world");
+            };
+            Msg::Apply
+        });
         html! {
             <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
                     type="submit"
-                    onclick=|_| {
-                        js!{ @(no_return)
-                            mui.tabs.activate("pane-world");
-                        };
-                        Msg::Apply
-                    }>
+                    onclick=onclick>
                     <i class="fas fa-check"></i>
                     <span>
                         <abbr title="Apply the settings and restart the search.">
@@ -147,7 +150,7 @@ impl Settings {
         }
     }
 
-    fn settings(&self) -> Html<Self> {
+    fn settings(&self) -> Html {
         html! {
             <div id="settings">
                 { self.set_rule() }
@@ -167,7 +170,14 @@ impl Settings {
         }
     }
 
-    fn set_rule(&self) -> Html<Self> {
+    fn set_rule(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                Msg::SetRule(v)
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-textfield">
                 <label for="set_rule">
@@ -181,19 +191,20 @@ impl Settings {
                 <input id="set_rule"
                     type="text"
                     class=if self.rule_is_valid { "" } else { "mui--is-invalid" }
-                    value={ self.config.rule_string.clone() }
-                    onchange=|e| {
-                        if let ChangeData::Value(v) = e {
-                            Msg::SetRule(v)
-                        } else {
-                            Msg::None
-                        }
-                    }/>
+                    value=self.config.rule_string.clone()
+                    onchange=onchange/>
             </div>
         }
     }
 
-    fn set_width(&self) -> Html<Self> {
+    fn set_width(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                Msg::SetWidth(v.parse().unwrap())
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-textfield">
                 <label for="set_width">
@@ -204,20 +215,21 @@ impl Settings {
                 </label>
                 <input id="set_width"
                     type="number"
-                    value={ self.config.width }
+                    value=self.config.width
                     min="1"
-                    onchange =|e| {
-                        if let ChangeData::Value(v) = e {
-                            Msg::SetWidth(v.parse().unwrap())
-                        } else {
-                            Msg::None
-                        }
-                    }/>
+                    onchange=onchange/>
             </div>
         }
     }
 
-    fn set_height(&self) -> Html<Self> {
+    fn set_height(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                Msg::SetHeight(v.parse().unwrap())
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-textfield">
                 <label for="set_height">
@@ -228,20 +240,21 @@ impl Settings {
                 </label>
                 <input id="set_height"
                     type="number"
-                    value={ self.config.height }
+                    value=self.config.height
                     min="1"
-                    onchange=|e| {
-                        if let ChangeData::Value(v) = e {
-                            Msg::SetHeight(v.parse().unwrap())
-                        } else {
-                            Msg::None
-                        }
-                    }/>
+                    onchange=onchange/>
             </div>
         }
     }
 
-    fn set_period(&self) -> Html<Self> {
+    fn set_period(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                Msg::SetPeriod(v.parse().unwrap())
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-textfield">
                 <label for="set_period">
@@ -252,20 +265,21 @@ impl Settings {
                 </label>
                 <input id="set_period"
                     type="number"
-                    value={ self.config.period }
+                    value=self.config.period
                     min="1"
-                    onchange=|e| {
-                        if let ChangeData::Value(v) = e {
-                            Msg::SetPeriod(v.parse().unwrap())
-                        } else {
-                            Msg::None
-                        }
-                    }/>
+                    onchange=onchange/>
             </div>
         }
     }
 
-    fn set_dx(&self) -> Html<Self> {
+    fn set_dx(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                Msg::SetDx(v.parse().unwrap())
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-textfield">
                 <label for="set_dx">
@@ -277,18 +291,19 @@ impl Settings {
                 <input id="set_dx"
                     type="number"
                     value=self.config.dx
-                    onchange=|e| {
-                        if let ChangeData::Value(v) = e {
-                            Msg::SetDx(v.parse().unwrap())
-                        } else {
-                            Msg::None
-                        }
-                    }/>
+                    onchange=onchange/>
             </div>
         }
     }
 
-    fn set_dy(&self) -> Html<Self> {
+    fn set_dy(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                Msg::SetDy(v.parse().unwrap())
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-textfield">
                 <label for="set_dy">
@@ -299,19 +314,29 @@ impl Settings {
                 </label>
                 <input id="set_dy"
                     type="number"
-                    value={ self.config.dy }
-                    onchange=|e| {
-                        if let ChangeData::Value(v) = e {
-                            Msg::SetDy(v.parse().unwrap())
-                        } else {
-                            Msg::None
-                        }
-                    }/>
+                    value=self.config.dy
+                    onchange=onchange/>
             </div>
         }
     }
 
-    fn set_max(&self) -> Html<Self> {
+    fn set_max(&self) -> Html {
+        let value = match self.config.max_cell_count {
+            None => 0,
+            Some(i) => i,
+        };
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                let max_cell_count = v.parse().unwrap();
+                let max_cell_count = match max_cell_count {
+                    0 => None,
+                    i => Some(i),
+                };
+                Msg::SetMax(max_cell_count)
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-textfield">
                 <label for="set_max">
@@ -321,39 +346,23 @@ impl Settings {
                     </abbr>
                     { ":" }
                 </label>
-                <input id="set_max",
-                    type="number",
-                    value={
-                        match self.config.max_cell_count {
-                            None => 0,
-                            Some(i) => i,
-                        }
-                    },
-                    min="0",
-                    onchange=|e| {
-                        if let ChangeData::Value(v) = e {
-                            let max_cell_count = v.parse().unwrap();
-                            let max_cell_count = match max_cell_count {
-                                0 => None,
-                                i => Some(i),
-                            };
-                            Msg::SetMax(max_cell_count)
-                        } else {
-                            Msg::None
-                        }
-                    }/>
+                <input id="set_max"
+                    type="number"
+                    value=value
+                    min="0"
+                    onchange=onchange/>
             </div>
         }
     }
 
-    fn set_front(&self) -> Html<Self> {
+    fn set_front(&self) -> Html {
         html! {
             <div class="mui-checkbox">
                 <label>
-                    <input id="set_front",
-                        type="checkbox",
-                        checked={ self.config.non_empty_front },
-                        onclick=|_| Msg::SetFront/>
+                    <input id="set_front"
+                        type="checkbox"
+                        checked=self.config.non_empty_front
+                        onclick=self.link.callback(|_| Msg::SetFront)/>
                     <abbr title="Force the front to be nonempty.\n\
                         Here 'front' means the first row or column to be searched, \
                         according to the search order.">
@@ -364,14 +373,14 @@ impl Settings {
         }
     }
 
-    fn set_reduce(&self) -> Html<Self> {
+    fn set_reduce(&self) -> Html {
         html! {
             <div class="mui-checkbox">
                 <label>
-                    <input id="set_reduce",
-                        type="checkbox",
-                        checked={ self.config.reduce_max },
-                        onclick=|_| Msg::SetReduce/>
+                    <input id="set_reduce"
+                        type="checkbox"
+                        checked=self.config.reduce_max
+                        onclick=self.link.callback(|_| Msg::SetReduce)/>
                     <abbr title="The new max cell count will be set to the cell count of \
                         the current result minus one.">
                     { "Reduce the max cell count when a result is found" }
@@ -381,7 +390,24 @@ impl Settings {
         }
     }
 
-    fn set_trans(&self) -> Html<Self> {
+    fn set_trans(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Select(s) = e {
+                match s.raw_value().as_ref() {
+                    "Id" => Msg::SetTrans(Transform::Id),
+                    "Rotate 90°" => Msg::SetTrans(Transform::Rotate90),
+                    "Rotate 180°" => Msg::SetTrans(Transform::Rotate180),
+                    "Rotate 270°" => Msg::SetTrans(Transform::Rotate270),
+                    "Flip -" => Msg::SetTrans(Transform::FlipRow),
+                    "Flip |" => Msg::SetTrans(Transform::FlipCol),
+                    "Flip \\" => Msg::SetTrans(Transform::FlipDiag),
+                    "Flip /" => Msg::SetTrans(Transform::FlipAntidiag),
+                    _ => Msg::None,
+                }
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-select">
                 <label for="set_trans">
@@ -393,38 +419,21 @@ impl Settings {
                     </abbr>
                     { ":" }
                 </label>
-                <select id="set_trans"
-                    onchange=|e| {
-                        if let ChangeData::Select(s) = e {
-                            match s.raw_value().as_ref() {
-                                "Id" => Msg::SetTrans(Transform::Id),
-                                "Rotate 90°" => Msg::SetTrans(Transform::Rotate90),
-                                "Rotate 180°" => Msg::SetTrans(Transform::Rotate180),
-                                "Rotate 270°" => Msg::SetTrans(Transform::Rotate270),
-                                "Flip -" => Msg::SetTrans(Transform::FlipRow),
-                                "Flip |" => Msg::SetTrans(Transform::FlipCol),
-                                "Flip \\" => Msg::SetTrans(Transform::FlipDiag),
-                                "Flip /" => Msg::SetTrans(Transform::FlipAntidiag),
-                                _ => Msg::None,
-                            }
-                        } else {
-                            Msg::None
-                        }
-                    }>
+                <select id="set_trans" onchange=onchange>
                     <option> { "Id" } </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "Rotate 90°" }
                     </option>
                     <option> { "Rotate 180°" } </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "Rotate 270°" }
                     </option>
                     <option> { "Flip |" } </option>
                     <option> { "Flip -" } </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "Flip \\" }
                     </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "Flip /" }
                     </option>
                 </select>
@@ -432,7 +441,26 @@ impl Settings {
         }
     }
 
-    fn set_sym(&self) -> Html<Self> {
+    fn set_sym(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Select(s) = e {
+                match s.raw_value().as_ref() {
+                    "C1" => Msg::SetSym(Symmetry::C1),
+                    "C2" => Msg::SetSym(Symmetry::C2),
+                    "C4" => Msg::SetSym(Symmetry::C4),
+                    "D2-" => Msg::SetSym(Symmetry::D2Row),
+                    "D2|" => Msg::SetSym(Symmetry::D2Col),
+                    "D2\\" => Msg::SetSym(Symmetry::D2Diag),
+                    "D2/" => Msg::SetSym(Symmetry::D2Antidiag),
+                    "D4+" => Msg::SetSym(Symmetry::D4Ortho),
+                    "D4X" => Msg::SetSym(Symmetry::D4Diag),
+                    "D8" => Msg::SetSym(Symmetry::D8),
+                    _ => Msg::None,
+                }
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-select">
                 <label for="set_sym">
@@ -441,44 +469,25 @@ impl Settings {
                     </abbr>
                     { ":" }
                 </label>
-                <select id ="set_sym"
-                    onchange = |e| {
-                        if let ChangeData::Select(s) = e {
-                            match s.raw_value().as_ref() {
-                                "C1" => Msg::SetSym(Symmetry::C1),
-                                "C2" => Msg::SetSym(Symmetry::C2),
-                                "C4" => Msg::SetSym(Symmetry::C4),
-                                "D2-" => Msg::SetSym(Symmetry::D2Row),
-                                "D2|" => Msg::SetSym(Symmetry::D2Col),
-                                "D2\\" => Msg::SetSym(Symmetry::D2Diag),
-                                "D2/" => Msg::SetSym(Symmetry::D2Antidiag),
-                                "D4+" => Msg::SetSym(Symmetry::D4Ortho),
-                                "D4X" => Msg::SetSym(Symmetry::D4Diag),
-                                "D8" => Msg::SetSym(Symmetry::D8),
-                                _ => Msg::None,
-                            }
-                        } else {
-                            Msg::None
-                        }
-                    }>
+                <select id="set_sym" onchange=onchange>
                     <option> { "C1" } </option>
                     <option> { "C2" } </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "C4" }
                     </option>
                     <option> { "D2|" } </option>
                     <option> { "D2-" } </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "D2\\" }
                     </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "D2/" }
                     </option>
                     <option> { "D4+" } </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "D4X" }
                     </option>
-                    <option disabled={ self.config.width != self.config.height}>
+                    <option disabled=self.config.width != self.config.height>
                         { "D8" }
                     </option>
                 </select>
@@ -486,7 +495,19 @@ impl Settings {
         }
     }
 
-    fn set_order(&self) -> Html<Self> {
+    fn set_order(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Select(s) = e {
+                match s.raw_value().as_ref() {
+                    "Automatic" => Msg::SetOrder(None),
+                    "Column" => Msg::SetOrder(Some(SearchOrder::ColumnFirst)),
+                    "Row" => Msg::SetOrder(Some(SearchOrder::RowFirst)),
+                    _ => Msg::None,
+                }
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-select">
                 <label for="set_order">
@@ -497,19 +518,7 @@ impl Settings {
                     </abbr>
                     { ":" }
                 </label>
-                <select id="set_order"
-                    onchange=|e| {
-                        if let ChangeData::Select(s) = e {
-                            match s.raw_value().as_ref() {
-                                "Automatic" => Msg::SetOrder(None),
-                                "Column" => Msg::SetOrder(Some(SearchOrder::ColumnFirst)),
-                                "Row" => Msg::SetOrder(Some(SearchOrder::RowFirst)),
-                                _ => Msg::None,
-                            }
-                        } else {
-                            Msg::None
-                        }
-                    } >
+                <select id="set_order" onchange=onchange>
                     <option> { "Automatic" } </option>
                     <option value="Column"> { "Column first" } </option>
                     <option value="Row"> { "Row first" } </option>
@@ -518,7 +527,19 @@ impl Settings {
         }
     }
 
-    fn set_choose(&self) -> Html<Self> {
+    fn set_choose(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Select(s) = e {
+                match s.raw_value().as_ref() {
+                    "Dead" => Msg::SetChoose(NewState::ChooseDead),
+                    "Alive" => Msg::SetChoose(NewState::ChooseAlive),
+                    "Random" => Msg::SetChoose(NewState::Random),
+                    _ => Msg::None,
+                }
+            } else {
+                Msg::None
+            }
+        });
         html! {
             <div class="mui-select">
                 <label for="set_choose">
@@ -527,19 +548,7 @@ impl Settings {
                     </abbr>
                     { ":" }
                 </label>
-                <select id="set_order"
-                    onchange=|e| {
-                        if let ChangeData::Select(s) = e {
-                            match s.raw_value().as_ref() {
-                                "Dead" => Msg::SetChoose(NewState::ChooseDead),
-                                "Alive" => Msg::SetChoose(NewState::ChooseAlive),
-                                "Random" => Msg::SetChoose(NewState::Random),
-                                _ => Msg::None,
-                            }
-                        } else {
-                            Msg::None
-                        }
-                    }>
+                <select id="set_order" onchange=onchange>
                     <option> { "Alive" } </option>
                     <option> { "Dead" } </option>
                     <option> { "Random" } </option>

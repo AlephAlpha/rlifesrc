@@ -7,10 +7,11 @@ use rlifesrc_lib::{Config, Status};
 use std::time::Duration;
 use stdweb::web::event::IEvent;
 use yew::{
+    events::MouseWheelEvent,
     format::Json,
     html,
     services::{storage::Area, DialogService, IntervalService, StorageService, Task},
-    Bridge, Bridged, Callback, Component, ComponentLink, Html, ShouldRender,
+    Bridge, Bridged, Component, ComponentLink, Html, ShouldRender,
 };
 
 const KEY: &str = "rlifesrc.world";
@@ -33,6 +34,7 @@ const INIT_WORLD: &str = "x = 16, y = 16, rule = B3/S23\n\
                           ????????????????!";
 
 pub struct App {
+    link: ComponentLink<Self>,
     config: Config,
     status: Status,
     gen: isize,
@@ -41,7 +43,8 @@ pub struct App {
     period: isize,
     worker: Box<dyn Bridge<Worker>>,
     storage: StorageService,
-    job: Job,
+    interval: IntervalService,
+    job: Option<Box<dyn Task>>,
 }
 
 pub enum Msg {
@@ -58,33 +61,17 @@ pub enum Msg {
     None,
 }
 
-struct Job {
-    interval: IntervalService,
-    callback: Callback<()>,
-    task: Option<Box<dyn Task>>,
-}
-
-impl Job {
-    fn new(link: &mut ComponentLink<App>) -> Self {
-        let interval = IntervalService::new();
-        let callback = link.send_back(|_| Msg::Tick);
-        let task = None;
-        Job {
-            interval,
-            callback,
-            task,
-        }
+impl App {
+    fn start_job(&mut self) {
+        let handle = self.interval.spawn(
+            Duration::from_millis(1000 / 60),
+            self.link.callback(|_| Msg::Tick),
+        );
+        self.job = Some(Box::new(handle));
     }
 
-    fn start(&mut self) {
-        let handle = self
-            .interval
-            .spawn(Duration::from_millis(1000 / 60), self.callback.clone());
-        self.task = Some(Box::new(handle));
-    }
-
-    fn stop(&mut self) {
-        if let Some(mut task) = self.task.take() {
+    fn stop_job(&mut self) {
+        if let Some(mut task) = self.job.take() {
             task.cancel();
         }
     }
@@ -94,17 +81,18 @@ impl Component for App {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let config: Config = Config::default();
         let status = Status::Paused;
-        let job = Job::new(&mut link);
-        let callback = link.send_back(Msg::DataReceived);
-        let worker = Worker::bridge(callback);
-        let storage = StorageService::new(Area::Local);
         let world = INIT_WORLD.to_owned();
         let period = config.period;
+        let callback = link.callback(Msg::DataReceived);
+        let worker = Worker::bridge(callback);
+        let storage = StorageService::new(Area::Local);
+        let interval = IntervalService::new();
 
         App {
+            link,
             config,
             status,
             gen: 0,
@@ -113,7 +101,8 @@ impl Component for App {
             period,
             worker,
             storage,
-            job,
+            interval,
+            job: None,
         }
     }
 
@@ -177,8 +166,8 @@ impl Component for App {
                     let old_status = self.status;
                     if self.status != status {
                         match (old_status, status) {
-                            (Status::Searching, _) => self.job.stop(),
-                            (_, Status::Searching) => self.job.start(),
+                            (Status::Searching, _) => self.stop_job(),
+                            (_, Status::Searching) => self.start_job(),
                             _ => (),
                         }
                         self.status = status;
@@ -199,7 +188,7 @@ impl Component for App {
         true
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div id="rlifesrc">
                 { self.header() }
@@ -211,7 +200,7 @@ impl Component for App {
 }
 
 impl App {
-    fn header(&self) -> Html<Self> {
+    fn header(&self) -> Html {
         html! {
             <header id="appbar" class="mui-appbar mui--z1">
                 <table class="mui-container-fluid">
@@ -236,7 +225,7 @@ impl App {
         }
     }
 
-    fn footer(&self) -> Html<Self> {
+    fn footer(&self) -> Html {
         html! {
             <footer id="footer" class="mui-container-fluid">
                 <div class="mui--text-caption mui--text-center">
@@ -253,7 +242,7 @@ impl App {
         }
     }
 
-    fn main(&self) -> Html<Self> {
+    fn main(&self) -> Html {
         html! {
             <main class="mui-container-fluid">
                 <div class="mui-row">
@@ -277,7 +266,8 @@ impl App {
                                 { self.buttons() }
                             </div>
                             <div class="mui-tabs__pane" id="pane-settings">
-                                <Settings config=&self.config callback=Msg::Apply/>
+                                <Settings config=&self.config
+                                    callback=self.link.callback(Msg::Apply)/>
                             </div>
                         </div>
                     </div>
@@ -286,30 +276,31 @@ impl App {
         }
     }
 
-    fn data(&self) -> Html<Self> {
+    fn data(&self) -> Html {
+        let onmousewheel = self.link.callback(|e: MouseWheelEvent| {
+            e.prevent_default();
+            if e.delta_y() < 0.0 {
+                Msg::IncGen
+            } else {
+                Msg::DecGen
+            }
+        });
         html! {
             <ul id="data" class="mui-list--inline mui--text-body2">
-                <li onmousewheel=|e| {
-                    e.prevent_default();
-                    if e.delta_y() < 0.0 {
-                        Msg::IncGen
-                    } else {
-                        Msg::DecGen
-                    }
-                }>
+                <li onmousewheel=onmousewheel>
                     <abbr title="The displayed generation.">
                         { "Generation" }
                     </abbr>
                     { ": " }
                     { self.gen }
                     <button class="mui-btn mui-btn--small btn-tiny"
-                        disabled={ self.gen == 0 }
-                        onclick=|_| Msg::DecGen>
+                        disabled=self.gen == 0
+                        onclick=self.link.callback(|_| Msg::DecGen)>
                         <i class="fas fa-minus"></i>
                     </button>
                     <button class="mui-btn mui-btn--small btn-tiny"
-                        disabled={ self.gen == self.period - 1 }
-                        onclick=|_| Msg::IncGen>
+                        disabled=self.gen == self.period - 1
+                        onclick=self.link.callback(|_| Msg::IncGen)>
                         <i class="fas fa-plus"></i>
                     </button>
                 </li>
@@ -334,28 +325,28 @@ impl App {
         }
     }
 
-    fn buttons(&self) -> Html<Self> {
+    fn buttons(&self) -> Html {
         html! {
             <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
-                    disabled={ self.status == Status::Searching }
-                    onclick=|_| Msg::Start>
+                    disabled=self.status == Status::Searching
+                    onclick=self.link.callback(|_| Msg::Start)>
                     <i class="fas fa-play"></i>
                     <span class="mui--hidden-xs">
                         { "Start" }
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    disabled={ self.status != Status::Searching }
-                    onclick=|_| Msg::Pause>
+                    disabled=self.status != Status::Searching
+                    onclick=self.link.callback(|_| Msg::Pause)>
                     <i class="fas fa-pause"></i>
                     <span class="mui--hidden-xs">
                         { "Pause" }
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    disabled={ self.status == Status::Searching }
-                    onclick=|_| Msg::Reset>
+                    disabled=self.status == Status::Searching
+                    onclick=self.link.callback(|_| Msg::Reset)>
                     <i class="fas fa-redo"></i>
                     <span class="mui--hidden-xs">
                         <abbr title="Reset the world.">
@@ -365,8 +356,8 @@ impl App {
                 </button>
                 <div class="mui--visible-xs-block"></div>
                 <button class="mui-btn mui-btn--raised"
-                    disabled={ self.status == Status::Searching }
-                    onclick=|_| Msg::Store>
+                    disabled=self.status == Status::Searching
+                    onclick=self.link.callback(|_| Msg::Store)>
                     <i class="fas fa-save"></i>
                     <span class="mui--hidden-xs">
                         <abbr title="Store the search status in the browser.">
@@ -375,7 +366,7 @@ impl App {
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    onclick=|_| Msg::Restore>
+                    onclick=self.link.callback(|_| Msg::Restore)>
                     <i class="fas fa-file-import"></i>
                     <span class="mui--hidden-xs">
                         <abbr title="Load the saved search status.">

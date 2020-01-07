@@ -1,12 +1,16 @@
 use stdweb::web::{self, event::IEvent};
-use yew::{html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
+use yew::{
+    events::DoubleClickEvent, html, Component, ComponentLink, Html, NodeRef, Properties,
+    ShouldRender,
+};
 
 pub struct World {
+    link: ComponentLink<Self>,
     world: String,
     node_ref: NodeRef,
 }
 
-#[derive(Properties)]
+#[derive(Clone, Properties)]
 pub struct Props {
     #[props(required)]
     pub world: String,
@@ -20,8 +24,9 @@ impl Component for World {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         World {
+            link,
             world: props.world,
             node_ref: NodeRef::default(),
         }
@@ -47,14 +52,15 @@ impl Component for World {
         }
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
+        let ondoubleclick = self.link.callback(|e: DoubleClickEvent| {
+            e.prevent_default();
+            Msg::Select
+        });
         html! {
             <pre id="world"
                 ref=self.node_ref.clone()
-                ondoubleclick=|e| {
-                    e.prevent_default();
-                    Msg::Select
-                }>
+                ondoubleclick=ondoubleclick>
                 { &self.world }
             </pre>
         }

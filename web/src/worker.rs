@@ -4,49 +4,9 @@ use std::time::Duration;
 use yew::{
     agent::{Agent, AgentLink, HandlerId, Public},
     services::{Task, TimeoutService},
-    Callback,
 };
 
 const VIEW_FREQ: u64 = 50000;
-
-struct Job {
-    timeout: TimeoutService,
-    callback: Callback<()>,
-    task: Option<Box<dyn Task>>,
-}
-
-impl Job {
-    fn new(link: &AgentLink<Worker>) -> Self {
-        let timeout = TimeoutService::new();
-        let callback = link.send_back(|_| WorkerMsg::Step);
-        let task = None;
-        Job {
-            timeout,
-            callback,
-            task,
-        }
-    }
-
-    fn start(&mut self) {
-        let handle = self
-            .timeout
-            .spawn(Duration::from_millis(0), self.callback.clone());
-        self.task = Some(Box::new(handle));
-    }
-
-    fn stop(&mut self) {
-        if let Some(mut task) = self.task.take() {
-            task.cancel();
-        }
-    }
-}
-
-pub struct Worker {
-    status: Status,
-    search: Box<dyn Search>,
-    link: AgentLink<Worker>,
-    job: Job,
-}
 
 #[derive(Serialize, Deserialize)]
 pub enum Request {
@@ -71,12 +31,33 @@ pub enum WorkerMsg {
     Step,
 }
 
+pub struct Worker {
+    status: Status,
+    search: Box<dyn Search>,
+    link: AgentLink<Worker>,
+    timeout: TimeoutService,
+    job: Option<Box<dyn Task>>,
+}
+
 impl Worker {
+    fn start_job(&mut self) {
+        let handle = self.timeout.spawn(
+            Duration::from_millis(0),
+            self.link.callback(|_| WorkerMsg::Step),
+        );
+        self.job = Some(Box::new(handle));
+    }
+
+    fn stop_job(&mut self) {
+        if let Some(mut task) = self.job.take() {
+            task.cancel();
+        }
+    }
+
     fn update_world(&mut self, id: HandlerId, gen: isize) {
         let world = self.search.rle_gen(gen);
         let count = self.search.cell_count_gen(gen);
-        self.link
-            .response(id, Response::UpdateWorld((world, count)));
+        self.link.respond(id, Response::UpdateWorld((world, count)));
         self.update_status(id);
     }
 
@@ -84,9 +65,9 @@ impl Worker {
         let status = self.status;
         if Status::Found == status && self.search.config().reduce_max {
             self.link
-                .response(id, Response::UpdateConfig(self.search.config().clone()));
+                .respond(id, Response::UpdateConfig(self.search.config().clone()));
         }
-        self.link.response(id, Response::UpdateStatus(status));
+        self.link.respond(id, Response::UpdateStatus(status));
     }
 }
 
@@ -99,15 +80,14 @@ impl Agent for Worker {
     fn create(link: AgentLink<Self>) -> Self {
         let config: Config = Config::default();
         let search = config.world().unwrap();
-
-        let status = Status::Paused;
-        let job = Job::new(&link);
+        let timeout = TimeoutService::new();
 
         Worker {
-            status,
+            status: Status::Paused,
             search,
             link,
-            job,
+            timeout,
+            job: None,
         }
     }
 
@@ -116,34 +96,34 @@ impl Agent for Worker {
             WorkerMsg::Step => {
                 if let Status::Searching = self.status {
                     self.status = self.search.search(Some(VIEW_FREQ));
-                    self.job.start();
+                    self.start_job();
                 } else {
-                    self.job.stop();
+                    self.stop_job();
                 }
             }
         }
     }
 
-    fn handle(&mut self, msg: Self::Input, id: HandlerId) {
+    fn handle_input(&mut self, msg: Self::Input, id: HandlerId) {
         match msg {
             Request::Start => {
                 self.status = Status::Searching;
                 self.update_status(id);
-                self.job.start();
+                self.start_job();
             }
             Request::Pause => {
-                self.job.stop();
+                self.stop_job();
                 self.status = Status::Paused;
                 self.update_status(id);
             }
             Request::SetWorld(config) => {
-                self.job.stop();
+                self.stop_job();
                 self.status = Status::Paused;
                 if let Ok(search) = config.world() {
                     self.search = search;
                     self.update_world(id, 0);
                 } else {
-                    self.link.response(id, Response::InvalidRule);
+                    self.link.respond(id, Response::InvalidRule);
                 }
             }
             Request::DisplayGen(gen) => {
@@ -151,18 +131,18 @@ impl Agent for Worker {
             }
             Request::Store => {
                 let world_ser = self.search.ser();
-                self.link.response(id, Response::Store(world_ser));
+                self.link.respond(id, Response::Store(world_ser));
             }
             Request::Restore(world_ser) => {
-                self.job.stop();
+                self.stop_job();
                 self.status = Status::Paused;
                 if let Ok(search) = world_ser.world() {
                     self.search = search;
                     self.link
-                        .response(id, Response::UpdateConfig(self.search.config().clone()));
+                        .respond(id, Response::UpdateConfig(self.search.config().clone()));
                     self.update_world(id, 0);
                 } else {
-                    self.link.response(id, Response::InvalidRule);
+                    self.link.respond(id, Response::InvalidRule);
                 }
             }
         }
