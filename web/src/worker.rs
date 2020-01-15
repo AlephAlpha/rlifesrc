@@ -83,7 +83,7 @@ impl Agent for Worker {
         let timeout = TimeoutService::new();
 
         Worker {
-            status: Status::Paused,
+            status: Status::Initial,
             search,
             link,
             timeout,

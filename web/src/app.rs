@@ -314,6 +314,7 @@ impl App {
                 <li>
                     {
                         match self.status {
+                            Status::Initial => "",
                             Status::Found => "Found a result.",
                             Status::None => "No more result.",
                             Status::Searching => "Searching...",

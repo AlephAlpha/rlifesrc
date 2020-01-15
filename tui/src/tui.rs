@@ -151,6 +151,7 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Updates the footer.
     fn update_footer(&mut self) -> CrosstermResult<()> {
+        const INITIAL: &str = "Press [space] to start.";
         const FOUND: &str = "Found a result. Press [q] to quit or [space] to search for the next.";
         const NONE: &str = "No more result. Press [q] to quit.";
         const SEARCHING: &str = "Searching... Press [space] to pause.";
@@ -163,6 +164,7 @@ impl<'a, W: Write> App<'a, W> {
             .queue(Print(format!(
                 "{:1$}",
                 match self.status {
+                    Status::Initial => INITIAL,
                     Status::Found => FOUND,
                     Status::None => NONE,
                     Status::Searching => SEARCHING,

@@ -14,7 +14,7 @@ keywords = ["game-of-life", "cellular-automata"]
 bitflags = "1.2.1"
 ca-rules = "0.3.1"
 derivative = "1.0.3"
-rand = "0.7.2"
+rand = "0.7.3"
 serde = { version = "1.0.104", features = ["derive"], optional = true }
 
 [features]

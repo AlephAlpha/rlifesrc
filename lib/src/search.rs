@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Status {
+    /// Initial status. Waiting to start.
+    Initial,
     /// A result is found.
     Found,
     /// Such pattern does not exist.
