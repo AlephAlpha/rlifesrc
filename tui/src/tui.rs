@@ -8,7 +8,7 @@ use crossterm::{
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand, QueueableCommand, Result as CrosstermResult,
 };
-use futures::{poll, task::Poll, TryStreamExt};
+use futures::{select, FutureExt, TryStreamExt};
 use rlifesrc_lib::{Search, State, Status, ALIVE, DEAD};
 use std::{
     io::{stdout, Write},
@@ -184,8 +184,22 @@ impl<'a, W: Write> App<'a, W> {
         Ok(())
     }
 
+    /// Pauses.
+    fn pause(&mut self) {
+        self.status = Status::Paused;
+        if let Some(instant) = self.start_time.take() {
+            self.timing += instant.elapsed();
+        }
+    }
+
+    /// Starts or resumes.
+    fn start(&mut self) {
+        self.status = Status::Searching;
+        self.start_time = Some(Instant::now());
+    }
+
     /// Searches for one step.
-    fn step(&mut self) {
+    async fn step(&mut self) {
         match self.search.search(Some(VIEW_FREQ)) {
             Status::Searching => (),
             s => {
@@ -199,20 +213,6 @@ impl<'a, W: Write> App<'a, W> {
                 }
             }
         }
-    }
-
-    /// Pauses.
-    fn pause(&mut self) {
-        self.status = Status::Paused;
-        if let Some(instant) = self.start_time.take() {
-            self.timing += instant.elapsed();
-        }
-    }
-
-    /// Starts or resumes.
-    fn start(&mut self) {
-        self.status = Status::Searching;
-        self.start_time = Some(Instant::now());
     }
 
     /// Asks whether to quit.
@@ -312,13 +312,16 @@ impl<'a, W: Write> App<'a, W> {
     async fn main_loop(&mut self, reader: &mut EventStream) -> CrosstermResult<()> {
         loop {
             if let Status::Searching = self.status {
-                if let Poll::Ready(event) = poll!(reader.try_next())? {
-                    if self.handle(event, reader, true).await? {
-                        break;
-                    }
-                }
-                self.step();
-                self.update()?;
+                select! {
+                    event = reader.try_next().fuse() => {
+                        if self.handle(event?, reader, true).await? {
+                            break;
+                        }
+                    },
+                    _ = self.step().fuse() => {
+                        self.update()?;
+                    },
+                };
             } else if self.handle(reader.try_next().await?, reader, false).await? {
                 break;
             }
