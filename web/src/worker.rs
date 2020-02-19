@@ -49,9 +49,7 @@ impl Worker {
     }
 
     fn stop_job(&mut self) {
-        if let Some(mut task) = self.job.take() {
-            task.cancel();
-        }
+        self.job.take();
     }
 
     fn update_world(&mut self, id: HandlerId, gen: isize) {

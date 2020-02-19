@@ -71,9 +71,7 @@ impl App {
     }
 
     fn stop_job(&mut self) {
-        if let Some(mut task) = self.job.take() {
-            task.cancel();
-        }
+        self.job.take();
     }
 }
 
