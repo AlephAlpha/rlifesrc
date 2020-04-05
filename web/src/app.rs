@@ -86,7 +86,7 @@ impl Component for App {
         let period = config.period;
         let callback = link.callback(Msg::DataReceived);
         let worker = Worker::bridge(callback);
-        let storage = StorageService::new(Area::Local);
+        let storage = StorageService::new(Area::Local).unwrap();
         let interval = IntervalService::new();
 
         App {

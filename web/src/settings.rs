@@ -13,9 +13,7 @@ pub struct Settings {
 
 #[derive(Clone, Properties)]
 pub struct Props {
-    #[props(required)]
     pub config: Config,
-    #[props(required)]
     pub callback: Callback<Config>,
 }
 

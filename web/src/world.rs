@@ -12,7 +12,6 @@ pub struct World {
 
 #[derive(Clone, Properties)]
 pub struct Props {
-    #[props(required)]
     pub world: String,
 }
 
