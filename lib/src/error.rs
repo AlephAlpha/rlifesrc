@@ -1,29 +1,14 @@
 use crate::cells::Coord;
 use ca_rules::ParseRuleError;
-use std::{
-    error,
-    fmt::{self, Display, Formatter},
-};
+use thiserror::Error;
 
 /// All kinds of errors in this crate.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum Error {
-    /// Errors when trying to get the state of a cell.
+    #[error("Unable to get the state of cell {0:?}")]
     GetCellError(Coord),
-    /// Errors when trying to set a cell.
+    #[error("Unable to set cell at {0:?}")]
     SetCellError(Coord),
-    /// Errors when parsing rule strings.
-    ParseRuleError(ParseRuleError),
+    #[error("Invalid rule: {0:?}")]
+    ParseRuleError(#[from] ParseRuleError),
 }
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::GetCellError(coord) => write!(f, "Unable to get the state of cell {:?}.", coord),
-            Error::SetCellError(coord) => write!(f, "Unable to set cell at {:?}.", coord),
-            Error::ParseRuleError(e) => write!(f, "{}", e),
-        }
-    }
-}
-
-impl error::Error for Error {}
