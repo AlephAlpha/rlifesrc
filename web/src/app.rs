@@ -1,4 +1,5 @@
 use crate::{
+    help::Help,
     settings::Settings,
     worker::{Request, Response, Worker},
     world::World,
@@ -186,6 +187,10 @@ impl Component for App {
         true
     }
 
+    fn change(&mut self, _: Self::Properties) -> ShouldRender {
+        false
+    }
+
     fn view(&self) -> Html {
         html! {
             <div id="rlifesrc">
@@ -257,6 +262,11 @@ impl App {
                                         { "Settings" }
                                     </a>
                                 </li>
+                                <li>
+                                    <a data-mui-toggle="tab" data-mui-controls="pane-help">
+                                        { "Help" }
+                                    </a>
+                                </li>
                             </ul>
                             <div class="mui-tabs__pane mui--is-active" id="pane-world">
                                 { self.data() }
@@ -266,6 +276,9 @@ impl App {
                             <div class="mui-tabs__pane" id="pane-settings">
                                 <Settings config=&self.config
                                     callback=self.link.callback(Msg::Apply)/>
+                            </div>
+                            <div class="mui-tabs__pane" id="pane-help">
+                                <Help/>
                             </div>
                         </div>
                     </div>
@@ -303,7 +316,8 @@ impl App {
                     </button>
                 </li>
                 <li>
-                    <abbr title="Number of known living cells in the current generation.">
+                    <abbr title="Number of known living cells in the current generation. \
+                        For Generations rules, dying cells are not counted.">
                         { "Cell count" }
                     </abbr>
                     { ": " }

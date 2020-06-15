@@ -10,8 +10,9 @@
 
 这里是 rlifesrc 的网页版。文本界面的说明见[`tui/`](../tui/README.md) 目录中的 `README.md`。
 
-* [编译](#编译)
-* [用法](#用法)
+- [rlifesrc-web](#rlifesrc-web)
+  - [编译](#编译)
+  - [用法](#用法)
 
 ## 编译
 
@@ -72,7 +73,7 @@ cp static/* some_folder/
 
 目前无法正常显示大于 25 种状态的 Generations 规则。
 
-点击左上角的 “Generation” 右边的加减号，或者在数字上滚动鼠标滚轮，可以切换显示的代数。“Cell count” 指的是当前代的活细胞个数。
+点击左上角的 “Generation” 右边的加减号，或者在数字上滚动鼠标滚轮，可以切换显示的代数。“Cell count” 指的是当前代的活细胞个数，不包括 Generations 规则中正在死亡的细胞。
 
 以下是各种参数的具体说明：
 
@@ -81,7 +82,7 @@ cp static/* some_folder/
   <dd>
   元胞自动机的规则
 
-  支持 Life-like 和 Isotropic non-totalistic 的规则，以及相应的 Generations 规则
+  支持 Life-like, isotropic non-totalistic, hexagonal, MAP 等规则，以及相应的 Generations 规则
   </dd>
 
   <dt>Width</dt>

@@ -180,9 +180,9 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_rule">
                     <abbr title="Rule of the cellular automaton. \
-                        Supports Life-like and isotropic non-totalistic rules, \
-                        and the corresponding Generations rules.">
-                    { "Rule" }
+                        Supports Life-like, isotropic non-totalistic, hexagonal, \
+                        MAP rules, and their corresponding Generations rules.">
+                        { "Rule" }
                     </abbr>
                     { ":" }
                 </label>
@@ -207,7 +207,7 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_width">
                     <abbr title="Width of the pattern.">
-                    { "Width" }
+                        { "Width" }
                     </abbr>
                     { ":" }
                 </label>
@@ -232,7 +232,7 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_height">
                     <abbr title="Height of the pattern.">
-                    { "Height" }
+                        { "Height" }
                     </abbr>
                     { ":" }
                 </label>
@@ -257,7 +257,7 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_period">
                     <abbr title="Period of the pattern.">
-                    { "Period" }
+                        { "Period" }
                     </abbr>
                     { ":" }
                 </label>
@@ -282,7 +282,7 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_dx">
                     <abbr title="Horizontal translation.">
-                    { "dx" }
+                        { "dx" }
                     </abbr>
                     { ":" }
                 </label>
@@ -306,7 +306,7 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_dy">
                     <abbr title="Vertical translation.">
-                    { "dy" }
+                        { "dy" }
                     </abbr>
                     { ":" }
                 </label>
@@ -340,7 +340,7 @@ impl Settings {
                 <label for="set_max">
                     <abbr title="Upper bound of numbers of minimum living cells in all generations. \
                         If this value is set to 0, it means there is no limitation.">
-                    { "Max cell count" }
+                        { "Max cell count" }
                     </abbr>
                     { ":" }
                 </label>
@@ -364,7 +364,7 @@ impl Settings {
                     <abbr title="Force the front to be nonempty.\n\
                         Here 'front' means the first row or column to be searched, \
                         according to the search order.">
-                    { "Force the first row or column to be nonempty" }
+                        { "Force the first row or column to be nonempty" }
                     </abbr>
                 </label>
             </div>
@@ -381,7 +381,7 @@ impl Settings {
                         onclick=self.link.callback(|_| Msg::SetReduce)/>
                     <abbr title="The new max cell count will be set to the cell count of \
                         the current result minus one.">
-                    { "Reduce the max cell count when a result is found" }
+                        { "Reduce the max cell count when a result is found" }
                     </abbr>
                 </label>
             </div>
@@ -413,7 +413,7 @@ impl Settings {
                         After the last generation, the pattern will return to \
                         the first generation, applying this transformation first, \
                         and then the translation defined by dx and dy.">
-                    { "Transformation" }
+                        { "Transformation" }
                     </abbr>
                     { ":" }
                 </label>
@@ -463,7 +463,7 @@ impl Settings {
             <div class="mui-select">
                 <label for="set_sym">
                     <abbr title="Symmetry of the pattern.">
-                    { "Symmetry" }
+                        { "Symmetry" }
                     </abbr>
                     { ":" }
                 </label>
@@ -512,7 +512,7 @@ impl Settings {
                     <abbr title="The order to find a new unknown cell.\n\
                         It will always search all generations of a cell first, \
                         and then go to another cell.">
-                    { "Search order" }
+                        { "Search order" }
                     </abbr>
                     { ":" }
                 </label>
@@ -542,7 +542,7 @@ impl Settings {
             <div class="mui-select">
                 <label for="set_choose">
                     <abbr title="How to choose a state for unknown cells.">
-                    { "Choice of state for unknown cells" }
+                        { "Choice of state for unknown cells" }
                     </abbr>
                     { ":" }
                 </label>

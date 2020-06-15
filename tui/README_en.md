@@ -11,11 +11,12 @@ Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important fe
 This is the command-line tool and the TUI. There is also a [web app complied to WASM](https://github.com/AlephAlpha/rlifesrc/tree/master/web).
 
 
-* [Installation](#installation)
-* [Usage](#usage)
-  * [CLI](#cli)
-  * [TUI](#tui)
-* [Compiling](#compiling)
+- [rlifesrc](#rlifesrc)
+  - [Installation](#installation)
+  - [Usage](#usage)
+    - [CLI](#cli)
+    - [TUI](#tui)
+  - [Compiling](#compiling)
 
 ## Installation
 
@@ -56,41 +57,42 @@ FLAGS:
         --reset-time
             Resets the time when starting a new search
 
-    -h, --help          
+    -h, --help
             Prints help information
 
-    -V, --version       
+    -V, --version
             Prints version information
 
 
 OPTIONS:
-    -c, --choose <CHOOSE>          
+    -c, --choose <CHOOSE>
             How to choose a state for unknown cells
              [default: alive]  [possible values: dead, alive, random, d, a, r]
 
-    -m, --max <MAX>                
+    -m, --max <MAX>
             Upper bound of numbers of minimum living cells in all generations
             If this value is set to 0, it means there is no limitation.
              [default: 0]
 
-    -o, --order <ORDER>            
+    -o, --order <ORDER>
             Search order
             Row first or column first.
              [default: automatic]  [possible values: row, column, automatic, r, c, a]
 
-    -r, --rule <RULE>              
+    -r, --rule <RULE>
             Rule of the cellular automaton
-            Supports Life-like and isotropic non-totalistic rules, and the corresponding Generations rules.
+            Supports Life-like, isotropic non-totalistic, hexagonal, MAP rules, and their
+            corresponding Generations rules.
              [default: B3/S23]
 
-    -s, --symmetry <SYMMETRY>      
+    -s, --symmetry <SYMMETRY>
             Symmetry of the pattern
             You may need to add quotation marks for some of the symmetries.
             The usages of these symmetries are the same as Oscar Cunningham's Logic Life Search.
-            See [https://conwaylife.com/wiki/Symmetry] 
+            See [https://conwaylife.com/wiki/Symmetry]
              [default: C1]  [possible values: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
-    -t, --transform <TRANSFORM>    
+    -t, --transform <TRANSFORM>
             Transformation of the pattern
             After the last generation, the pattern will return to the first generation, applying this transformation first, and then the translation defined by DX and DY.
             You may need to add quotation marks for some of the transformations.
@@ -100,19 +102,19 @@ OPTIONS:
              [default: Id]  [possible values: Id, R90, R180, R270, F|, F-, F\, F/]
 
 ARGS:
-    <X>     
+    <X>
             Width of the pattern
 
-    <Y>     
+    <Y>
             Height of the pattern
 
-    <P>     
+    <P>
             Period of the pattern [default: 1]
 
-    <DX>    
+    <DX>
             Horizontal translation [default: 0]
 
-    <DY>    
+    <DY>
             Vertical translation [default: 0]
 ```
 
@@ -194,7 +196,7 @@ When you enter the TUI, it looks like this (taking `rlifesrc 20 16 7 3 0 -r '345
 
 The output format during the search is the same as that of the CLI, except that `?` means unknown cells.
 
-`Cells` means the number of known living cells in the current generation.`Confl` means the number of conflicts during the search, which can be understood of the number of steps.
+`Cells` means the number of known living cells in the current generation. For Generations rules, dying cells are not counted. `Confl` means the number of conflicts during the search, which can be understood of the number of steps.
 
 Press the space bar or `Enter` to start or pause the search, `q` to quit, Page up (Page down) to show the last (the next) generation. Note that the usage of the keys is different from the original lifesrc.
 

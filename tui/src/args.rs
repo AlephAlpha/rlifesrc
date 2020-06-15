@@ -135,8 +135,8 @@ impl Args {
                     .help("Rule of the cellular automaton")
                     .long_help(
                         "Rule of the cellular automaton\n\
-                         Supports Life-like and isotropic non-totalistic rules, \
-                         and the corresponding Generations rules.\n",
+                         Supports Life-like, isotropic non-totalistic, hexagonal, MAP rules, \
+                         and their corresponding Generations rules.\n",
                     )
                     .short("r")
                     .long("rule")

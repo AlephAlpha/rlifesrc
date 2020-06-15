@@ -34,9 +34,13 @@ pub trait Search {
     fn is_gen_rule(&self) -> bool;
 
     /// Number of known living cells in some generation.
+    ///
+    /// For Generations rules, dying cells are not counted.
     fn cell_count_gen(&self, t: isize) -> usize;
 
     /// Minumum number of known living cells in all generation.
+    ///
+    /// For Generations rules, dying cells are not counted.
     fn cell_count(&self) -> usize;
 
     /// Number of conflicts during the search.

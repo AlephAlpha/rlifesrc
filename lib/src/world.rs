@@ -29,6 +29,8 @@ pub struct World<'a, R: Rule> {
     search_list: Vec<CellRef<'a, R>>,
 
     /// Number of known living cells in each generation.
+    ///
+    /// For Generations rules, dying cells are not counted.
     pub(crate) cell_count: Vec<usize>,
 
     /// Number of unknown or living cells on the first row or column.
@@ -470,6 +472,8 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Minumum number of known living cells in all generation.
+    ///
+    /// For Generations rules, dying cells are not counted.
     pub(crate) fn cell_count(&self) -> usize {
         *self.cell_count.iter().min().unwrap()
     }
