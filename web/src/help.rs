@@ -98,7 +98,7 @@ For example, if you want to find a vertical spaceship with \
 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship), \
 you can set the transformation to `F|`.
 
-Some transformations requires that the world is square.
+Some transformations require that the world is square.
 
 ### Symmetry
 
@@ -109,11 +109,11 @@ The notations are stolen from Oscar Cunningham's \
 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search). \
 Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
 
-Some symmetries requires that the world is square.
+Some symmetries require that the world is square.
 
 ### Max cell count
 
-Upper bound of numbers of minimum living cells in all generations.Help
+Upper bound of numbers of minimum living cells in all generations.
 
 If this value is set to 0, it means there is no limitation.
 
