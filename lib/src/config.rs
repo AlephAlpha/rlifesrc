@@ -430,8 +430,8 @@ impl Config {
     }
 
     /// Sets the rule string.
-    pub fn set_rule_string(mut self, rule_string: String) -> Self {
-        self.rule_string = rule_string;
+    pub fn set_rule_string<S: ToString>(mut self, rule_string: S) -> Self {
+        self.rule_string = rule_string.to_string();
         self
     }
 

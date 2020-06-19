@@ -84,8 +84,18 @@ fn turtle() -> Result<(), Error> {
 }
 
 #[test]
+fn b0() -> Result<(), Error> {
+    let config = Config::new(3, 3, 2)
+        .set_rule_string("B026/S1")
+        .set_non_empty_front(false);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+    Ok(())
+}
+
+#[test]
 fn p3_2333() -> Result<(), Error> {
-    let config = Config::new(4, 4, 3).set_rule_string("23/3/3".to_owned());
+    let config = Config::new(4, 4, 3).set_rule_string("23/3/3");
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
     Ok(())
@@ -95,7 +105,7 @@ fn p3_2333() -> Result<(), Error> {
 fn snowflakes() -> Result<(), Error> {
     let config = Config::new(4, 4, 2)
         .set_translate(0, 1)
-        .set_rule_string("B2ci3ai4c8/S02ae3eijkq4iz5ar6i7e".to_owned());
+        .set_rule_string("B2ci3ai4c8/S02ae3eijkq4iz5ar6i7e");
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
     Ok(())

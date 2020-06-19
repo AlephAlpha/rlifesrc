@@ -33,6 +33,12 @@ pub trait Search {
     /// Whether the rule is a Generations rule.
     fn is_gen_rule(&self) -> bool;
 
+    /// Whether the rule contains `B0`.
+    ///
+    /// In other words, whether a cell would become `Alive` in the next
+    /// generation, if all its neighbors in this generation are dead.
+    fn is_b0_rule(&self) -> bool;
+
     /// Number of known living cells in some generation.
     ///
     /// For Generations rules, dying cells are not counted.
@@ -145,12 +151,16 @@ impl<'a, R: Rule> Search for World<'a, R> {
         R::IS_GEN
     }
 
+    fn is_b0_rule(&self) -> bool {
+        self.rule.has_b0()
+    }
+
     fn cell_count_gen(&self, t: isize) -> usize {
         self.cell_count[t as usize]
     }
 
     fn cell_count(&self) -> usize {
-        *self.cell_count.iter().min().unwrap()
+        self.cell_count()
     }
 
     fn conflicts(&self) -> u64 {

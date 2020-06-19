@@ -404,18 +404,20 @@ impl<'a, R: Rule> World<'a, R> {
         cell.state.set(Some(state));
         let mut result = true;
         cell.update_desc(Some(state), true);
-        if state == ALIVE {
-            self.cell_count[cell.coord.2 as usize] += 1;
-            if let Some(max) = self.config.max_cell_count {
-                if *self.cell_count.iter().min().unwrap() > max {
-                    result = false;
+        if cell.background == DEAD {
+            if state == ALIVE {
+                self.cell_count[cell.coord.2 as usize] += 1;
+                if let Some(max) = self.config.max_cell_count {
+                    if self.cell_count() > max {
+                        result = false;
+                    }
                 }
             }
-        }
-        if cell.is_front && state == DEAD {
-            self.front_cell_count -= 1;
-            if self.config.non_empty_front && self.front_cell_count == 0 {
-                result = false;
+            if cell.is_front && state == DEAD {
+                self.front_cell_count -= 1;
+                if self.config.non_empty_front && self.front_cell_count == 0 {
+                    result = false;
+                }
             }
         }
         self.set_stack.push(SetCell::new(cell, reason));
@@ -428,11 +430,13 @@ impl<'a, R: Rule> World<'a, R> {
         let old_state = cell.state.take();
         if old_state != None {
             cell.update_desc(old_state, false);
-            if old_state == Some(ALIVE) {
-                self.cell_count[cell.coord.2 as usize] -= 1;
-            }
-            if cell.is_front && old_state == Some(DEAD) {
-                self.front_cell_count += 1;
+            if cell.background == DEAD {
+                if old_state == Some(ALIVE) {
+                    self.cell_count[cell.coord.2 as usize] -= 1;
+                }
+                if cell.is_front && old_state == Some(DEAD) {
+                    self.front_cell_count += 1;
+                }
             }
         }
     }
@@ -475,6 +479,10 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// For Generations rules, dying cells are not counted.
     pub(crate) fn cell_count(&self) -> usize {
-        *self.cell_count.iter().min().unwrap()
+        if self.rule.has_b0() {
+            *self.cell_count.iter().step_by(2).min().unwrap()
+        } else {
+            *self.cell_count.iter().min().unwrap()
+        }
     }
 }
