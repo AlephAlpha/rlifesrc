@@ -1,7 +1,7 @@
 //! The world.
 
 use crate::{
-    cells::{CellRef, Coord, LifeCell, State, ALIVE, DEAD},
+    cells::{CellRef, Coord, LifeCell, State, DEAD},
     config::{Config, SearchOrder, Symmetry, Transform},
     error::Error,
     rules::Rule,
@@ -74,18 +74,21 @@ impl<'a, R: Rule> World<'a, R> {
         let mut cells = Vec::with_capacity(size);
 
         // Whether to consider only the first generation of the front.
-        let front_gen0 = match search_order {
-            SearchOrder::ColumnFirst => {
-                config.dy == 0
-                    && config.dx >= 0
-                    && (config.transform == Transform::Id || config.transform == Transform::FlipRow)
-            }
-            SearchOrder::RowFirst => {
-                config.dx == 0
-                    && config.dy >= 0
-                    && (config.transform == Transform::Id || config.transform == Transform::FlipCol)
-            }
-        };
+        let front_gen0 = !rule.has_b0()
+            && match search_order {
+                SearchOrder::ColumnFirst => {
+                    config.dy == 0
+                        && config.dx >= 0
+                        && (config.transform == Transform::Id
+                            || config.transform == Transform::FlipRow)
+                }
+                SearchOrder::RowFirst => {
+                    config.dx == 0
+                        && config.dy >= 0
+                        && (config.transform == Transform::Id
+                            || config.transform == Transform::FlipCol)
+                }
+            };
 
         // Whether to consider only half of the first generation of the front.
         let front_half = match config.symmetry {
@@ -101,8 +104,8 @@ impl<'a, R: Rule> World<'a, R> {
         for x in -1..=config.width {
             for y in -1..=config.height {
                 for t in 0..config.period {
-                    let state = if rule.has_b0() && t % 2 == 1 {
-                        ALIVE
+                    let state = if rule.has_b0() {
+                        State(t as usize % rule.gen())
                     } else {
                         DEAD
                     };
@@ -404,20 +407,18 @@ impl<'a, R: Rule> World<'a, R> {
         cell.state.set(Some(state));
         let mut result = true;
         cell.update_desc(Some(state), true);
-        if cell.background == DEAD {
-            if state == ALIVE {
-                self.cell_count[cell.coord.2 as usize] += 1;
-                if let Some(max) = self.config.max_cell_count {
-                    if self.cell_count() > max {
-                        result = false;
-                    }
-                }
-            }
-            if cell.is_front && state == DEAD {
-                self.front_cell_count -= 1;
-                if self.config.non_empty_front && self.front_cell_count == 0 {
+        if state == !cell.background {
+            self.cell_count[cell.coord.2 as usize] += 1;
+            if let Some(max) = self.config.max_cell_count {
+                if self.cell_count() > max {
                     result = false;
                 }
+            }
+        }
+        if cell.is_front && state == cell.background {
+            self.front_cell_count -= 1;
+            if self.config.non_empty_front && self.front_cell_count == 0 {
+                result = false;
             }
         }
         self.set_stack.push(SetCell::new(cell, reason));
@@ -430,13 +431,11 @@ impl<'a, R: Rule> World<'a, R> {
         let old_state = cell.state.take();
         if old_state != None {
             cell.update_desc(old_state, false);
-            if cell.background == DEAD {
-                if old_state == Some(ALIVE) {
-                    self.cell_count[cell.coord.2 as usize] -= 1;
-                }
-                if cell.is_front && old_state == Some(DEAD) {
-                    self.front_cell_count += 1;
-                }
+            if old_state == Some(!cell.background) {
+                self.cell_count[cell.coord.2 as usize] -= 1;
+            }
+            if cell.is_front && old_state == Some(cell.background) {
+                self.front_cell_count += 1;
             }
         }
     }
@@ -479,10 +478,6 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// For Generations rules, dying cells are not counted.
     pub(crate) fn cell_count(&self) -> usize {
-        if self.rule.has_b0() {
-            *self.cell_count.iter().step_by(2).min().unwrap()
-        } else {
-            *self.cell_count.iter().min().unwrap()
-        }
+        *self.cell_count.iter().min().unwrap()
     }
 }

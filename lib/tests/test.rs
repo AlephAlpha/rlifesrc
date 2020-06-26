@@ -85,9 +85,7 @@ fn turtle() -> Result<(), Error> {
 
 #[test]
 fn b0() -> Result<(), Error> {
-    let config = Config::new(3, 3, 2)
-        .set_rule_string("B026/S1")
-        .set_non_empty_front(false);
+    let config = Config::new(3, 3, 2).set_rule_string("B026/S1");
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
     Ok(())
