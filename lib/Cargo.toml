@@ -1,6 +1,6 @@
 [package]
 name = "rlifesrc-lib"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["AlephAlpha <alephalpha911@gmail.com>"]
 edition = "2018"
 description = "A Game of Life pattern searcher (library)."
@@ -15,8 +15,8 @@ bitflags = "1.2.1"
 ca-rules = "0.3.2"
 derivative = "2.1.1"
 rand = "0.7.3"
-serde = { version = "1.0.112", features = ["derive"], optional = true }
-thiserror = "1.0.19"
+serde = { version = "1.0.114", features = ["derive"], optional = true }
+thiserror = "1.0.20"
 
 [features]
 default = []
