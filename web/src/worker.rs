@@ -23,7 +23,7 @@ pub enum Response {
     UpdateWorld((String, usize)),
     UpdateStatus(Status),
     UpdateConfig(Config),
-    InvalidRule,
+    InvalidRule(String),
     Store(WorldSer),
 }
 
@@ -117,11 +117,15 @@ impl Agent for Worker {
             Request::SetWorld(config) => {
                 self.stop_job();
                 self.status = Status::Paused;
-                if let Ok(search) = config.world() {
-                    self.search = search;
-                    self.update_world(id, 0);
-                } else {
-                    self.link.respond(id, Response::InvalidRule);
+                match config.world() {
+                    Ok(search) => {
+                        self.search = search;
+                        self.update_world(id, 0);
+                    }
+                    Err(error) => {
+                        let message = error.to_string();
+                        self.link.respond(id, Response::InvalidRule(message));
+                    }
                 }
             }
             Request::DisplayGen(gen) => {
@@ -134,13 +138,17 @@ impl Agent for Worker {
             Request::Restore(world_ser) => {
                 self.stop_job();
                 self.status = Status::Paused;
-                if let Ok(search) = world_ser.world() {
-                    self.search = search;
-                    self.link
-                        .respond(id, Response::UpdateConfig(self.search.config().clone()));
-                    self.update_world(id, 0);
-                } else {
-                    self.link.respond(id, Response::InvalidRule);
+                match world_ser.world() {
+                    Ok(search) => {
+                        self.search = search;
+                        self.link
+                            .respond(id, Response::UpdateConfig(self.search.config().clone()));
+                        self.update_world(id, 0);
+                    }
+                    Err(error) => {
+                        let message = error.to_string();
+                        self.link.respond(id, Response::InvalidRule(message));
+                    }
                 }
             }
         }

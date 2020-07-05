@@ -172,9 +172,9 @@ impl Component for App {
                         self.status = status;
                     }
                 }
-                Response::InvalidRule => {
+                Response::InvalidRule(error) => {
                     let mut dialog = DialogService::new();
-                    dialog.alert("Invalid rule!");
+                    dialog.alert(&error);
                     return false;
                 }
                 Response::Store(world_ser) => {

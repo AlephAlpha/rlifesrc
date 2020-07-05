@@ -50,6 +50,8 @@ macro_rules! impl_rule {
         pub struct $rule {
             /// Whether the rule contains `B0`.
             b0: bool,
+            /// Whether the rule contains `S8`.
+            s8: bool,
             /// An array of actions for all neighborhood descriptors.
             impl_table: $impl_table,
         }
@@ -62,10 +64,16 @@ macro_rules! impl_rule {
         }
 
         impl FromStr for $rule {
-            type Err = ParseRuleError;
+            type Err = Error;
 
             fn from_str(input: &str) -> Result<Self, Self::Err> {
-                $parser::parse_rule(input)
+                let rule: $rule = $parser::parse_rule(input)
+                    .map_err(Error::ParseRuleError)?;
+                if rule.has_b0_s8() {
+                    Err(Error::B0S8Error)
+                } else {
+                    Ok(rule)
+                }
             }
         }
 
@@ -76,6 +84,10 @@ macro_rules! impl_rule {
 
             fn has_b0(&self) -> bool {
                 self.b0
+            }
+
+            fn has_b0_s8(&self) -> bool {
+                self.b0 && self.s8
             }
 
             fn gen(&self) -> usize {
@@ -164,6 +176,8 @@ macro_rules! impl_rule {
         pub struct $rule_gen {
             /// Whether the rule contains `B0`.
             b0: bool,
+            /// Whether the rule contains `S8`.
+            s8: bool,
             /// Number of states.
             gen: usize,
             /// An array of actions for all neighborhood descriptors.
@@ -174,11 +188,11 @@ macro_rules! impl_rule {
             /// Constructs a new rule from the `b` and `s` data
             /// and the number of states.
             pub fn new(b: Vec<u8>, s: Vec<u8>, gen: usize) -> Self {
-                let b0 = b.contains(&0);
                 let life = $rule::new(b, s);
                 let impl_table = life.impl_table;
                 Self {
-                    b0,
+                    b0: life.b0,
+                    s8: life.s8,
                     gen,
                     impl_table,
                 }
@@ -188,6 +202,7 @@ macro_rules! impl_rule {
             pub fn non_gen(self) -> $rule {
                 $rule {
                     b0: self.b0,
+                    s8: self.s8,
                     impl_table: self.impl_table,
                 }
             }
@@ -201,10 +216,16 @@ macro_rules! impl_rule {
         }
 
         impl FromStr for $rule_gen {
-            type Err = ParseRuleError;
+            type Err = Error;
 
             fn from_str(input: &str) -> Result<Self, Self::Err> {
-                $parser_gen::parse_rule(input)
+                let rule: $rule_gen = $parser_gen::parse_rule(input)
+                    .map_err(Error::ParseRuleError)?;
+                if rule.has_b0_s8() {
+                    Err(Error::B0S8Error)
+                } else {
+                    Ok(rule)
+                }
             }
         }
 
@@ -216,6 +237,10 @@ macro_rules! impl_rule {
 
             fn has_b0(&self) -> bool {
                 self.b0
+            }
+
+            fn has_b0_s8(&self) -> bool {
+                self.b0 && self.s8
             }
 
             fn gen(&self) -> usize {

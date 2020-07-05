@@ -11,4 +11,6 @@ pub enum Error {
     SetCellError(Coord),
     #[error("Invalid rule: {0:?}")]
     ParseRuleError(#[from] ParseRuleError),
+    #[error("B0S8 rules are not supported yet. Please use the inverted rule.")]
+    B0S8Error,
 }

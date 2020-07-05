@@ -2,12 +2,13 @@
 
 use crate::{
     cells::{CellRef, State, ALIVE, DEAD},
+    error::Error,
     rules::Rule,
     search::Reason,
     world::World,
 };
 use bitflags::bitflags;
-use ca_rules::{ParseLife, ParseLifeGen, ParseRuleError};
+use ca_rules::{ParseLife, ParseLifeGen};
 use std::str::FromStr;
 
 bitflags! {
@@ -131,10 +132,11 @@ impl Life {
     /// Constructs a new rule from the `b` and `s` data.
     pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
         let b0 = b.contains(&0);
+        let s8 = s.contains(&8);
 
         let impl_table = [ImplFlags::empty(); 1 << 12];
 
-        Life { b0, impl_table }
+        Life { b0, s8, impl_table }
             .init_trans(b, s)
             .init_conflict()
             .init_impl()

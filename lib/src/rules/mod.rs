@@ -28,9 +28,18 @@ pub trait Rule: Sized {
 
     /// Whether the rule contains `B0`.
     ///
-    /// In other words, whether a cell would become `Alive` in the next
+    /// In other words, whether a dead cell would become `Alive` in the next
     /// generation, if all its neighbors in this generation are dead.
     fn has_b0(&self) -> bool;
+
+    /// Whether the rule contains both `B0` and `S8`.
+    ///
+    /// In a rule that contains `B0`, a dead cell would become `Alive` in the next
+    /// generation, if all its neighbors in this generation are dead.
+    ///
+    /// In a rule that contains `S8`, a living cell would stay `Alive` in the next
+    /// generation, if all its neighbors in this generation are alive.
+    fn has_b0_s8(&self) -> bool;
 
     /// The number of states.
     fn gen(&self) -> usize;

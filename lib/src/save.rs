@@ -103,11 +103,7 @@ impl WorldSer {
                 Ok(Box::new(world))
             }
         } else {
-            let rule = self
-                .config
-                .rule_string
-                .parse::<NtLifeGen>()
-                .map_err(Error::ParseRuleError)?;
+            let rule = self.config.rule_string.parse::<NtLifeGen>()?;
             if rule.gen() > 2 {
                 let world = self.world_with_rule(rule)?;
                 Ok(Box::new(world))

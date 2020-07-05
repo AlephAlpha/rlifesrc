@@ -518,10 +518,7 @@ impl Config {
                 Ok(Box::new(World::new(&self, rule)))
             }
         } else {
-            let rule = self
-                .rule_string
-                .parse::<NtLifeGen>()
-                .map_err(Error::ParseRuleError)?;
+            let rule = self.rule_string.parse::<NtLifeGen>()?;
             if rule.gen() > 2 {
                 Ok(Box::new(World::new(&self, rule)))
             } else {
