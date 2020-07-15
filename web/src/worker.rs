@@ -35,13 +35,12 @@ pub struct Worker {
     status: Status,
     search: Box<dyn Search>,
     link: AgentLink<Worker>,
-    timeout: TimeoutService,
     job: Option<Box<dyn Task>>,
 }
 
 impl Worker {
     fn start_job(&mut self) {
-        let handle = self.timeout.spawn(
+        let handle = TimeoutService::spawn(
             Duration::from_millis(0),
             self.link.callback(|_| WorkerMsg::Step),
         );
@@ -70,7 +69,7 @@ impl Worker {
 }
 
 impl Agent for Worker {
-    type Reach = Public;
+    type Reach = Public<Self>;
     type Message = WorkerMsg;
     type Input = Request;
     type Output = Response;
@@ -78,13 +77,11 @@ impl Agent for Worker {
     fn create(link: AgentLink<Self>) -> Self {
         let config: Config = Config::default();
         let search = config.world().unwrap();
-        let timeout = TimeoutService::new();
 
         Worker {
             status: Status::Initial,
             search,
             link,
-            timeout,
             job: None,
         }
     }
@@ -116,7 +113,7 @@ impl Agent for Worker {
             }
             Request::SetWorld(config) => {
                 self.stop_job();
-                self.status = Status::Paused;
+                self.status = Status::Initial;
                 match config.world() {
                     Ok(search) => {
                         self.search = search;

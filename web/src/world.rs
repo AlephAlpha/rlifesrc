@@ -52,14 +52,14 @@ impl Component for World {
     }
 
     fn view(&self) -> Html {
-        let ondoubleclick = self.link.callback(|e: DoubleClickEvent| {
+        let ondblclick = self.link.callback(|e: DoubleClickEvent| {
             e.prevent_default();
             Msg::Select
         });
         html! {
             <pre id="world"
                 ref=self.node_ref.clone()
-                ondoubleclick=ondoubleclick>
+                ondblclick=ondblclick>
                 { &self.world }
             </pre>
         }

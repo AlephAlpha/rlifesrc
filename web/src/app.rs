@@ -44,7 +44,6 @@ pub struct App {
     period: isize,
     worker: Box<dyn Bridge<Worker>>,
     storage: StorageService,
-    interval: IntervalService,
     job: Option<Box<dyn Task>>,
 }
 
@@ -64,7 +63,7 @@ pub enum Msg {
 
 impl App {
     fn start_job(&mut self) {
-        let handle = self.interval.spawn(
+        let handle = IntervalService::spawn(
             Duration::from_millis(1000 / 60),
             self.link.callback(|_| Msg::Tick),
         );
@@ -82,13 +81,12 @@ impl Component for App {
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let config: Config = Config::default();
-        let status = Status::Paused;
+        let status = Status::Initial;
         let world = INIT_WORLD.to_owned();
         let period = config.period;
         let callback = link.callback(Msg::DataReceived);
         let worker = Worker::bridge(callback);
         let storage = StorageService::new(Area::Local).unwrap();
-        let interval = IntervalService::new();
 
         App {
             link,
@@ -100,7 +98,6 @@ impl Component for App {
             period,
             worker,
             storage,
-            interval,
             job: None,
         }
     }
@@ -173,8 +170,7 @@ impl Component for App {
                     }
                 }
                 Response::InvalidRule(error) => {
-                    let mut dialog = DialogService::new();
-                    dialog.alert(&error);
+                    DialogService::alert(&error);
                     return false;
                 }
                 Response::Store(world_ser) => {
@@ -288,7 +284,7 @@ impl App {
     }
 
     fn data(&self) -> Html {
-        let onmousewheel = self.link.callback(|e: MouseWheelEvent| {
+        let onwheel = self.link.callback(|e: MouseWheelEvent| {
             e.prevent_default();
             if e.delta_y() < 0.0 {
                 Msg::IncGen
@@ -298,7 +294,7 @@ impl App {
         });
         html! {
             <ul id="data" class="mui-list--inline mui--text-body2">
-                <li onmousewheel=onmousewheel>
+                <li onwheel=onwheel>
                     <abbr title="The displayed generation.">
                         { "Generation" }
                     </abbr>
