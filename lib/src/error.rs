@@ -13,4 +13,6 @@ pub enum Error {
     ParseRuleError(#[from] ParseRuleError),
     #[error("B0S8 rules are not supported yet. Please use the inverted rule.")]
     B0S8Error,
+    #[error("Symmetry or transformation requires the world to be square")]
+    SquareWorldError,
 }

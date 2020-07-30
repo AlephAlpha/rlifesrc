@@ -17,9 +17,10 @@ use std::{
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
-/// Transformations (rotations and reflections) after the last generation.
+/// Transformations (rotations and reflections) after the last generation
+/// in a period.
 ///
-/// After the last generation, the pattern will return to
+/// After the last generation in a period, the pattern will return to
 /// the first generation, applying this transformation first,
 /// and then the translation defined by `dx` and `dy`.
 ///
@@ -110,7 +111,7 @@ impl Debug for Transform {
 }
 
 impl Transform {
-    /// Whether the transformation requires the world to be square.
+    /// Whether this transformation requires the world to be square.
     ///
     /// Returns `true` for `R90`, `R270`, `F\` and `F/`.
     pub fn square_world(self) -> bool {
@@ -223,7 +224,7 @@ impl Debug for Symmetry {
 }
 
 impl Symmetry {
-    /// Whether the transformation requires the world to be square.
+    /// Whether this transformation requires the world to be square.
     ///
     /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
     pub fn square_world(self) -> bool {
@@ -240,13 +241,12 @@ impl Symmetry {
 
 /// The order to find a new unknown cell.
 ///
-/// It will always search all generations of a cell first,
-/// and the go to another cell.
+/// It will always search all generations of one cell
+/// before going to another cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum SearchOrder {
-    /// Searches all cells of a row first,
-    /// and the go to the next row.
+    /// Searches all cells of one row before going to the next row.
     ///
     /// ```plaintext
     /// 123
@@ -255,8 +255,7 @@ pub enum SearchOrder {
     /// ```
     RowFirst,
 
-    /// Searches all cells of a column first,
-    /// and the go to the next column.
+    /// Searches all cells of one column before going to the next column.
     ///
     /// ```plaintext
     /// 147
@@ -270,23 +269,33 @@ pub enum SearchOrder {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum NewState {
-    /// Choosing the background state.
+    /// Chooses the background state.
     ///
-    /// For rules with `B0`, it chooses `Dead` in even generations,
-    /// `Alive` in odd generations.
+    /// For rules without `B0`, it always chooses `DEAD`.
     ///
-    /// For other rules, it always chooese `Dead`.
+    /// For rules with `B0`, the background changes periodically.
+    /// For example, for non-Generations rules,
+    /// it chooses `DEAD` on even generations,
+    /// `ALIVE` on odd generations.
     ChooseDead,
-    /// Choosing the oposite of the background state.
+
+    /// Chooses the opposite of the background state.
     ///
-    /// For rules with `B0`, it chooses `Alive` in even generations,
-    /// `Dead` in odd generations.
+    /// For rules without `B0`, it always chooses `ALIVE`.
     ///
-    /// For other rules, it always chooese `Alive`.
+    /// For rules with `B0`, the background changes periodically.
+    /// For example, for non-Generations rules,
+    /// it chooses `ALIVE` on even generations,
+    /// `DEAD` on odd generations.
     ChooseAlive,
+
     /// Random.
     ///
-    /// For life-like rules, the probability of either state is 1/2.
+    /// For non-Generations rules,
+    /// the probability of either state is `1/2`.
+    ///
+    /// For Generations rules with `n` states,
+    /// the probability of each state is `1/n`.
     Random,
 }
 
@@ -321,9 +330,10 @@ pub struct Config {
     /// Vertical translation.
     pub dy: isize,
 
-    /// Transformations (rotations and reflections) after the last generation.
+    /// Transformations (rotations and reflections) after the last generation
+    /// in a period.
     ///
-    /// After the last generation, the pattern will return to
+    /// After the last generation in a period, the pattern will return to
     /// the first generation, applying this transformation first,
     /// and then the translation defined by `dx` and `dy`.
     pub transform: Transform,
@@ -333,8 +343,8 @@ pub struct Config {
 
     /// The order to find a new unknown cell.
     ///
-    /// It will always search all generations of a cell first,
-    /// and then go to another cell.
+    /// It will always search all generations of one cell
+    /// before going to another cell.
     ///
     /// `None` means that it will automatically choose a search order
     /// according to the width and height of the world.
@@ -497,15 +507,12 @@ impl Config {
 
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
-    ///
-    /// In rules that contain `B0`, cells outside the search range are
-    /// considered `Dead` in even generations, `Alive` in odd generations.
-    /// In other rules, all cells outside the search range are `Dead`.
-    ///
-    /// After the last generation, the pattern will return to
-    /// the first generation, applying the transformation first,
-    /// and then the translation defined by `dx` and `dy`.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
+        if (self.symmetry.square_world() || self.transform.square_world())
+            && self.width == self.height
+        {
+            return Err(Error::SquareWorldError);
+        }
         if let Ok(rule) = self.rule_string.parse::<Life>() {
             Ok(Box::new(World::new(&self, rule)))
         } else if let Ok(rule) = self.rule_string.parse::<NtLife>() {

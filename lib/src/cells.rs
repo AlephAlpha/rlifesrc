@@ -11,9 +11,6 @@ use std::{
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
-pub const DEAD: State = State(0);
-pub const ALIVE: State = State(1);
-
 /// Possible states of a known cell.
 ///
 /// During the search, the state of a cell is represented by `Option<State>`,
@@ -22,7 +19,12 @@ pub const ALIVE: State = State(1);
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct State(pub usize);
 
+pub const DEAD: State = State(0);
+pub const ALIVE: State = State(1);
+
 /// Flips the state.
+///
+/// For Generations rules, the `not` of a dying state is `ALIVE`.
 impl Not for State {
     type Output = State;
 
@@ -50,9 +52,11 @@ pub struct LifeCell<'a, R: Rule> {
 
     /// The background state of the cell.
     ///
-    /// For rules without `B0`, it is always dead.
-    /// For rules with `B0`, it is dead on even generations,
-    /// alive on odd generations.
+    /// For rules without `B0`, it is always `DEAD`.
+    ///
+    /// For rules with `B0`, the background changes periodically.
+    /// For example, for non-Generations rules, it is `DEAD` on even generations,
+    /// `ALIVE` on odd generations.
     pub(crate) background: State,
 
     /// The state of the cell.
@@ -87,12 +91,11 @@ pub struct LifeCell<'a, R: Rule> {
 }
 
 impl<'a, R: Rule> LifeCell<'a, R> {
-    /// Generates a new cell with state `state`, such that its neighborhood
+    /// Generates a new cell with background state, such that its neighborhood
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `first_gen` and `first_col` are set to `false`.
-    pub(crate) fn new(coord: Coord, background: State, b0: bool) -> Self {
-        let succ_state = if b0 { !background } else { background };
+    pub(crate) fn new(coord: Coord, background: State, succ_state: State) -> Self {
         LifeCell {
             coord,
             background,
@@ -125,6 +128,8 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
     }
 }
 
+/// A reference to a `LifeCell` which has the same lifetime as the cell
+/// it refers to.
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Copy(bound = ""))]
 pub struct CellRef<'a, R: Rule> {
@@ -135,7 +140,7 @@ impl<'a, R: Rule> CellRef<'a, R> {
     /// Updates the neighborhood descriptors of all neighbors and the predecessor
     /// when the state of one cell is changed.
     ///
-    /// The `state` is the new state of the cell when `new` is true,
+    /// Here `state` is the new state of the cell when `new` is true,
     /// the old state when `new` is false.
     pub(crate) fn update_desc(self, state: Option<State>, new: bool) {
         R::update_desc(self, state, new);

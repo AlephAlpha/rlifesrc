@@ -98,7 +98,7 @@ impl Args {
                     .help("Transformation of the pattern")
                     .long_help(
                         "Transformation of the pattern\n\
-                         After the last generation, the pattern will return to \
+                         After the last generation in a period, the pattern will return to \
                          the first generation, applying this transformation first, \
                          and then the translation defined by DX and DY.\n\
                          You may need to add quotation marks for some of the transformations.\n\

@@ -409,8 +409,8 @@ impl Settings {
         html! {
             <div class="mui-select">
                 <label for="set_trans">
-                    <abbr title="Transformations after the last generation.\n\
-                        After the last generation, the pattern will return to \
+                    <abbr title="Transformations after the last generation in a period.\n\
+                        After the last generation in a period, the pattern will return to \
                         the first generation, applying this transformation first, \
                         and then the translation defined by dx and dy.">
                         { "Transformation" }
@@ -510,8 +510,8 @@ impl Settings {
             <div class="mui-select">
                 <label for="set_order">
                     <abbr title="The order to find a new unknown cell.\n\
-                        It will always search all generations of a cell first, \
-                        and then go to another cell.">
+                        It will always search all generations of one cell \
+                        before going to another cell.">
                         { "Search order" }
                     </abbr>
                     { ":" }

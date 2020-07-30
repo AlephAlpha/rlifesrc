@@ -83,7 +83,7 @@ Vertical translation.
 
 Transformation of the pattern.
 
-After the last generation, the pattern will return to the first generation, \
+After the last generation in a period, the pattern will return to the first generation, \
 applying this transformation first, and then the translation defined by `dx` and `dy`.
 
 8 different transformations correspond to the 10 elements of the dihedral group _D_<sub>8</sub>. \
@@ -119,9 +119,9 @@ If this value is set to 0, it means there is no limitation.
 
 ### Search order
 
-Search order.
+The order to find a new unknown cell.
 
-Row first or column first.
+It will always search all generations of one cell before going to another cell.
 
 `Automatic` means that it will start from the shorter side, i.e., \
 start from the columns if there are more columns than rows, \

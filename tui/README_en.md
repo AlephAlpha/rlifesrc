@@ -94,7 +94,7 @@ OPTIONS:
 
     -t, --transform <TRANSFORM>
             Transformation of the pattern
-            After the last generation, the pattern will return to the first generation, applying this transformation first, and then the translation defined by DX and DY.
+            After the last generation in a period, the pattern will return to the first generation, applying this transformation first, and then the translation defined by DX and DY.
             You may need to add quotation marks for some of the transformations.
             "Id" is the identical transformation.
             "R" means counterclockwise rotation.

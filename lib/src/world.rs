@@ -20,7 +20,7 @@ pub struct World<'a, R: Rule> {
     ///
     /// This vector will not be moved after its creation.
     /// All the cells will live throughout the lifetime of the world.
-    // So the unsafe code below is actually safe.
+    // So the unsafe codes below are actually safe.
     cells: Vec<LifeCell<'a, R>>,
 
     /// A list of references to cells sorted by the search order.
@@ -59,14 +59,6 @@ pub struct World<'a, R: Rule> {
 
 impl<'a, R: Rule> World<'a, R> {
     /// Creates a new world from the configuration and the rule.
-    ///
-    /// In rules that contain `B0`, cells outside the search range are
-    /// considered `Dead` in even generations, `Alive` in odd generations.
-    /// In other rules, all cells outside the search range are `Dead`.
-    ///
-    /// After the last generation, the pattern will return to
-    /// the first generation, applying the transformation first,
-    /// and then the translation defined by `dx` and `dy`.
     pub fn new(config: &Config, rule: R) -> Self {
         let search_order = config.auto_search_order();
 
@@ -109,7 +101,12 @@ impl<'a, R: Rule> World<'a, R> {
                     } else {
                         DEAD
                     };
-                    let mut cell = LifeCell::new((x, y, t), state, rule.has_b0());
+                    let succ_state = if rule.has_b0() {
+                        State((t as usize + 1) % rule.gen())
+                    } else {
+                        DEAD
+                    };
+                    let mut cell = LifeCell::new((x, y, t), state, succ_state);
                     match search_order {
                         SearchOrder::ColumnFirst => {
                             if front_gen0 {
