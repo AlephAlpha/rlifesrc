@@ -16,6 +16,16 @@ fn not_found() -> Result<(), Error> {
 }
 
 #[test]
+fn square_world() -> Result<(), Error> {
+    let config = Config::new(10, 9, 1).set_symmetry(Symmetry::D2Diag);
+    assert!(config.world().is_err());
+    let config = Config::new(10, 10, 1).set_symmetry(Symmetry::D2Diag);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+    Ok(())
+}
+
+#[test]
 fn max_cell_count() -> Result<(), Error> {
     let config = Config::new(5, 5, 1).set_max_cell_count(Some(5));
     let mut search = config.world()?;

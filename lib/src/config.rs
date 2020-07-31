@@ -509,7 +509,7 @@ impl Config {
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
         if (self.symmetry.square_world() || self.transform.square_world())
-            && self.width == self.height
+            && self.width != self.height
         {
             return Err(Error::SquareWorldError);
         }
