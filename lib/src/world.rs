@@ -80,6 +80,7 @@ impl<'a, R: Rule> World<'a, R> {
                         && (config.transform == Transform::Id
                             || config.transform == Transform::FlipCol)
                 }
+                SearchOrder::Diagonal => false,
             };
 
         // Whether to consider only half of the first generation of the front.
@@ -132,6 +133,7 @@ impl<'a, R: Rule> World<'a, R> {
                                 cell.is_front = true
                             }
                         }
+                        SearchOrder::Diagonal => (),
                     }
                     cells.push(cell);
                 }
@@ -349,6 +351,25 @@ impl<'a, R: Rule> World<'a, R> {
                     for x in 0..self.config.width {
                         for t in 0..self.config.period {
                             let cell = self.find_cell((x, y, t)).unwrap();
+                            self.search_list.push(cell);
+                        }
+                    }
+                }
+            }
+            SearchOrder::Diagonal => {
+                let size = self.config.height;
+                for i in 0..size {
+                    for j in 0..=i {
+                        for t in 0..self.config.period {
+                            let cell = self.find_cell((j, i - j, t)).unwrap();
+                            self.search_list.push(cell);
+                        }
+                    }
+                }
+                for i in 0..size {
+                    for j in i + 1..size {
+                        for t in 0..self.config.period {
+                            let cell = self.find_cell((j, size + i - j, t)).unwrap();
                             self.search_list.push(cell);
                         }
                     }

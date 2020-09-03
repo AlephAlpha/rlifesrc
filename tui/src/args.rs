@@ -158,7 +158,16 @@ impl Args {
                     .short("o")
                     .long("order")
                     .takes_value(true)
-                    .possible_values(&["row", "column", "automatic", "r", "c", "a"])
+                    .possible_values(&[
+                        "row",
+                        "column",
+                        "automatic",
+                        "diagonal",
+                        "r",
+                        "c",
+                        "a",
+                        "d",
+                    ])
                     .default_value("automatic"),
             )
             .arg(
@@ -255,6 +264,33 @@ impl Args {
         let transform: Transform = matches.value_of("TRANSFORM").unwrap().parse().unwrap();
         let symmetry: Symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
 
+        let all = matches.is_present("ALL");
+        #[cfg(feature = "tui")]
+        let reset = matches.is_present("RESET");
+        #[cfg(feature = "tui")]
+        let no_tui = matches.is_present("NOTUI");
+        let search_order = match matches.value_of("ORDER").unwrap() {
+            "row" | "r" => Some(SearchOrder::RowFirst),
+            "column" | "c" => Some(SearchOrder::ColumnFirst),
+            "diagonal" | "d" => Some(SearchOrder::Diagonal),
+            _ => None,
+        };
+        let new_state = match matches.value_of("CHOOSE").unwrap() {
+            "dead" | "d" => NewState::ChooseDead,
+            "alive" | "a" => NewState::ChooseAlive,
+            "random" | "r" => NewState::Random,
+            _ => NewState::ChooseAlive,
+        };
+        let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
+        let max_cell_count = match max_cell_count {
+            0 => None,
+            i => Some(i),
+        };
+        let non_empty_front = matches.is_present("FRONT");
+        let reduce_max = matches.is_present("REDUCE");
+
+        let rule_string = matches.value_of("RULE").unwrap().to_string();
+
         if width != height {
             if transform.square_world() {
                 return Err(Error::with_description(
@@ -274,33 +310,13 @@ impl Args {
                     ErrorKind::InvalidValue,
                 ));
             }
+            if search_order == Some(SearchOrder::Diagonal) {
+                return Err(Error::with_description(
+                    "Diagonal search order is only valid for square worlds",
+                    ErrorKind::InvalidValue,
+                ));
+            }
         }
-
-        let all = matches.is_present("ALL");
-        #[cfg(feature = "tui")]
-        let reset = matches.is_present("RESET");
-        #[cfg(feature = "tui")]
-        let no_tui = matches.is_present("NOTUI");
-        let search_order = match matches.value_of("ORDER").unwrap() {
-            "row" | "r" => Some(SearchOrder::RowFirst),
-            "column" | "c" => Some(SearchOrder::ColumnFirst),
-            _ => None,
-        };
-        let new_state = match matches.value_of("CHOOSE").unwrap() {
-            "dead" | "d" => NewState::ChooseDead,
-            "alive" | "a" => NewState::ChooseAlive,
-            "random" | "r" => NewState::Random,
-            _ => NewState::ChooseAlive,
-        };
-        let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
-        let max_cell_count = match max_cell_count {
-            0 => None,
-            i => Some(i),
-        };
-        let non_empty_front = matches.is_present("FRONT");
-        let reduce_max = matches.is_present("REDUCE");
-
-        let rule_string = matches.value_of("RULE").unwrap().to_string();
 
         let config = Config::new(width, height, period)
             .set_translate(dx, dy)

@@ -263,6 +263,17 @@ pub enum SearchOrder {
     /// 369
     /// ```
     ColumnFirst,
+
+    /// Diagonal.
+    ///
+    /// ```plaintext
+    /// 136
+    /// 258
+    /// 479
+    /// ```
+    ///
+    /// This search order requires the world to be square.
+    Diagonal,
 }
 
 /// How to choose a state for an unknown cell.
@@ -446,6 +457,8 @@ impl Config {
     }
 
     /// Automatically determines the search order if `search_order` is `None`.
+    ///
+    /// The result will never be `SearchOrder::Diagonal`.
     pub(crate) fn auto_search_order(&self) -> SearchOrder {
         self.search_order.unwrap_or_else(|| {
             let (width, height) = match self.symmetry {
@@ -508,7 +521,9 @@ impl Config {
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
-        if (self.symmetry.square_world() || self.transform.square_world())
+        if (self.symmetry.square_world()
+            || self.transform.square_world()
+            || self.search_order == Some(SearchOrder::Diagonal))
             && self.width != self.height
         {
             return Err(Error::SquareWorldError);
