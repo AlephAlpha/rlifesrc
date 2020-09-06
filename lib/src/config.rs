@@ -115,13 +115,13 @@ impl Transform {
     ///
     /// Returns `true` for `R90`, `R270`, `F\` and `F/`.
     pub fn square_world(self) -> bool {
-        match self {
+        matches!(
+            self,
             Transform::Rotate90
-            | Transform::Rotate270
-            | Transform::FlipDiag
-            | Transform::FlipAntidiag => true,
-            _ => false,
-        }
+                | Transform::Rotate270
+                | Transform::FlipDiag
+                | Transform::FlipAntidiag
+        )
     }
 }
 
@@ -228,14 +228,14 @@ impl Symmetry {
     ///
     /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
     pub fn square_world(self) -> bool {
-        match self {
+        matches!(
+            self,
             Symmetry::C4
-            | Symmetry::D2Diag
-            | Symmetry::D2Antidiag
-            | Symmetry::D4Diag
-            | Symmetry::D8 => true,
-            _ => false,
-        }
+                | Symmetry::D2Diag
+                | Symmetry::D2Antidiag
+                | Symmetry::D4Diag
+                | Symmetry::D8
+        )
     }
 }
 

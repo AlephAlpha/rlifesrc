@@ -81,8 +81,8 @@ OPTIONS:
 
     -o, --order <ORDER>
             搜索顺序
-            先搜行还是先搜列。
-             [默认: automatic]  [可能的值: row, column, automatic, r, c, a]
+            先搜行还是先搜列，或者对角方向搜索。
+             [默认: automatic]  [可能的值: row, column, automatic, diagonal, r, c, a, d]
 
     -r, --rule <RULE>
             元胞自动机的规则

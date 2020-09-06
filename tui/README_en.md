@@ -76,8 +76,8 @@ OPTIONS:
 
     -o, --order <ORDER>
             Search order
-            Row first or column first.
-             [default: automatic]  [possible values: row, column, automatic, r, c, a]
+            Row first or column first, or diagonal.
+             [default: automatic]  [possible values: row, column, automatic, diagonal, r, c, a, d]
 
     -r, --rule <RULE>
             Rule of the cellular automaton

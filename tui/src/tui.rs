@@ -20,18 +20,6 @@ const VIEW_FREQ: u64 = 5000;
 #[cfg(not(debug_assertions))]
 const VIEW_FREQ: u64 = 100000;
 
-/// A macro to generate constant key events.
-macro_rules! const_key {
-    ($($name:ident => $key:expr),* $(,)?) => {
-        $(
-            const $name: Event = Event::Key(KeyEvent {
-                code: $key,
-                modifiers: KeyModifiers::empty(),
-            });
-        )*
-    };
-}
-
 struct App<'a, W: Write> {
     gen: isize,
     period: isize,
@@ -43,6 +31,7 @@ struct App<'a, W: Write> {
     output: &'a mut W,
     term_size: (u16, u16),
     world_size: (isize, isize),
+    asking_quit: bool,
 }
 
 impl<'a, W: Write> App<'a, W> {
@@ -60,6 +49,7 @@ impl<'a, W: Write> App<'a, W> {
             output,
             term_size: (80, 24),
             world_size,
+            asking_quit: false,
         }
     }
 
@@ -216,14 +206,8 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Asks whether to quit.
-    async fn ask_quit(&mut self, reader: &mut EventStream) -> CrosstermResult<bool> {
+    fn ask_quit(&mut self) -> CrosstermResult<()> {
         const ASK_QUIT: &str = "Are you sure to quit? [Y/n]";
-
-        const_key! {
-            KEY_ENTER => KeyCode::Enter,
-            KEY_Y => KeyCode::Char('y'),
-            KEY_UPPER_Y => KeyCode::Char('Y'),
-        };
 
         self.output
             .queue(MoveTo(0, self.term_size.1 - 1))?
@@ -231,77 +215,110 @@ impl<'a, W: Write> App<'a, W> {
             .queue(SetForegroundColor(Color::Black))?
             .queue(Print(format!("{:1$}", ASK_QUIT, self.term_size.0 as usize)))?
             .flush()?;
-        if let Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) = reader.try_next().await? {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+
+        self.asking_quit = true;
+        Ok(())
     }
 
     /// Handles a key event. Return `true` to quit the program.
     async fn handle(
         &mut self,
         event: Option<Event>,
-        reader: &mut EventStream,
+        // reader: &mut EventStream,
         is_searching: bool,
     ) -> CrosstermResult<bool> {
-        const_key! {
-            KEY_Q => KeyCode::Char('q'),
-            KEY_ESC => KeyCode::Esc,
-            KEY_PAGEUP => KeyCode::PageUp,
-            KEY_PAGEDOWN => KeyCode::PageDown,
-            KEY_SPACE => KeyCode::Char(' '),
-            KEY_ENTER => KeyCode::Enter,
-        };
+        /// A macro to generate constant key events.
+        macro_rules! const_key {
+            ($name:ident => $key:expr) => {
+                const $name: Event = Event::Key(KeyEvent {
+                    code: $key,
+                    modifiers: KeyModifiers::empty(),
+                });
+            };
+            ($name:ident => upper $key:expr) => {
+                const $name: Event = Event::Key(KeyEvent {
+                    code: $key,
+                    modifiers: KeyModifiers::SHIFT,
+                });
+            };
+        }
 
-        match event {
-            Some(KEY_Q) | Some(KEY_ESC) => {
-                if is_searching {
-                    self.pause();
+        const_key!(KEY_Y => KeyCode::Char('y'));
+        const_key!(KEY_UPPER_Y => upper KeyCode::Char('Y'));
+        const_key!(KEY_Q => KeyCode::Char('q'));
+        const_key!(KEY_UPPER_Q => upper KeyCode::Char('Q'));
+        const_key!(KEY_SPACE => KeyCode::Char(' '));
+        const_key!(KEY_ESC => KeyCode::Esc);
+        const_key!(KEY_ENTER => KeyCode::Enter);
+        const_key!(KEY_PAGEUP => KeyCode::PageUp);
+        const_key!(KEY_PAGEDOWN => KeyCode::PageDown);
+
+        if self.asking_quit {
+            match event {
+                Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) => return Ok(true),
+                Some(Event::Resize(width, height)) => {
+                    self.term_size = (width, height);
+                    self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
+                    self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
+                    self.output
+                        .queue(ResetColor)?
+                        .queue(Clear(ClearType::All))?;
+                    self.update()?;
+                    self.ask_quit()?;
                 }
-                self.update()?;
-                if let Status::Paused = self.status {
-                    if self.ask_quit(reader).await? {
-                        return Ok(true);
-                    } else {
-                        self.update()?;
-                    }
-                } else {
+                Some(_) => {
+                    self.asking_quit = false;
+                    self.update()?;
+                }
+                None => {
                     return Ok(true);
                 }
             }
-            Some(KEY_PAGEDOWN) => {
-                self.gen = (self.gen + 1) % self.period;
-                self.update()?;
-            }
-            Some(KEY_PAGEUP) => {
-                self.gen = (self.gen + self.period - 1) % self.period;
-                self.update()?;
-            }
-            Some(KEY_SPACE) | Some(KEY_ENTER) => {
-                if is_searching {
-                    self.pause();
-                } else {
-                    self.start();
+        } else {
+            match event {
+                Some(KEY_Q) | Some(KEY_UPPER_Q) | Some(KEY_ESC) => {
+                    if is_searching {
+                        self.pause();
+                    }
+                    self.update()?;
+                    if let Status::Paused = self.status {
+                        self.ask_quit()?;
+                    } else {
+                        return Ok(true);
+                    }
                 }
-                self.update()?;
-            }
-            Some(Event::Resize(width, height)) => {
-                self.term_size = (width, height);
-                self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
-                self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
-                self.output
-                    .queue(ResetColor)?
-                    .queue(Clear(ClearType::All))?;
-                self.update()?;
-            }
-            Some(_) => (),
-            None => {
-                if is_searching {
-                    self.pause();
+                Some(KEY_PAGEDOWN) => {
+                    self.gen = (self.gen + 1) % self.period;
+                    self.update()?;
                 }
-                self.update()?;
-                return Ok(true);
+                Some(KEY_PAGEUP) => {
+                    self.gen = (self.gen + self.period - 1) % self.period;
+                    self.update()?;
+                }
+                Some(KEY_SPACE) | Some(KEY_ENTER) => {
+                    if is_searching {
+                        self.pause();
+                    } else {
+                        self.start();
+                    }
+                    self.update()?;
+                }
+                Some(Event::Resize(width, height)) => {
+                    self.term_size = (width, height);
+                    self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
+                    self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
+                    self.output
+                        .queue(ResetColor)?
+                        .queue(Clear(ClearType::All))?;
+                    self.update()?;
+                }
+                Some(_) => (),
+                None => {
+                    if is_searching {
+                        self.pause();
+                    }
+                    return Ok(true);
+                }
             }
         }
 
@@ -314,7 +331,7 @@ impl<'a, W: Write> App<'a, W> {
             if let Status::Searching = self.status {
                 select! {
                     event = reader.try_next().fuse() => {
-                        if self.handle(event?, reader, true).await? {
+                        if self.handle(event?, true).await? {
                             break;
                         }
                     },
@@ -322,7 +339,7 @@ impl<'a, W: Write> App<'a, W> {
                         self.update()?;
                     },
                 };
-            } else if self.handle(reader.try_next().await?, reader, false).await? {
+            } else if self.handle(reader.try_next().await?, false).await? {
                 break;
             }
         }

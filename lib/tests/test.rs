@@ -1,4 +1,4 @@
-use rlifesrc_lib::{Config, Error, Status, Symmetry, Transform};
+use rlifesrc_lib::{Config, Error, SearchOrder, Status, Symmetry, Transform};
 
 #[test]
 fn default() -> Result<(), Error> {
@@ -88,6 +88,16 @@ fn turtle() -> Result<(), Error> {
     let config = Config::new(12, 13, 3)
         .set_translate(0, 1)
         .set_symmetry(Symmetry::D2Col);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+    Ok(())
+}
+
+#[test]
+fn diagonal() -> Result<(), Error> {
+    let config = Config::new(8, 8, 4)
+        .set_translate(1, 1)
+        .set_search_order(Some(SearchOrder::Diagonal));
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
     Ok(())
