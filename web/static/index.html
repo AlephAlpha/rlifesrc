@@ -1,104 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="shortcut icon" href="favicon.ico" />
-    <title>
-      Rust Life Search - A Game of Life pattern searcher written in Rust.
-    </title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/muicss@0.10.2/dist/css/mui.min.css"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/muicss@0.10.2/dist/js/mui.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"
-    />
-    <style>
-      body {
-        background-color: #eee;
-      }
 
-      #appbar {
-        background-color: #222;
-      }
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="shortcut icon" href="favicon.ico" />
+  <title>
+    Rust Life Search - A Game of Life pattern searcher written in Rust.
+  </title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/muicss@0.10.2/dist/css/mui.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/muicss@0.10.2/dist/js/mui.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.14.0/css/all.min.css" />
+  <style>
+    body {
+      background-color: #eee;
+    }
 
-      #appbar table {
-        width: 100%;
-      }
+    #appbar {
+      background-color: #222;
+    }
 
-      #title {
-        margin-right: 10px;
-      }
+    #appbar table {
+      width: 100%;
+    }
 
-      #appbar .fab {
-        color: #fff;
-      }
+    #title {
+      margin-right: 10px;
+    }
 
-      main {
-        margin-top: 20px;
-      }
+    #appbar .fab {
+      color: #fff;
+    }
 
-      .mui-panel {
-        padding-top: 10px;
-      }
+    main {
+      margin-top: 20px;
+    }
 
-      .mui-tabs__pane {
-        margin-top: 10px;
-      }
+    .mui-panel {
+      padding-top: 10px;
+    }
 
-      .fas + span {
-        margin-left: 5px;
-      }
+    .mui-tabs__pane {
+      margin-top: 10px;
+    }
 
-      .btn-tiny {
-        margin-left: 4px;
-        padding: 0 4px;
-      }
+    .fas+span {
+      margin-left: 5px;
+    }
 
-      .btn-tiny + .btn-tiny {
-        margin-left: 0;
-      }
+    .btn-tiny {
+      margin-left: 4px;
+      padding: 0 4px;
+    }
 
-      #world {
-        background-color: #eee;
-        font-family: "Liberation Mono", Consolas, monospace;
-        font-size: 1rem;
-        line-height: 1rem;
-        letter-spacing: 2px;
-        max-height: 400px;
-        overflow: auto;
-        padding: 5px;
-      }
+    .btn-tiny+.btn-tiny {
+      margin-left: 0;
+    }
 
-      .buttons .mui-btn {
-        margin-right: 8px;
-      }
+    #world {
+      background-color: #eee;
+      font-family: "Liberation Mono", Consolas, monospace;
+      font-size: 1rem;
+      line-height: 1rem;
+      letter-spacing: 2px;
+      max-height: 400px;
+      overflow: auto;
+      padding: 5px;
+    }
 
-      .buttons .mui-btn + .mui-btn {
-        margin-left: 0px;
-      }
+    .buttons .mui-btn {
+      margin-right: 8px;
+    }
 
-      #settings {
-        margin-top: 10px;
-      }
+    .buttons .mui-btn+.mui-btn {
+      margin-left: 0px;
+    }
 
-      code {
-        background-color: #eee;
-        font-family: "Liberation Mono", Consolas, monospace;
-        padding: 2px;
-      }
+    #settings {
+      margin-top: 10px;
+    }
 
-      footer {
-        margin-bottom: 20px;
-      }
-    </style>
-  </head>
+    code {
+      background-color: #eee;
+      font-family: "Liberation Mono", Consolas, monospace;
+      padding: 2px;
+    }
 
-  <body>
-    <script src="main.js"></script>
-  </body>
+    footer {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="main.js"></script>
+</body>
+
 </html>

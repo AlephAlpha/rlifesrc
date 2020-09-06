@@ -10,16 +10,19 @@ echo "Here is $here"
 echo "Target folder is $target"
 
 if [ ! -d $target/.git/ ]; then
-    echo "\nInitializing..."
+    echo
+    echo "Initializing..."
     rm -rf $target
     git clone --single-branch --branch=gh-pages --depth 1 git@github.com:AlephAlpha/rlifesrc.git $target
 fi
 
-echo "\nBuilding..."
+echo
+echo "Building..."
 cd $here
 cargo web build --release
 
-echo "\nCopying files..."
+echo
+echo "Copying files..."
 cd $target
 git clean -fdx
 git rm -rf .
@@ -30,7 +33,8 @@ git add -A
 while getopts ":d" o; do
     case "${o}" in
     d)
-        echo "\nDeploying..."
+        echo
+        echo "Deploying..."
         git commit -m "网页版更新：$(date)"
         git push origin gh-pages
         ;;
@@ -39,4 +43,5 @@ while getopts ":d" o; do
 done
 shift $((OPTIND - 1))
 
-echo "\nDone!"
+echo
+echo "Done!"
