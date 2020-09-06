@@ -426,8 +426,7 @@ impl Settings {
                 <select id="set_trans" onchange=onchange>
                     <option> { "Id" } </option>
                     <option disabled=self.config.width != self.config.height>
-                        <i class="fas fa-check"></i>
-                        <span> { "Rotate 90°" } </span>
+                        { "Rotate 90°" }
                     </option>
                     <option> { "Rotate 180°" } </option>
                     <option disabled=self.config.width != self.config.height>

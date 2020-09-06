@@ -250,17 +250,20 @@ impl App {
                             <ul class="mui-tabs__bar">
                                 <li class="mui--is-active">
                                     <a data-mui-toggle="tab" data-mui-controls="pane-world">
-                                        { "World" }
+                                        <i class="fas fa-globe"></i>
+                                        <span> { "World" } </span>
                                     </a>
                                 </li>
                                 <li>
                                     <a data-mui-toggle="tab" data-mui-controls="pane-settings">
-                                        { "Settings" }
+                                        <i class="fas fa-cog"></i>
+                                        <span> { "Settings" } </span>
                                     </a>
                                 </li>
                                 <li>
                                     <a data-mui-toggle="tab" data-mui-controls="pane-help">
-                                        { "Help" }
+                                        <i class="fas fa-question-circle"></i>
+                                        <span> { "Help" } </span>
                                     </a>
                                 </li>
                             </ul>
