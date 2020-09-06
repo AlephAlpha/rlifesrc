@@ -1,4 +1,4 @@
-# [rlifesrc](https://alephalpha.github.io/rlifesrc/)
+# [rlifesrc](https://github.com/AlephAlpha/rlifesrc)
 
 [![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc) [![Crates.io](https://img.shields.io/crates/v/rlifesrc)](https://crates.io/crates/rlifesrc) [![English](https://img.shields.io/badge/readme-English-brightgreen)](README_en.md)
 
@@ -140,7 +140,9 @@ rlifesrc 16 5 3 0 1
 
 注意有些变换和对称性要求世界是正方形。
 
-搜索顺序中的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。
+搜索顺序中的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。不会自动选择对角方向。
+
+对角搜索顺序要求世界是正方形。
 
 ### 命令行
 

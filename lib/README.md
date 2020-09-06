@@ -1,4 +1,4 @@
-# [rlifesrc-lib](https://alephalpha.github.io/rlifesrc/)
+# [rlifesrc-lib](https://github.com/AlephAlpha/rlifesrc)
 
 [![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc) [![Crates.io](https://img.shields.io/crates/v/rlifesrc-lib)](https://crates.io/crates/rlifesrc-lib) [![Docs.rs](https://docs.rs/rlifesrc-lib/badge.svg)](https://docs.rs/rlifesrc-lib/) [![English](https://img.shields.io/badge/readme-English-brightgreen)](README_en.md)
 

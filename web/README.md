@@ -1,4 +1,4 @@
-# [rlifesrc-web](https://alephalpha.github.io/rlifesrc/)
+# [rlifesrc-web](https://github.com/AlephAlpha/rlifesrc)
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
@@ -141,7 +141,11 @@ cp static/* some_folder/
   <dd>
   搜索顺序。
 
-  先搜行还是先搜列，或者根据图样的宽度和高度自动选取。
+  无论哪种搜索顺序，总是先搜完一个细胞的每一代，再搜下一个细胞。
+
+  `Automatic` 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。不会自动选择对角方向。
+
+  对角搜索顺序要求世界是正方形。
   </dd>
 
   <dt>Choice of state for unknown cells</dt>

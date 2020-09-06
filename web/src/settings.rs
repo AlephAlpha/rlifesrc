@@ -53,13 +53,19 @@ impl Component for Settings {
         match msg {
             Msg::SetWidth(width) => {
                 self.config.width = width;
-                if self.config.transform.square_world() || self.config.symmetry.square_world() {
+                if self.config.transform.square_world()
+                    || self.config.symmetry.square_world()
+                    || self.config.search_order == Some(SearchOrder::Diagonal)
+                {
                     self.config.height = width;
                 }
             }
             Msg::SetHeight(height) => {
                 self.config.height = height;
-                if self.config.transform.square_world() || self.config.symmetry.square_world() {
+                if self.config.transform.square_world()
+                    || self.config.symmetry.square_world()
+                    || self.config.search_order == Some(SearchOrder::Diagonal)
+                {
                     self.config.width = height;
                 }
             }
@@ -500,6 +506,7 @@ impl Settings {
                     "Automatic" => Msg::SetOrder(None),
                     "Column" => Msg::SetOrder(Some(SearchOrder::ColumnFirst)),
                     "Row" => Msg::SetOrder(Some(SearchOrder::RowFirst)),
+                    "Diagonal" => Msg::SetOrder(Some(SearchOrder::Diagonal)),
                     _ => Msg::None,
                 }
             } else {
@@ -520,6 +527,9 @@ impl Settings {
                     <option> { "Automatic" } </option>
                     <option value="Column"> { "Column first" } </option>
                     <option value="Row"> { "Row first" } </option>
+                    <option value="Diagonal" disabled=self.config.width != self.config.height>
+                        { "Diagonal" }
+                    </option>
                 </select>
             </div>
         }

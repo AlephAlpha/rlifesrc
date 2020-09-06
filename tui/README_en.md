@@ -1,4 +1,4 @@
-# [rlifesrc](https://alephalpha.github.io/rlifesrc/)
+# [rlifesrc](https://github.com/AlephAlpha/rlifesrc)
 
 [![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc) [![Crates.io](https://img.shields.io/crates/v/rlifesrc)](https://crates.io/crates/rlifesrc) [![中文](https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87-brightgreen)](README.md)
 
@@ -136,7 +136,9 @@ For example, if you want to find a vertical spaceship with [glide symmetric](htt
 
 Some of the symmetries and transformations are only valid when the world is square.
 
-“Automatic” in the search order means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns.
+“Automatic” in the search order means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns. It will never choose the diagonal search order.
+
+Diagonal search order requires  that the world is square.
 
 ### CLI
 
