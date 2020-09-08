@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use pulldown_cmark::{html::push_html, Parser};
 use std::include_str;
-use stdweb::web::Node;
+use web_sys::Node;
 use yew::{virtual_dom::VNode, Component, ComponentLink, Html, ShouldRender};
 
 const HELP_TEXT: &str = include_str!("help.md");
@@ -33,7 +33,14 @@ impl Component for Help {
     }
 
     fn view(&self) -> Html {
-        let html = format!("<div class=\"mui-container\">{}</div>", *HELP_HTML);
-        VNode::VRef(Node::from_html(&html).unwrap())
+        let html = web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .create_element("div")
+            .unwrap();
+        html.set_inner_html(&HELP_HTML);
+        html.set_attribute("class", "mui-container").unwrap();
+        VNode::VRef(Node::from(html))
     }
 }

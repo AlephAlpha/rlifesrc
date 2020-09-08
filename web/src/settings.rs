@@ -1,8 +1,14 @@
 use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
-use stdweb::js;
+use wasm_bindgen::prelude::wasm_bindgen;
 use yew::{
     html, html::ChangeData, Callback, Component, ComponentLink, Html, Properties, ShouldRender,
 };
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["mui", "tabs"])]
+    fn activate(tab: &str);
+}
 
 pub struct Settings {
     link: ComponentLink<Self>,
@@ -133,9 +139,7 @@ impl Component for Settings {
 impl Settings {
     fn apply_button(&self) -> Html {
         let onclick = self.link.callback(|_| {
-            js! { @(no_return)
-                mui.tabs.activate("pane-world");
-            };
+            activate("pane-world");
             Msg::Apply
         });
         html! {
@@ -397,7 +401,7 @@ impl Settings {
     fn set_trans(&self) -> Html {
         let onchange = self.link.callback(|e: ChangeData| {
             if let ChangeData::Select(s) = e {
-                match s.raw_value().as_ref() {
+                match s.value().as_ref() {
                     "Id" => Msg::SetTrans(Transform::Id),
                     "Rotate 90°" => Msg::SetTrans(Transform::Rotate90),
                     "Rotate 180°" => Msg::SetTrans(Transform::Rotate180),
@@ -448,7 +452,7 @@ impl Settings {
     fn set_sym(&self) -> Html {
         let onchange = self.link.callback(|e: ChangeData| {
             if let ChangeData::Select(s) = e {
-                match s.raw_value().as_ref() {
+                match s.value().as_ref() {
                     "C1" => Msg::SetSym(Symmetry::C1),
                     "C2" => Msg::SetSym(Symmetry::C2),
                     "C4" => Msg::SetSym(Symmetry::C4),
@@ -502,7 +506,7 @@ impl Settings {
     fn set_order(&self) -> Html {
         let onchange = self.link.callback(|e: ChangeData| {
             if let ChangeData::Select(s) = e {
-                match s.raw_value().as_ref() {
+                match s.value().as_ref() {
                     "Automatic" => Msg::SetOrder(None),
                     "Column" => Msg::SetOrder(Some(SearchOrder::ColumnFirst)),
                     "Row" => Msg::SetOrder(Some(SearchOrder::RowFirst)),
@@ -538,7 +542,7 @@ impl Settings {
     fn set_choose(&self) -> Html {
         let onchange = self.link.callback(|e: ChangeData| {
             if let ChangeData::Select(s) = e {
-                match s.raw_value().as_ref() {
+                match s.value().as_ref() {
                     "Dead" => Msg::SetChoose(NewState::ChooseDead),
                     "Alive" => Msg::SetChoose(NewState::ChooseAlive),
                     "Random" => Msg::SetChoose(NewState::Random),

@@ -6,9 +6,8 @@ use crate::{
 };
 use rlifesrc_lib::{Config, Status};
 use std::time::Duration;
-use stdweb::web::event::IEvent;
 use yew::{
-    events::MouseWheelEvent,
+    events::WheelEvent,
     format::Json,
     html,
     services::{storage::Area, DialogService, IntervalService, StorageService, Task},
@@ -287,7 +286,7 @@ impl App {
     }
 
     fn data(&self) -> Html {
-        let onwheel = self.link.callback(|e: MouseWheelEvent| {
+        let onwheel = self.link.callback(|e: WheelEvent| {
             e.prevent_default();
             if e.delta_y() < 0.0 {
                 Msg::IncGen

@@ -1,7 +1,5 @@
-use stdweb::web::{self, event::IEvent};
 use yew::{
-    events::DoubleClickEvent, html, Component, ComponentLink, Html, NodeRef, Properties,
-    ShouldRender,
+    events::MouseEvent, html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender,
 };
 
 pub struct World {
@@ -35,8 +33,8 @@ impl Component for World {
         match msg {
             Msg::Select => {
                 if let Some(node) = self.node_ref.get() {
-                    if let Some(selection) = web::window().get_selection() {
-                        selection.select_all_children(&node);
+                    if let Ok(Some(selection)) = web_sys::window().unwrap().get_selection() {
+                        selection.select_all_children(&node).unwrap();
                     }
                 }
                 false
@@ -52,7 +50,7 @@ impl Component for World {
     }
 
     fn view(&self) -> Html {
-        let ondblclick = self.link.callback(|e: DoubleClickEvent| {
+        let ondblclick = self.link.callback(|e: MouseEvent| {
             e.prevent_default();
             Msg::Select
         });

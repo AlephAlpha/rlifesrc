@@ -4,29 +4,33 @@ set -e
 
 cd $(dirname "$0")
 here=$(pwd)
+bin=$here/../target/wasm32-unknown-unknown/release/
 target=$here/../target/deploy/
 
 echo "Here is $here"
 echo "Target folder is $target"
 
+echo
+echo "Initializing..."
 if [ ! -d $target/.git/ ]; then
-    echo
-    echo "Initializing..."
     rm -rf $target
     git clone --single-branch --branch=gh-pages --depth 1 git@github.com:AlephAlpha/rlifesrc.git $target
 fi
+cd $target
+git clean -fdx
+git rm -rf .
 
 echo
 echo "Building..."
 cd $here
-cargo web build --release
+cargo build --release --target wasm32-unknown-unknown --bin main
+wasm-bindgen --target web --no-typescript --out-dir $target $bin/main.wasm
+cargo build --release --target wasm32-unknown-unknown --bin worker
+wasm-bindgen --target no-modules --no-typescript --out-dir $target $bin/worker.wasm
 
 echo
 echo "Copying files..."
 cd $target
-git clean -fdx
-git rm -rf .
-cp -v ../wasm32-unknown-unknown/release/*.{js,wasm} .
 cp -vr $here/static/* .
 git add -A
 

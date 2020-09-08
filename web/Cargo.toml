@@ -11,9 +11,10 @@ readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
-rlifesrc-lib = { path = "../lib/", version = "0.3.3", features = ["stdweb"] }
+rlifesrc-lib = { path = "../lib/", version = "0.3.3", features = ["wasm-bindgen"] }
 lazy_static = "1.4.0"
 pulldown-cmark = "0.8.0"
 serde = { version = "1.0.115", features = ["derive"] }
-stdweb = "0.4.20"
-yew = { version = "0.17.3", package = "yew-stdweb" }
+wasm-bindgen = "0.2.67"
+web-sys = { version = "0.3.44", features = ["Selection", "Window"] }
+yew = "0.17.3"
