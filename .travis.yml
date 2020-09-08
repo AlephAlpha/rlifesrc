@@ -17,5 +17,4 @@ script:
   - cargo clippy -- --deny=warnings
   - cargo build --verbose
   - cargo test --verbose --all-features
-  - cd web; cargo build --target wasm32-unknown-unknown --verbose; cd ..
-  - cd web; cargo test --target wasm32-unknown-unknown --verbose; cd ..
+  - cd web && cargo build --target wasm32-unknown-unknown --verbose && cd ..
