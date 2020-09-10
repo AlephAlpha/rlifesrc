@@ -156,6 +156,6 @@ impl Agent for Worker {
     }
 
     fn name_of_resource() -> &'static str {
-        "worker.js"
+        "rlifesrc/worker.js"
     }
 }
