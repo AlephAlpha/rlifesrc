@@ -1,6 +1,6 @@
 use rlifesrc_lib::{Config, Search, Status, WorldSer};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{option_env, time::Duration};
 use yew::{
     agent::{Agent, AgentLink, HandlerId, Public},
     services::{Task, TimeoutService},
@@ -156,6 +156,6 @@ impl Agent for Worker {
     }
 
     fn name_of_resource() -> &'static str {
-        "rlifesrc/worker.js"
+        option_env!("RLIFESRC_PATH").unwrap_or("rlifesrc/worker.js")
     }
 }

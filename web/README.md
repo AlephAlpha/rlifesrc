@@ -16,40 +16,36 @@
 
 ## 编译
 
-这是用 Rust 写的。没有 Rust 的话，先安装 [Rust](https://www.rust-lang.org/)。
+目前我把编译的工具从 `cargo-web` 换成了 `wasm-bindgen` ，编译变得有点复杂。详见 [`deploy.sh`](./deploy.sh) 文件，其中包含了编译和部署到 GitHub Pages 上的过程，与编译有关的是 `echo "Building..."` 后面的五行。
 
-编译网页版还要先安装 [cargo-web](https://github.com/koute/cargo-web)：
+要注意一下几点：
 
+1. 编译前要安装**最新版**的 [`wasm-bindgen`](https://github.com/rustwasm/wasm-bindgen)：
 
-```bash
-cargo install cargo-web
-```
+    ```bash
+    cargo install -f wasm-bindgen-cli
+    ```  
 
-准备好了之后，就可以用 `git clone` 下载：
+    `wasm-bindgen` 版本不对的话会无法编译。如果升级到最新版还是不对，可以试试先删掉 `Cargo.lock` 再重新编译。
 
-```bash
-git clone https://github.com/AlephAlpha/rlifesrc.git
-cd rlifesrc/
-```
+2. 由于是编译成 wasm，还要给 Rust 添加相应的 target：
 
-安装了 cargo-web 之后，用
+    ```bash
+    rustup target add wasm32-unknown-unknown
+    ```
 
-```bash
-cd web/
-cargo web build --release
-```
+3. `deploy.sh` 中，`$build` 指的是 `cargo build` 输出的目录；`$deploy` 指的是部署用的目录，`wasm-bindgen` 也会输出于此处。可以根据需要修改 `$deploy` 目录，但 `$build` 不要乱改。
 
-来编译即可。记得一定要 `cd` 到 `web` 目录。
+4. 现在 [`yew`](https://github.com/yewstack/yew) 是从**绝对路径**读取 worker 所在的文件。由于我是部署到 `https://alephalpha.github.io/rlifesrc/`，所以把这个路径默认设为 `"rlifesrc/worker.js"`；如果部署到的地址不同，可以在编译时通过环境变量 `RLIFESRC_PATH` 修改此路径。
 
-由于用了 Web Worker，需要编译两个文件，无法直接使用 `cargo web start` 来运行，或者用 `cargo web deploy` 编译成静态网页。只能在编译之后手动把 `target/wasm32-unknown-unknown/release/` 文件夹里的以 `*.js` 和 `*.wasm` 结尾的四个文件，以及 `static` 中的两个文件，复制到同一个文件夹：
+5. 如果只是想在本地使用网页版，完全可以不用编译，只需要把编译好的版本 `git clone` 下来，用 python 自带的服务器功能：
 
-```bash
-mkdir -p some_folder/
-cp ../target/wasm32-unknown-unknown/release/*.{js,wasm} some_folder/
-cp static/* some_folder/
-```
+    ```bash
+    git clone --single-branch --branch=gh-pages --depth 1 git@github.com:AlephAlpha/rlifesrc.git
+    python3 -m http.server
+    ```
 
-然后就可以把这个文件夹中的内容部署到自己的网站，比如说 GitHub Pages。注意由于[此问题](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS/Errors/CORSRequestNotHttp)，无法直接在浏览器打开 `index.html` 来运行；至少火狐浏览器如此。
+然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面说的问题4，不要先 `cd` 到 `rlifesrc` 再运行服务器。
 
 ## 用法
 
