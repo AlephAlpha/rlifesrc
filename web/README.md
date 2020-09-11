@@ -41,11 +41,11 @@
 5. 如果只是想在本地使用网页版，完全可以不用编译，只需要把编译好的版本 `git clone` 下来，用 python 自带的服务器功能：
 
     ```bash
-    git clone --single-branch --branch=gh-pages --depth 1 git@github.com:AlephAlpha/rlifesrc.git
+    git clone --single-branch --branch=gh-pages --depth 1 https://github.com/AlephAlpha/rlifesrc.git
     python3 -m http.server
     ```
 
-然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面说的问题4，不要先 `cd` 到 `rlifesrc` 再运行服务器。
+    然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面说的问题4，不要先 `cd` 到 `rlifesrc` 再运行服务器。
 
 ## 用法
 
