@@ -15,8 +15,8 @@ bitflags = "1.2.1"
 ca-rules = "0.3.2"
 derivative = "2.1.1"
 rand = "0.7.3"
-serde = { version = "1.0.115", features = ["derive"], optional = true }
-thiserror = "1.0.20"
+serde = { version = "1.0.116", features = ["derive"], optional = true }
+thiserror = "1.0.21"
 
 [features]
 default = []
