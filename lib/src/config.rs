@@ -277,7 +277,8 @@ pub enum SearchOrder {
 }
 
 /// How to choose a state for an unknown cell.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
+#[derivative(Default)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum NewState {
     /// Chooses the background state.
@@ -298,6 +299,7 @@ pub enum NewState {
     /// For example, for non-Generations rules,
     /// it chooses `ALIVE` on even generations,
     /// `DEAD` on odd generations.
+    #[derivative(Default)]
     ChooseAlive,
 
     /// Random.
@@ -308,12 +310,6 @@ pub enum NewState {
     /// For Generations rules with `n` states,
     /// the probability of each state is `1/n`.
     Random,
-}
-
-impl Default for NewState {
-    fn default() -> Self {
-        NewState::ChooseAlive
-    }
 }
 
 /// World configuration.

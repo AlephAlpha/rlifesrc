@@ -40,6 +40,7 @@ while getopts ":d" o; do
     d)
         echo
         echo "Deploying..."
+        git add -A
         git commit -m "网页版更新：$(date)"
         git push origin gh-pages
         ;;
