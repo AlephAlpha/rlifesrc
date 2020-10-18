@@ -14,7 +14,7 @@ keywords = ["game-of-life", "cellular-automata"]
 rlifesrc-lib = { path = "../lib/", version = "0.3.4", features = ["wasm-bindgen"] }
 lazy_static = "1.4.0"
 pulldown-cmark = "0.8.0"
-serde = { version = "1.0.116", features = ["derive"] }
+serde = { version = "1.0.117", features = ["derive"] }
 wasm-bindgen = "^0.2.68"
 web-sys = { version = "0.3.45", features = ["Selection", "Window"] }
 yew = "0.17.3"

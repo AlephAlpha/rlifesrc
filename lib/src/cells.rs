@@ -118,13 +118,11 @@ impl<'a, R: Rule> LifeCell<'a, R> {
 
 impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(
-            f,
-            "LifeCell {{ coord: {:?}, state: {:?}, desc: {:?} }}",
-            self.coord,
-            self.state.get(),
-            self.desc.get()
-        )
+        f.debug_struct("LifeCell")
+            .field("coord", &self.coord)
+            .field("state", &self.state.get())
+            .field("desc", &self.desc.get())
+            .finish()
     }
 }
 
@@ -165,6 +163,8 @@ impl<'a, R: Rule> Deref for CellRef<'a, R> {
 
 impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for CellRef<'a, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(f, "CellRef {{ coord: {:?} }}", self.coord)
+        f.debug_struct("CellRef")
+            .field("coord", &self.coord)
+            .finish()
     }
 }
