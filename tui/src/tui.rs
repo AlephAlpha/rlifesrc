@@ -1,5 +1,3 @@
-#![allow(clippy::borrowed_box)]
-
 use async_std::task;
 use crossterm::{
     cursor::{Hide, MoveTo, MoveToNextLine, Show},

@@ -20,8 +20,10 @@ pub(crate) struct Args {
 impl Args {
     /// Parses the command-line arguments.
     pub(crate) fn parse() -> ClapResult<Self> {
-        let mut app = App::new("rlifesrc")
-            .about("Searching for patterns in Conway's Game of Life")
+        let mut app = App::new(env!("CARGO_PKG_NAME"))
+            .version(env!("CARGO_PKG_VERSION"))
+            .author(env!("CARGO_PKG_AUTHORS"))
+            .about(env!("CARGO_PKG_DESCRIPTION"))
             .long_about(
                 "Searching for patterns in Conway's Game of Life\n\
                  \n\
@@ -38,7 +40,6 @@ impl Args {
                  * Each line is ended with `$`;\n\
                  * The whole pattern is ended with `!`",
             )
-            .version("0.3.0")
             .settings(&[AppSettings::AllowNegativeNumbers, AppSettings::ColoredHelp])
             .arg(
                 Arg::with_name("X")

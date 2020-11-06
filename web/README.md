@@ -36,7 +36,7 @@
 
 3. `deploy.sh` 中，`$build` 指的是 `cargo build` 输出的目录；`$deploy` 指的是部署用的目录，`wasm-bindgen` 也会输出于此处。可以根据需要修改 `$deploy` 目录，但 `$build` 不要乱改。
 
-4. 现在 [`yew`](https://github.com/yewstack/yew) 是从**绝对路径**读取 worker 所在的文件。由于我是部署到 `https://alephalpha.github.io/rlifesrc/`，所以把这个路径默认设为 `"rlifesrc/worker.js"`；如果部署到的地址不同，可以在编译时通过环境变量 `RLIFESRC_PATH` 修改此路径。
+4. 现在 [`yew`](https://github.com/yewstack/yew) 是从**绝对路径**读取 worker 所在的文件。由于我是部署到 `https://alephalpha.github.io/rlifesrc/`，所以把这个路径默认设为 `"rlifesrc/worker.js"`；如果部署到的地址不同，可以在**编译时**通过环境变量 `RLIFESRC_PATH` 修改此路径。
 
 5. 如果只是想在本地使用网页版，完全可以不用编译，只需要把编译好的版本 `git clone` 下来，用 python 自带的服务器功能：
 
