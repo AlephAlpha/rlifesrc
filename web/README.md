@@ -1,5 +1,7 @@
 # [rlifesrc-web](https://github.com/AlephAlpha/rlifesrc)
 
+[![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc) [![English](https://img.shields.io/badge/readme-English-brightgreen)](src/help.md)
+
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
 由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 JavaScript 的情况下弄成一个网页，写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
@@ -55,7 +57,7 @@
 
 搜到结果后再点 “Start” 会在当前结果的基础上搜下一个结果。如果要从头开始搜索，可以点击 “Reset” 来重置世界。
 
-搜索所需的时间可能很长。点击 “Save” 可以通过 [Web Storage API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Storage_API) 把当前的搜索状态保存在浏览器中，点 “Load” 可以读取。关闭浏览器，保存的搜索状态不会消失。目前尚不支持自动保存/读取。
+搜索所需的时间可能很长。点击 “Save” 可以把当前的搜索状态保存在一个 JSON 文件中，点 “Load” 可以上传保存的搜索状态。
 
 输出的结果用 Golly 的 [Extended RLE](http://golly.sourceforge.net/Help/formats.html#rle) 格式显示；但不会合并相邻的相同符号，而是采用类似于 [Plaintext](https://conwaylife.com/wiki/Plaintext) 格式的排版。
 

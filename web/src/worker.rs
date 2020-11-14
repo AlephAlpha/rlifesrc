@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{option_env, time::Duration};
 use yew::{
     agent::{Agent, AgentLink, HandlerId, Public},
-    services::{Task, TimeoutService},
+    services::timeout::{TimeoutService, TimeoutTask},
 };
 
 const VIEW_FREQ: u64 = 50000;
@@ -14,8 +14,8 @@ pub enum Request {
     Pause,
     SetWorld(Config),
     DisplayGen(isize),
-    Store,
-    Restore(WorldSer),
+    Save,
+    Load(WorldSer),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -24,7 +24,7 @@ pub enum Response {
     UpdateStatus(Status),
     UpdateConfig(Config),
     InvalidRule(String),
-    Store(WorldSer),
+    Save(WorldSer),
 }
 
 pub enum WorkerMsg {
@@ -35,7 +35,7 @@ pub struct Worker {
     status: Status,
     search: Box<dyn Search>,
     link: AgentLink<Worker>,
-    job: Option<Box<dyn Task>>,
+    timeout_task: Option<TimeoutTask>,
 }
 
 impl Worker {
@@ -44,11 +44,11 @@ impl Worker {
             Duration::from_millis(0),
             self.link.callback(|_| WorkerMsg::Step),
         );
-        self.job = Some(Box::new(handle));
+        self.timeout_task = Some(handle);
     }
 
     fn stop_job(&mut self) {
-        self.job.take();
+        self.timeout_task.take();
     }
 
     fn update_world(&mut self, id: HandlerId, gen: isize) {
@@ -82,7 +82,7 @@ impl Agent for Worker {
             status: Status::Initial,
             search,
             link,
-            job: None,
+            timeout_task: None,
         }
     }
 
@@ -128,11 +128,11 @@ impl Agent for Worker {
             Request::DisplayGen(gen) => {
                 self.update_world(id, gen);
             }
-            Request::Store => {
+            Request::Save => {
                 let world_ser = self.search.ser();
-                self.link.respond(id, Response::Store(world_ser));
+                self.link.respond(id, Response::Save(world_ser));
             }
-            Request::Restore(world_ser) => {
+            Request::Load(world_ser) => {
                 self.stop_job();
                 self.status = Status::Paused;
                 match world_ser.world() {

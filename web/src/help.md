@@ -14,7 +14,7 @@ First set up height, width, period, translation and other parameters in the `Set
 
 When a result is found, you can click `Start` again to search for the next result, or click `Reset` to reset the world.
 
-It may takes a very long time to find a result. You can click `Save` to save the current search status in your browser, and click `Load` to load a saved status. Automatic saving and loading are not supported yet.
+It may takes a very long time to find a result. You can click `Save` to save the current search status in a JSON file, and click `Load` to load a saved status.
 
 The result is printed in a mix of [Plaintext](https://conwaylife.com/wiki/Plaintext) and [RLE](https://conwaylife.com/wiki/Rle) format. Specifically:
 

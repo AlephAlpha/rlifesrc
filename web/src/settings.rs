@@ -75,40 +75,20 @@ impl Component for Settings {
                     self.config.width = height;
                 }
             }
-            Msg::SetPeriod(period) => {
-                self.config.period = period;
-            }
-            Msg::SetDx(dx) => {
-                self.config.dx = dx;
-            }
-            Msg::SetDy(dy) => {
-                self.config.dy = dy;
-            }
-            Msg::SetTrans(transform) => {
-                self.config.transform = transform;
-            }
-            Msg::SetSym(symmetry) => {
-                self.config.symmetry = symmetry;
-            }
+            Msg::SetPeriod(period) => self.config.period = period,
+            Msg::SetDx(dx) => self.config.dx = dx,
+            Msg::SetDy(dy) => self.config.dy = dy,
+            Msg::SetTrans(transform) => self.config.transform = transform,
+            Msg::SetSym(symmetry) => self.config.symmetry = symmetry,
             Msg::SetRule(rule_string) => {
                 self.rule_is_valid = rule_string.parse::<NtLifeGen>().is_ok();
                 self.config.rule_string = rule_string;
             }
-            Msg::SetOrder(search_order) => {
-                self.config.search_order = search_order;
-            }
-            Msg::SetChoose(new_state) => {
-                self.config.new_state = new_state;
-            }
-            Msg::SetMax(max_cell_count) => {
-                self.config.max_cell_count = max_cell_count;
-            }
-            Msg::SetFront => {
-                self.config.non_empty_front ^= true;
-            }
-            Msg::SetReduce => {
-                self.config.reduce_max ^= true;
-            }
+            Msg::SetOrder(search_order) => self.config.search_order = search_order,
+            Msg::SetChoose(new_state) => self.config.new_state = new_state,
+            Msg::SetMax(max_cell_count) => self.config.max_cell_count = max_cell_count,
+            Msg::SetFront => self.config.non_empty_front ^= true,
+            Msg::SetReduce => self.config.reduce_max ^= true,
             Msg::Apply => {
                 self.callback.emit(self.config.clone());
                 return false;

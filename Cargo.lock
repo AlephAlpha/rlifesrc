@@ -931,6 +931,7 @@ dependencies = [
 name = "rlifesrc-web"
 version = "0.3.4"
 dependencies = [
+ "js-sys",
  "lazy_static",
  "pulldown-cmark",
  "rlifesrc-lib",
