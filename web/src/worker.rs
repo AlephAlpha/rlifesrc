@@ -14,6 +14,7 @@ pub enum Request {
     Pause,
     SetWorld(Config),
     DisplayGen(isize),
+    MaxPartial,
     Save,
     Load(WorldSer),
 }
@@ -34,6 +35,8 @@ pub enum WorkerMsg {
 pub struct Worker {
     status: Status,
     search: Box<dyn Search>,
+    max_partial_count: usize,
+    max_partial: String,
     link: AgentLink<Worker>,
     timeout_task: Option<TimeoutTask>,
 }
@@ -49,6 +52,17 @@ impl Worker {
 
     fn stop_job(&mut self) {
         self.timeout_task.take();
+    }
+
+    fn update_max_martial(&mut self, check_max: bool) {
+        let (gen, cell_count) = (0..self.search.config().period)
+            .map(|t| (t, self.search.cell_count_gen(t)))
+            .max_by_key(|p| p.1)
+            .unwrap();
+        if !check_max || cell_count > self.max_partial_count {
+            self.max_partial_count = cell_count;
+            self.max_partial = self.search.rle_gen(gen);
+        }
     }
 
     fn update_world(&mut self, id: HandlerId, gen: isize) {
@@ -78,12 +92,16 @@ impl Agent for Worker {
         let config: Config = Config::default();
         let search = config.world().unwrap();
 
-        Worker {
+        let mut worker = Worker {
             status: Status::Initial,
             search,
+            max_partial_count: 0,
+            max_partial: String::new(),
             link,
             timeout_task: None,
-        }
+        };
+        worker.update_max_martial(false);
+        worker
     }
 
     fn update(&mut self, msg: Self::Message) {
@@ -91,6 +109,7 @@ impl Agent for Worker {
             WorkerMsg::Step => {
                 if let Status::Searching = self.status {
                     self.status = self.search.search(Some(VIEW_FREQ));
+                    self.update_max_martial(true);
                     self.start_job();
                 } else {
                     self.stop_job();
@@ -117,6 +136,7 @@ impl Agent for Worker {
                 match config.world() {
                     Ok(search) => {
                         self.search = search;
+                        self.update_max_martial(false);
                         self.update_world(id, 0);
                     }
                     Err(error) => {
@@ -128,6 +148,13 @@ impl Agent for Worker {
             Request::DisplayGen(gen) => {
                 self.update_world(id, gen);
             }
+            Request::MaxPartial => {
+                self.link.respond(
+                    id,
+                    Response::UpdateWorld((self.max_partial.clone(), self.max_partial_count)),
+                );
+                self.update_status(id);
+            }
             Request::Save => {
                 let world_ser = self.search.ser();
                 self.link.respond(id, Response::Save(world_ser));
@@ -138,6 +165,7 @@ impl Agent for Worker {
                 match world_ser.world() {
                     Ok(search) => {
                         self.search = search;
+                        self.update_max_martial(false);
                         self.link
                             .respond(id, Response::UpdateConfig(self.search.config().clone()));
                         self.update_world(id, 0);

@@ -47,7 +47,7 @@ pub struct App {
     gen: isize,
     cells: usize,
     world: String,
-    period: isize,
+    max_partial: bool,
     worker: Box<dyn Bridge<Worker>>,
     interval_task: Option<IntervalTask>,
     reader_task: Option<ReaderTask>,
@@ -63,6 +63,7 @@ pub enum Msg {
     Save,
     Load(FileList),
     SendFile(FileData),
+    SetMaxPartial,
     Apply(Config),
     DataReceived(Response),
     None,
@@ -90,7 +91,6 @@ impl Component for App {
         let config: Config = Config::default();
         let status = Status::Initial;
         let world = INIT_WORLD.to_owned();
-        let period = config.period;
         let callback = link.callback(Msg::DataReceived);
         let worker = Worker::bridge(callback);
 
@@ -101,7 +101,7 @@ impl Component for App {
             gen: 0,
             cells: 0,
             world,
-            period,
+            max_partial: false,
             worker,
             interval_task: None,
             reader_task: None,
@@ -110,9 +110,15 @@ impl Component for App {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Tick => self.worker.send(Request::DisplayGen(self.gen)),
+            Msg::Tick => {
+                if self.max_partial {
+                    self.worker.send(Request::MaxPartial)
+                } else {
+                    self.worker.send(Request::DisplayGen(self.gen))
+                }
+            }
             Msg::IncGen => {
-                if self.gen < self.period - 1 {
+                if self.gen < self.config.period - 1 {
                     self.gen += 1;
                     self.worker.send(Request::DisplayGen(self.gen));
                     return true;
@@ -142,10 +148,18 @@ impl Component for App {
                     self.worker.send(Request::Load(world_ser));
                 }
             }
+            Msg::SetMaxPartial => {
+                self.max_partial ^= true;
+                if self.max_partial {
+                    self.worker.send(Request::MaxPartial)
+                } else {
+                    self.worker.send(Request::DisplayGen(self.gen))
+                }
+                return true;
+            }
             Msg::Apply(config) => {
                 self.config = config;
                 self.gen = 0;
-                self.period = self.config.period;
                 self.worker.send(Request::SetWorld(self.config.clone()));
                 return true;
             }
@@ -252,24 +266,35 @@ impl App {
                                 <li class="mui--is-active">
                                     <a data-mui-toggle="tab" data-mui-controls="pane-world">
                                         <i class="fas fa-globe"></i>
-                                        <span> { "World" } </span>
+                                        <span class="mui--hidden-xs"> { "World" } </span>
                                     </a>
                                 </li>
                                 <li>
                                     <a data-mui-toggle="tab" data-mui-controls="pane-settings">
                                         <i class="fas fa-cog"></i>
-                                        <span> { "Settings" } </span>
+                                        <span class="mui--hidden-xs"> { "Settings" } </span>
                                     </a>
                                 </li>
                                 <li>
                                     <a data-mui-toggle="tab" data-mui-controls="pane-help">
                                         <i class="fas fa-question-circle"></i>
-                                        <span> { "Help" } </span>
+                                        <span class="mui--hidden-xs"> { "Help" } </span>
                                     </a>
                                 </li>
                             </ul>
                             <div class="mui-tabs__pane mui--is-active" id="pane-world">
                                 { self.data() }
+                                <div class="mui-checkbox">
+                                    <label>
+                                        <input id="partial-max"
+                                            type="checkbox"
+                                            checked=self.max_partial
+                                            onclick=self.link.callback(|_| Msg::SetMaxPartial)/>
+                                        <abbr title="Show maximal partial result.">
+                                            { "Max Partial" }
+                                        </abbr>
+                                    </label>
+                                </div>
                                 <World world=&self.world/>
                                 { self.buttons() }
                             </div>
@@ -298,7 +323,8 @@ impl App {
         });
         html! {
             <ul id="data" class="mui-list--inline mui--text-body2">
-                <li onwheel=onwheel>
+                <li onwheel=onwheel
+                    class=if self.max_partial { "mui--hide" } else { "" }>
                     <abbr title="The displayed generation.">
                         { "Generation" }
                     </abbr>
@@ -310,7 +336,7 @@ impl App {
                         <i class="fas fa-minus"></i>
                     </button>
                     <button class="mui-btn mui-btn--small btn-tiny"
-                        disabled=self.gen == self.period - 1
+                        disabled=self.gen == self.config.period - 1
                         onclick=self.link.callback(|_| Msg::IncGen)>
                         <i class="fas fa-plus"></i>
                     </button>
