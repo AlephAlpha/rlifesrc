@@ -146,6 +146,8 @@ impl Component for App {
             Msg::SendFile(data) => {
                 if let Json(Ok(world_ser)) = Ok(data.content).into() {
                     self.worker.send(Request::Load(world_ser));
+                } else {
+                    DialogService::alert("Broken saved file.");
                 }
             }
             Msg::SetMaxPartial => {
@@ -183,7 +185,7 @@ impl Component for App {
                             self.status = status;
                         }
                     }
-                    Response::InvalidRule(error) => {
+                    Response::Error(error) => {
                         DialogService::alert(&error);
                     }
                     Response::Save(world_ser) => {

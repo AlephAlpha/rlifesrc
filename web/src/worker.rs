@@ -24,7 +24,7 @@ pub enum Response {
     UpdateWorld((String, usize)),
     UpdateStatus(Status),
     UpdateConfig(Config),
-    InvalidRule(String),
+    Error(String),
     Save(WorldSer),
 }
 
@@ -141,7 +141,7 @@ impl Agent for Worker {
                     }
                     Err(error) => {
                         let message = error.to_string();
-                        self.link.respond(id, Response::InvalidRule(message));
+                        self.link.respond(id, Response::Error(message));
                     }
                 }
             }
@@ -172,7 +172,7 @@ impl Agent for Worker {
                     }
                     Err(error) => {
                         let message = error.to_string();
-                        self.link.respond(id, Response::InvalidRule(message));
+                        self.link.respond(id, Response::Error(message));
                     }
                 }
             }
