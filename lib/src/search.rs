@@ -7,12 +7,12 @@ use crate::{
 };
 use rand::{thread_rng, Rng};
 
-#[cfg(feature = "serialize")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Search status.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Status {
     /// Initial status. Waiting to start.
     Initial,
@@ -28,7 +28,7 @@ pub enum Status {
 
 /// Reasons for setting a cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(crate) enum Reason {
     /// Decides the state of a cell by choice,
     /// and remembers its position in the `search_list` of the world.

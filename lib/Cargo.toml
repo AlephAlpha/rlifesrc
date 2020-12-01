@@ -20,6 +20,5 @@ thiserror = "1.0.22"
 
 [features]
 default = []
-serialize = ["serde"]
-stdweb = ["serialize", "rand/stdweb"]
-wasm-bindgen = ["serialize", "rand/wasm-bindgen"]
+stdweb = ["serde", "rand/stdweb"]
+wasm-bindgen = ["serde", "rand/wasm-bindgen"]

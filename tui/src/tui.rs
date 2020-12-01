@@ -3,7 +3,7 @@ use crossterm::{
     cursor::{Hide, MoveTo, MoveToNextLine, Show},
     event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers},
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
-    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
     ExecutableCommand, QueueableCommand, Result as CrosstermResult,
 };
 use futures::{select, FutureExt, TryStreamExt};
@@ -53,7 +53,10 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Initializes the screen.
     fn init(&mut self) -> CrosstermResult<()> {
-        self.output.execute(EnterAlternateScreen)?.execute(Hide)?;
+        self.output
+            .execute(EnterAlternateScreen)?
+            .execute(Hide)?
+            .execute(SetTitle("rlifesrc"))?;
         terminal::enable_raw_mode()?;
         self.term_size = terminal::size()?;
         self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);

@@ -53,7 +53,7 @@ mod search;
 mod traits;
 mod world;
 
-#[cfg(feature = "serialize")]
+#[cfg(feature = "serde")]
 mod save;
 
 pub use cells::{State, ALIVE, DEAD};
@@ -63,5 +63,5 @@ pub use search::Status;
 pub use traits::Search;
 pub use world::World;
 
-#[cfg(feature = "serialize")]
+#[cfg(feature = "serde")]
 pub use save::WorldSer;

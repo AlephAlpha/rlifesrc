@@ -14,7 +14,7 @@ use std::{
     str::FromStr,
 };
 
-#[cfg(feature = "serialize")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Transformations (rotations and reflections) after the last generation
@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 /// Some of the transformations are only valid when the world is square.
 #[derive(Clone, Copy, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Transform {
     /// `Id`.
     ///
@@ -137,7 +137,7 @@ impl Transform {
 /// Some of the symmetries are only valid when the world is square.
 #[derive(Clone, Copy, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Symmetry {
     /// `C1`.
     ///
@@ -244,7 +244,7 @@ impl Symmetry {
 /// It will always search all generations of one cell
 /// before going to another cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SearchOrder {
     /// Searches all cells of one row before going to the next row.
     ///
@@ -279,7 +279,7 @@ pub enum SearchOrder {
 /// How to choose a state for an unknown cell.
 #[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum NewState {
     /// Chooses the background state.
     ///
@@ -317,7 +317,7 @@ pub enum NewState {
 /// The world will be generated from this configuration.
 #[derive(Clone, Debug, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Config {
     /// Width.
     #[derivative(Default(value = "16"))]

@@ -1,4 +1,4 @@
-#![cfg(feature = "serialize")]
+#![cfg(feature = "serde")]
 //! Saves the world.
 
 use crate::{
