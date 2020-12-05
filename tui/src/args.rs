@@ -95,6 +95,26 @@ impl Args {
                     .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
             )
             .arg(
+                Arg::with_name("DIAG")
+                    .help("Diagonal width")
+                    .long_help(
+                        "Diagonal width\n\
+                        If the diagonal width is n > 0, the cells at position (x, y)\
+                        where abs(x - y) > n are assumed to be dead.\n\
+                        If this value is set to 0, it would be ignored.\n",
+                    )
+                    .long("diag")
+                    .takes_value(true)
+                    .default_value("0")
+                    .validator(|d| {
+                        if is_positive(&d) || d == "0" {
+                            Ok(())
+                        } else {
+                            Err(String::from("diagonal width must be a positive integer"))
+                        }
+                    }),
+            )
+            .arg(
                 Arg::with_name("TRANSFORM")
                     .help("Transformation of the pattern")
                     .long_help(
@@ -287,6 +307,11 @@ impl Args {
             0 => None,
             i => Some(i),
         };
+        let diagonal_width = matches.value_of("DIAG").unwrap().parse().unwrap();
+        let diagonal_width = match diagonal_width {
+            0 => None,
+            i => Some(i),
+        };
         let non_empty_front = matches.is_present("FRONT");
         let reduce_max = matches.is_present("REDUCE");
 
@@ -328,7 +353,8 @@ impl Args {
             .set_max_cell_count(max_cell_count)
             .set_non_empty_front(non_empty_front)
             .set_reduce_max(reduce_max)
-            .set_rule_string(rule_string);
+            .set_rule_string(rule_string)
+            .set_diagonal_width(diagonal_width);
 
         let search = config.world().unwrap();
 

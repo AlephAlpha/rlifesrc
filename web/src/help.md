@@ -60,6 +60,13 @@ Horizontal translation.
 
 Vertical translation.
 
+### Diagonal width
+
+If the diagonal width is `n > 0`, the cells at position `(x, y)` where `abs(x - y) > n` are assumed to be dead.
+
+If this value is set to `0`, it would be ignored.
+
+
 ### Transformation
 
 Transformation of the pattern.

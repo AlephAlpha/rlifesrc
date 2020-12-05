@@ -36,6 +36,7 @@ pub enum Msg {
     SetOrder(Option<SearchOrder>),
     SetChoose(NewState),
     SetMax(Option<usize>),
+    SetDiag(Option<isize>),
     SetFront,
     SetReduce,
     None,
@@ -87,6 +88,7 @@ impl Component for Settings {
             Msg::SetOrder(search_order) => self.config.search_order = search_order,
             Msg::SetChoose(new_state) => self.config.new_state = new_state,
             Msg::SetMax(max_cell_count) => self.config.max_cell_count = max_cell_count,
+            Msg::SetDiag(diagonal_width) => self.config.diagonal_width = diagonal_width,
             Msg::SetFront => self.config.non_empty_front ^= true,
             Msg::SetReduce => self.config.reduce_max ^= true,
             Msg::Apply => {
@@ -147,6 +149,7 @@ impl Settings {
                 { self.set_period() }
                 { self.set_dx() }
                 { self.set_dy() }
+                { self.set_diag() }
                 { self.set_trans() }
                 { self.set_sym() }
                 { self.set_max() }
@@ -308,11 +311,41 @@ impl Settings {
         }
     }
 
+    fn set_diag(&self) -> Html {
+        let value = self.config.diagonal_width.unwrap_or(0);
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                let diagonal_width = v.parse().unwrap();
+                let diagonal_width = match diagonal_width {
+                    0 => None,
+                    i => Some(i),
+                };
+                Msg::SetDiag(diagonal_width)
+            } else {
+                Msg::None
+            }
+        });
+        html! {
+            <div class="mui-textfield">
+                <label for="set_diag">
+                    <abbr title="If the diagonal width is n > 0, the cells at position (x, y)\
+                        where abs(x - y) > n are assumed to be dead. \
+                        If this value is set to 0, it would be ignored.">
+                        { "Diagonal width" }
+                    </abbr>
+                    { ":" }
+                </label>
+                <input id="set_diag"
+                    type="number"
+                    value=value
+                    min="0"
+                    onchange=onchange/>
+            </div>
+        }
+    }
+
     fn set_max(&self) -> Html {
-        let value = match self.config.max_cell_count {
-            None => 0,
-            Some(i) => i,
-        };
+        let value = self.config.max_cell_count.unwrap_or(0);
         let onchange = self.link.callback(|e: ChangeData| {
             if let ChangeData::Value(v) = e {
                 let max_cell_count = v.parse().unwrap();

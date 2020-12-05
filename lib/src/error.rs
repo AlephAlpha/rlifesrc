@@ -15,4 +15,6 @@ pub enum Error {
     B0S8Error,
     #[error("Symmetry or transformation requires the world to be square")]
     SquareWorldError,
+    #[error("Width / height / period should be positive")]
+    NonPositiveError,
 }

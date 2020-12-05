@@ -322,6 +322,11 @@ impl<'a, R: Rule> World<'a, R> {
     fn init_state(mut self) -> Self {
         for x in 0..self.config.width {
             for y in 0..self.config.height {
+                if let Some(d) = self.config.diagonal_width {
+                    if (x - y).abs() > d {
+                        continue;
+                    }
+                }
                 for t in 0..self.config.period {
                     let cell = self.find_cell((x, y, t)).unwrap();
                     if !self.set_stack.iter().any(|s| s.cell == cell) {

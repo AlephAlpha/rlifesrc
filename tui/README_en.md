@@ -69,6 +69,13 @@ OPTIONS:
             How to choose a state for unknown cells
              [default: alive]  [possible values: dead, alive, random, d, a, r]
 
+        --diag <DIAG>              
+            Diagonal width
+            If the diagonal width is n > 0, the cells at position (x, y) where
+            abs(x - y) > n are assumed to be  dead.
+            If this value is set to 0, it would be ignored.
+             [default: 0]
+
     -m, --max <MAX>
             Upper bound of numbers of minimum living cells in all generations
             If this value is set to 0, it means there is no limitation.

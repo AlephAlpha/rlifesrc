@@ -383,6 +383,12 @@ pub struct Config {
     /// The rule string of the cellular automaton.
     #[derivative(Default(value = "String::from(\"B3/S23\")"))]
     pub rule_string: String,
+
+    /// Diagonal width.
+    ///
+    /// If the diagonal width is `n`, the cells at position `(x, y)`
+    /// where `abs(x - y) > n` are assumed to be dead.
+    pub diagonal_width: Option<isize>,
 }
 
 impl Config {
@@ -416,8 +422,8 @@ impl Config {
     }
 
     /// Sets the search order.
-    pub fn set_search_order(mut self, search_order: Option<SearchOrder>) -> Self {
-        self.search_order = search_order;
+    pub fn set_search_order<T: Into<Option<SearchOrder>>>(mut self, search_order: T) -> Self {
+        self.search_order = search_order.into();
         self
     }
 
@@ -428,8 +434,8 @@ impl Config {
     }
 
     /// Sets the maximal number of living cells.
-    pub fn set_max_cell_count(mut self, max_cell_count: Option<usize>) -> Self {
-        self.max_cell_count = max_cell_count;
+    pub fn set_max_cell_count<T: Into<Option<usize>>>(mut self, max_cell_count: T) -> Self {
+        self.max_cell_count = max_cell_count.into();
         self
     }
 
@@ -449,6 +455,12 @@ impl Config {
     /// Sets the rule string.
     pub fn set_rule_string<S: ToString>(mut self, rule_string: S) -> Self {
         self.rule_string = rule_string.to_string();
+        self
+    }
+
+    /// Sets the diagonal width.
+    pub fn set_diagonal_width<T: Into<Option<isize>>>(mut self, diagonal_width: T) -> Self {
+        self.diagonal_width = diagonal_width.into();
         self
     }
 
@@ -517,6 +529,14 @@ impl Config {
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
+        if self.width <= 0 || self.height <= 0 || self.period <= 0 {
+            return Err(Error::NonPositiveError);
+        }
+        if let Some(diagonal_width) = self.diagonal_width {
+            if diagonal_width <= 0 {
+                return Err(Error::NonPositiveError);
+            }
+        }
         if (self.symmetry.square_world()
             || self.transform.square_world()
             || self.search_order == Some(SearchOrder::Diagonal))
