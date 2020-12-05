@@ -387,7 +387,7 @@ pub struct Config {
     /// Diagonal width.
     ///
     /// If the diagonal width is `n`, the cells at position `(x, y)`
-    /// where `abs(x - y) > n` are assumed to be dead.
+    /// where `abs(x - y) >= n` are assumed to be dead.
     pub diagonal_width: Option<isize>,
 }
 

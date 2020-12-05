@@ -323,7 +323,7 @@ impl<'a, R: Rule> World<'a, R> {
         for x in 0..self.config.width {
             for y in 0..self.config.height {
                 if let Some(d) = self.config.diagonal_width {
-                    if (x - y).abs() > d {
+                    if (x - y).abs() >= d {
                         continue;
                     }
                 }

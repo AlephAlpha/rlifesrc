@@ -100,7 +100,7 @@ impl Args {
                     .long_help(
                         "Diagonal width\n\
                         If the diagonal width is n > 0, the cells at position (x, y)\
-                        where abs(x - y) > n are assumed to be dead.\n\
+                        where abs(x - y) >= n are assumed to be dead.\n\
                         If this value is set to 0, it would be ignored.\n",
                     )
                     .long("diag")
