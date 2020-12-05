@@ -67,6 +67,7 @@ impl<'a, R: Rule> World<'a, R> {
 
         // Whether to consider only the first generation of the front.
         let front_gen0 = !rule.has_b0()
+            && config.diagonal_width.is_none()
             && match search_order {
                 SearchOrder::ColumnFirst => {
                     config.dy == 0
@@ -84,10 +85,11 @@ impl<'a, R: Rule> World<'a, R> {
             };
 
         // Whether to consider only half of the first generation of the front.
-        let front_half = match config.symmetry {
-            Symmetry::D2Diag | Symmetry::D2Antidiag | Symmetry::D4Diag => false,
-            _ => front_gen0,
-        };
+        let front_half = config.diagonal_width.is_none()
+            && match config.symmetry {
+                Symmetry::D2Diag | Symmetry::D2Antidiag | Symmetry::D4Diag => false,
+                _ => front_gen0,
+            };
 
         // Fills the vector with dead cells,
         // and checks whether it is on the first row or column.
@@ -108,32 +110,34 @@ impl<'a, R: Rule> World<'a, R> {
                         DEAD
                     };
                     let mut cell = LifeCell::new((x, y, t), state, succ_state);
-                    match search_order {
-                        SearchOrder::ColumnFirst => {
-                            if front_gen0 {
-                                if x == (config.dx - 1).max(0)
-                                    && t == 0
-                                    && (!front_half || 2 * y < config.height)
-                                {
+                    if config.diagonal_width.is_none() {
+                        match search_order {
+                            SearchOrder::ColumnFirst => {
+                                if front_gen0 {
+                                    if x == (config.dx - 1).max(0)
+                                        && t == 0
+                                        && (!front_half || 2 * y < config.height)
+                                    {
+                                        cell.is_front = true
+                                    }
+                                } else if x == 0 {
                                     cell.is_front = true
                                 }
-                            } else if x == 0 {
-                                cell.is_front = true
                             }
-                        }
-                        SearchOrder::RowFirst => {
-                            if front_gen0 {
-                                if y == (config.dy - 1).max(0)
-                                    && t == 0
-                                    && (!front_half || 2 * x < config.width)
-                                {
+                            SearchOrder::RowFirst => {
+                                if front_gen0 {
+                                    if y == (config.dy - 1).max(0)
+                                        && t == 0
+                                        && (!front_half || 2 * x < config.width)
+                                    {
+                                        cell.is_front = true
+                                    }
+                                } else if y == 0 {
                                     cell.is_front = true
                                 }
-                            } else if y == 0 {
-                                cell.is_front = true
                             }
+                            SearchOrder::Diagonal => (),
                         }
-                        SearchOrder::Diagonal => (),
                     }
                     cells.push(cell);
                 }
