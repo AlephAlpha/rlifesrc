@@ -110,33 +110,35 @@ impl<'a, R: Rule> World<'a, R> {
                         DEAD
                     };
                     let mut cell = LifeCell::new((x, y, t), state, succ_state);
-                    if config.diagonal_width.is_none() {
-                        match search_order {
-                            SearchOrder::ColumnFirst => {
-                                if front_gen0 {
-                                    if x == (config.dx - 1).max(0)
-                                        && t == 0
-                                        && (!front_half || 2 * y < config.height)
-                                    {
-                                        cell.is_front = true
-                                    }
-                                } else if x == 0 {
+                    match search_order {
+                        SearchOrder::ColumnFirst => {
+                            if front_gen0 {
+                                if x == (config.dx - 1).max(0)
+                                    && t == 0
+                                    && (!front_half || 2 * y < config.height)
+                                {
                                     cell.is_front = true
                                 }
+                            } else if x == 0 {
+                                cell.is_front = true
                             }
-                            SearchOrder::RowFirst => {
-                                if front_gen0 {
-                                    if y == (config.dy - 1).max(0)
-                                        && t == 0
-                                        && (!front_half || 2 * x < config.width)
-                                    {
-                                        cell.is_front = true
-                                    }
-                                } else if y == 0 {
+                        }
+                        SearchOrder::RowFirst => {
+                            if front_gen0 {
+                                if y == (config.dy - 1).max(0)
+                                    && t == 0
+                                    && (!front_half || 2 * x < config.width)
+                                {
                                     cell.is_front = true
                                 }
+                            } else if y == 0 {
+                                cell.is_front = true
                             }
-                            SearchOrder::Diagonal => (),
+                        }
+                        SearchOrder::Diagonal => {
+                            if x == 0 || y == 0 {
+                                cell.is_front = true
+                            }
                         }
                     }
                     cells.push(cell);

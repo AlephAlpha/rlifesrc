@@ -44,8 +44,11 @@ FLAGS:
             Only useful when --no-tui is set.
 
     -f, --front
-            Force the first row or column to be nonempty
-            Here 'front' means the first row or column to be searched, according to the search order.
+            Force the front to be nonempty
+            Depending on the search order, the 'front' means:
+            * the first row, when the search order is row first;
+            * the first column, when the search order is column first;
+            * the first row plus the first column, when the search order is diagonal.
 
     -n, --no-tui
             Starts searching immediately, without entering the TUI
@@ -69,7 +72,7 @@ OPTIONS:
             How to choose a state for unknown cells
              [default: alive]  [possible values: dead, alive, random, d, a, r]
 
-        --diag <DIAG>              
+        --diag <DIAG>
             Diagonal width
             If the diagonal width is n > 0, the cells at position (x, y) where
             abs(x - y) >= n are assumed to be  dead.

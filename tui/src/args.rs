@@ -215,10 +215,13 @@ impl Args {
             )
             .arg(
                 Arg::with_name("FRONT")
-                    .help(
-                        "Force the first row or column to be nonempty\n\
-                         Here 'front' means the first row or column to be searched, \
-                         according to the search order.",
+                    .help("Force the first row or column to be nonempty")
+                    .long_help(
+                        "Force the front to be nonempty\n\
+                         Depending on the search order, the 'front' means:\n\
+                         * the first row, when the search order is row first;\n\
+                         * the first column, when the search order is column first;\n\
+                         * the first row plus the first column, when the search order is diagonal.\n",
                     )
                     .short("f")
                     .long("front"),
@@ -229,7 +232,7 @@ impl Args {
                     .long_help(
                         "Reduce the max cell count when a result is found\n\
                          The new max cell count will be set to the cell count of \
-                         the current result minus one.",
+                         the current result minus one.\n",
                     )
                     .long("reduce"),
             );

@@ -115,9 +115,13 @@ How to choose a state for unknown cells.
 
 ### Non empty front
 
-Force the first row or column to be nonempty
+Force the front to be nonempty.
 
-Here "front" means the first row or column to be searched, according to the search order.
+Depending on the search order, the 'front' means:
+
+* the first row, when the search order is row first;
+* the first column, when the search order is column first;
+* the first row plus the first column, when the search order is diagonal.
 
 ### Reduce max cell count
 

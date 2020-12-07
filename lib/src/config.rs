@@ -368,8 +368,10 @@ pub struct Config {
 
     /// Whether to force the first row/column to be nonempty.
     ///
-    /// Here 'front' means the first row or column to be searched,
-    /// according to the search order.
+    /// Depending on the search order, the 'front' means:
+    /// * the first row, when the search order is row first;
+    /// * the first column, when the search order is column first;
+    /// * the first row plus the first column, when the search order is diagonal.
     #[derivative(Default(value = "true"))]
     pub non_empty_front: bool,
 

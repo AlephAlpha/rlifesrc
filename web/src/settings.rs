@@ -329,7 +329,7 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_diag">
                     <abbr title="If the diagonal width is n > 0, the cells at position (x, y)\
-                        where abs(x - y) >= n are assumed to be dead. \
+                        where abs(x - y) >= n are assumed to be dead.\n\
                         If this value is set to 0, it would be ignored.">
                         { "Diagonal width" }
                     </abbr>
@@ -361,7 +361,7 @@ impl Settings {
         html! {
             <div class="mui-textfield">
                 <label for="set_max">
-                    <abbr title="Upper bound of numbers of minimum living cells in all generations. \
+                    <abbr title="Upper bound of numbers of minimum living cells in all generations.\n\
                         If this value is set to 0, it means there is no limitation.">
                         { "Max cell count" }
                     </abbr>
@@ -384,10 +384,11 @@ impl Settings {
                         type="checkbox"
                         checked=self.config.non_empty_front
                         onclick=self.link.callback(|_| Msg::SetFront)/>
-                    <abbr title="Force the front to be nonempty.\n\
-                        Here 'front' means the first row or column to be searched, \
-                        according to the search order.">
-                        { "Force the first row or column to be nonempty" }
+                    <abbr title="Depending on the search order, the 'front' means:\n\
+                        * the first row, when the search order is row first;\n\
+                        * the first column, when the search order is column first;\n\
+                        * the first row plus the first column, when the search order is diagonal.">
+                        { "Force the front to be nonempty" }
                     </abbr>
                 </label>
             </div>
