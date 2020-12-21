@@ -14,11 +14,11 @@ keywords = ["game-of-life", "cellular-automata"]
 bitflags = "1.2.1"
 ca-rules = "0.3.2"
 derivative = "2.1.1"
-rand = "0.7.3"
+rand = "0.8.0"
+getrandom = "0.2.0"
 serde = { version = "1.0.118", features = ["derive"], optional = true }
 thiserror = "1.0.22"
 
 [features]
 default = []
-stdweb = ["serde", "rand/stdweb"]
-wasm-bindgen = ["serde", "rand/wasm-bindgen"]
+js = ["serde", "getrandom/js"]

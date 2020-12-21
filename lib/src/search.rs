@@ -214,7 +214,7 @@ impl<'a, R: Rule> World<'a, R> {
             let state = match self.config.new_state {
                 NewState::ChooseDead => cell.background,
                 NewState::ChooseAlive => !cell.background,
-                NewState::Random => State(thread_rng().gen_range(0, self.rule.gen())),
+                NewState::Random => State(thread_rng().gen_range(0..self.rule.gen())),
             };
             Some(self.set_cell(cell, state, Reason::Decide(i)))
         } else {
