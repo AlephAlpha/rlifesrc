@@ -883,7 +883,7 @@ checksum = "41cc0f7e4d5d4544e8861606a285bb08d3e70712ccc7d2b84d7c0ccfaf4b05ce"
 
 [[package]]
 name = "rlifesrc"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "async-std",
  "clap",
@@ -894,7 +894,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-lib"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "bitflags",
  "ca-rules",
@@ -907,7 +907,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-web"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "js-sys",
  "lazy_static",
