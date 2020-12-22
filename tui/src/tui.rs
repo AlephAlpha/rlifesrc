@@ -35,7 +35,6 @@ struct App<'a, W: Write> {
 impl<'a, W: Write> App<'a, W> {
     fn new(search: Box<dyn Search>, reset: bool, output: &'a mut W) -> Self {
         let period = search.config().period;
-        let world_size = (search.config().width, search.config().height);
         App {
             gen: 0,
             period,
@@ -46,7 +45,7 @@ impl<'a, W: Write> App<'a, W> {
             reset,
             output,
             term_size: (80, 24),
-            world_size,
+            world_size: (80, 24),
             asking_quit: false,
         }
     }
@@ -59,8 +58,16 @@ impl<'a, W: Write> App<'a, W> {
             .execute(SetTitle("rlifesrc"))?;
         terminal::enable_raw_mode()?;
         self.term_size = terminal::size()?;
-        self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
-        self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
+        self.world_size.0 = self
+            .search
+            .config()
+            .width
+            .min(self.term_size.0 as isize - 1);
+        self.world_size.1 = self
+            .search
+            .config()
+            .height
+            .min(self.term_size.1 as isize - 3);
         self.update()
     }
 
@@ -306,8 +313,16 @@ impl<'a, W: Write> App<'a, W> {
                 }
                 Some(Event::Resize(width, height)) => {
                     self.term_size = (width, height);
-                    self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
-                    self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
+                    self.world_size.0 = self
+                        .search
+                        .config()
+                        .width
+                        .min(self.term_size.0 as isize - 1);
+                    self.world_size.1 = self
+                        .search
+                        .config()
+                        .height
+                        .min(self.term_size.1 as isize - 3);
                     self.output
                         .queue(ResetColor)?
                         .queue(Clear(ClearType::All))?;
