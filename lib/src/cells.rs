@@ -84,6 +84,9 @@ pub struct LifeCell<'a, R: Rule> {
     /// with this cell because of the symmetry.
     pub(crate) sym: Vec<CellRef<'a, R>>,
 
+    /// The next cell to be searched when searching for an unknown cell.
+    pub(crate) next: Option<CellRef<'a, R>>,
+
     /// Whether the cell is on the first row or column.
     ///
     /// Here the choice of row or column depends on the search order.
@@ -105,6 +108,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             succ: Default::default(),
             nbhd: Default::default(),
             sym: Default::default(),
+            next: Default::default(),
             is_front: false,
         }
     }

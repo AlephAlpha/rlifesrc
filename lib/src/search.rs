@@ -30,9 +30,8 @@ pub enum Status {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(crate) enum Reason {
-    /// Decides the state of a cell by choice,
-    /// and remembers its position in the `search_list` of the world.
-    Decide(usize),
+    /// Decides the state of a cell by choice.
+    Decide,
 
     /// Determines the state of a cell by other cells.
     Deduce,
@@ -40,9 +39,8 @@ pub(crate) enum Reason {
     /// Tries another state of a cell when the original state
     /// leads to a conflict.
     ///
-    /// Remembers its position in the `search_list` of the world,
-    /// and the number of remaining states to try.
-    TryAnother(usize, usize),
+    /// Remembers the number of remaining states to try.
+    TryAnother(usize),
 }
 
 /// Records the cells whose values are set and their reasons.
@@ -134,14 +132,14 @@ impl<'a, R: Rule> World<'a, R> {
         while let Some(set_cell) = self.set_stack.pop() {
             let cell = set_cell.cell;
             match set_cell.reason {
-                Reason::Decide(i) => {
+                Reason::Decide => {
                     self.check_index = self.set_stack.len();
-                    self.search_index = i + 1;
+                    self.next_unknown = cell.next;
                     if R::IS_GEN {
                         let State(j) = cell.state.get().unwrap();
                         let state = State((j + 1) % self.rule.gen());
                         self.clear_cell(cell);
-                        if self.set_cell(cell, state, Reason::TryAnother(i, self.rule.gen() - 2)) {
+                        if self.set_cell(cell, state, Reason::TryAnother(self.rule.gen() - 2)) {
                             return true;
                         }
                     } else {
@@ -152,16 +150,16 @@ impl<'a, R: Rule> World<'a, R> {
                         }
                     }
                 }
-                Reason::TryAnother(i, n) => {
+                Reason::TryAnother(n) => {
                     self.check_index = self.set_stack.len();
-                    self.search_index = i + 1;
+                    self.next_unknown = cell.next;
                     let State(j) = cell.state.get().unwrap();
                     let state = State((j + 1) % self.rule.gen());
                     self.clear_cell(cell);
                     let reason = if n == 1 {
                         Reason::Deduce
                     } else {
-                        Reason::TryAnother(i, n - 1)
+                        Reason::TryAnother(n - 1)
                     };
                     if self.set_cell(cell, state, reason) {
                         return true;
@@ -173,7 +171,7 @@ impl<'a, R: Rule> World<'a, R> {
             }
         }
         self.check_index = 0;
-        self.search_index = 0;
+        self.next_unknown = None;
         false
     }
 
@@ -209,14 +207,14 @@ impl<'a, R: Rule> World<'a, R> {
     /// Returns `None` is there is no unknown cell,
     /// `Some(false)` if the new state leads to an immediate conflict.
     fn decide(&mut self) -> Option<bool> {
-        if let Some((i, cell)) = self.get_unknown(self.search_index) {
-            self.search_index = i + 1;
+        if let Some(cell) = self.get_unknown() {
+            self.next_unknown = cell.next;
             let state = match self.config.new_state {
                 NewState::ChooseDead => cell.background,
                 NewState::ChooseAlive => !cell.background,
                 NewState::Random => State(thread_rng().gen_range(0..self.rule.gen())),
             };
-            Some(self.set_cell(cell, state, Reason::Decide(i)))
+            Some(self.set_cell(cell, state, Reason::Decide))
         } else {
             None
         }
@@ -230,7 +228,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// and no results are found.
     pub fn search(&mut self, max_step: Option<u64>) -> Status {
         let mut step_count = 0;
-        if self.get_unknown(0).is_none() && !self.backup() {
+        if self.next_unknown.is_none() && !self.backup() {
             return Status::None;
         }
         while self.go(&mut step_count) {
