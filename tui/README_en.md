@@ -146,7 +146,7 @@ For example, if you want to find a vertical spaceship with [glide symmetric](htt
 
 Some of the symmetries and transformations are only valid when the world is square.
 
-“Automatic” in the search order means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns. It will never choose the diagonal search order.
+“Automatic” in the search order means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns. When the world is square and the diagonal width is not larger than width of the world, it would choose diagonal.
 
 Diagonal search order requires  that the world is square.
 

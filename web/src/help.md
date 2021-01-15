@@ -103,7 +103,7 @@ The order to find a new unknown cell.
 
 It will always search all generations of one cell before going to another cell.
 
-`Automatic` means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns. It will never choose the diagonal search order.
+`Automatic` means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns. When the world is square and the diagonal width is not larger than width of the world, it would choose diagonal.
 
 Diagonal search order requires  that the world is square.
 

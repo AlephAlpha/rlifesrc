@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## Unreleased (but already released to the web version)
 
 - Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
+- When the world is square and the diagonal width is not larger than width of the world, `Automatic` search order would choose `Diagonal`.
 - Update dependencies.
 
 ### Breaking change:

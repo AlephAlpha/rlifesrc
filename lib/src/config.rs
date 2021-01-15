@@ -467,8 +467,6 @@ impl Config {
     }
 
     /// Automatically determines the search order if `search_order` is `None`.
-    ///
-    /// The result will never be `SearchOrder::Diagonal`.
     pub(crate) fn auto_search_order(&self) -> SearchOrder {
         self.search_order.unwrap_or_else(|| {
             let (width, height) = match self.symmetry {
@@ -480,7 +478,11 @@ impl Config {
                 Ordering::Greater => SearchOrder::ColumnFirst,
                 Ordering::Less => SearchOrder::RowFirst,
                 Ordering::Equal => {
-                    if self.dx.abs() >= self.dy.abs() {
+                    if self.diagonal_width.is_some()
+                        && 2 * self.diagonal_width.unwrap() <= self.width
+                    {
+                        SearchOrder::Diagonal
+                    } else if self.dx.abs() >= self.dy.abs() {
                         SearchOrder::ColumnFirst
                     } else {
                         SearchOrder::RowFirst
