@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
+- Update dependencies.
+
+### Breaking change:
+- Save file no longer compatible.
+
 ## 0.3.5 - 2020/12/22
 
 - Now you can specify the [diagonal width](web/src/help.md#diagonal-width).
