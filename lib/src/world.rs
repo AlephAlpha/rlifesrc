@@ -7,6 +7,7 @@ use crate::{
     rules::Rule,
     search::{Reason, SetCell},
 };
+use std::mem;
 
 /// The world.
 pub struct World<'a, R: Rule> {
@@ -22,11 +23,6 @@ pub struct World<'a, R: Rule> {
     /// All the cells will live throughout the lifetime of the world.
     // So the unsafe codes below are actually safe.
     cells: Vec<LifeCell<'a, R>>,
-
-    /// A list of references to cells sorted by the search order.
-    ///
-    /// Used to find unknown cells.
-    search_list: Vec<CellRef<'a, R>>,
 
     /// Number of known living cells in each generation.
     ///
@@ -51,10 +47,8 @@ pub struct World<'a, R: Rule> {
     /// See `proceed` for details.
     pub(crate) check_index: usize,
 
-    /// The starting position in the `search_list` to look for an unknown cell.
-    ///
-    /// Cells before this position are all known.
-    pub(crate) search_index: usize,
+    /// The starting point to look for an unknown cell.
+    pub(crate) next_unknown: Option<CellRef<'a, R>>,
 }
 
 impl<'a, R: Rule> World<'a, R> {
@@ -150,13 +144,12 @@ impl<'a, R: Rule> World<'a, R> {
             config: config.clone(),
             rule,
             cells,
-            search_list: Vec::with_capacity(size),
             cell_count: vec![0; config.period as usize],
             front_cell_count: 0,
             conflicts: 0,
             set_stack: Vec::with_capacity(size),
             check_index: 0,
-            search_index: 0,
+            next_unknown: None,
         }
         .init_nbhd()
         .init_pred_succ()
@@ -344,44 +337,55 @@ impl<'a, R: Rule> World<'a, R> {
         self
     }
 
+    /// Set the `next` of a cell to be `self.next_unknown`
+    /// and set `self.next_unknown` to be this cell.
+    fn set_next(&mut self, coord: Coord) {
+        if let Some(cell) = self.find_cell(coord) {
+            if cell.state.get().is_none() {
+                let next = mem::replace(&mut self.next_unknown, Some(cell));
+                let cell_ptr = self.find_cell_mut(coord).unwrap();
+                unsafe {
+                    let cell = cell_ptr.as_mut().unwrap();
+                    cell.next = next;
+                }
+            }
+        }
+    }
+
     /// Sets the search order.
     fn init_search_order(mut self, search_order: SearchOrder) -> Self {
         match search_order {
             SearchOrder::ColumnFirst => {
-                for x in 0..self.config.width {
-                    for y in 0..self.config.height {
-                        for t in 0..self.config.period {
-                            let cell = self.find_cell((x, y, t)).unwrap();
-                            self.search_list.push(cell);
+                for x in (0..self.config.width).rev() {
+                    for y in (0..self.config.height).rev() {
+                        for t in (0..self.config.period).rev() {
+                            self.set_next((x, y, t))
                         }
                     }
                 }
             }
             SearchOrder::RowFirst => {
-                for y in 0..self.config.height {
-                    for x in 0..self.config.width {
-                        for t in 0..self.config.period {
-                            let cell = self.find_cell((x, y, t)).unwrap();
-                            self.search_list.push(cell);
+                for y in (0..self.config.height).rev() {
+                    for x in (0..self.config.width).rev() {
+                        for t in (0..self.config.period).rev() {
+                            self.set_next((x, y, t))
                         }
                     }
                 }
             }
             SearchOrder::Diagonal => {
                 let size = self.config.height;
-                for i in 0..size {
-                    for j in 0..=i {
-                        for t in 0..self.config.period {
-                            let cell = self.find_cell((j, i - j, t)).unwrap();
-                            self.search_list.push(cell);
+                for i in (0..size).rev() {
+                    for j in (i + 1..size).rev() {
+                        for t in (0..self.config.period).rev() {
+                            self.set_next((j, size + i - j, t))
                         }
                     }
                 }
-                for i in 0..size {
-                    for j in i + 1..size {
-                        for t in 0..self.config.period {
-                            let cell = self.find_cell((j, size + i - j, t)).unwrap();
-                            self.search_list.push(cell);
+                for i in (0..size).rev() {
+                    for j in (0..=i).rev() {
+                        for t in (0..self.config.period).rev() {
+                            self.set_next((j, i - j, t))
                         }
                     }
                 }
@@ -469,18 +473,16 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Gets a references to the first unknown cell since `index` in the `search_list`.
-    pub(crate) fn get_unknown(&self, index: usize) -> Option<(usize, CellRef<'a, R>)> {
-        self.search_list[index..]
-            .iter()
-            .enumerate()
-            .find_map(|(i, cell)| {
-                if cell.state.get().is_none() {
-                    Some((i + index, *cell))
-                } else {
-                    None
-                }
-            })
+    /// Gets a references to the first unknown cell since `self.next_unknown`.
+    pub(crate) fn get_unknown(&mut self) -> Option<CellRef<'a, R>> {
+        while let Some(cell) = self.next_unknown {
+            if cell.state.get().is_none() {
+                return Some(cell);
+            } else {
+                self.next_unknown = cell.next;
+            }
+        }
+        None
     }
 
     /// Tests whether the world is nonempty,

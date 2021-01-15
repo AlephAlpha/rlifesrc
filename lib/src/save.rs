@@ -55,9 +55,6 @@ pub struct WorldSer {
     ///
     /// See `proceed` for details.
     check_index: usize,
-
-    /// The position in the `search_list` of the last decided cell.
-    search_index: usize,
 }
 
 impl WorldSer {
@@ -81,7 +78,6 @@ impl WorldSer {
         }
         world.conflicts = self.conflicts;
         world.check_index = self.check_index;
-        world.search_index = self.search_index;
         Ok(world)
     }
 
@@ -124,7 +120,6 @@ impl<'a, R: Rule> World<'a, R> {
             conflicts: self.conflicts,
             set_stack: self.set_stack.iter().map(|s| s.ser()).collect(),
             check_index: self.check_index,
-            search_index: self.search_index,
         }
     }
 }
