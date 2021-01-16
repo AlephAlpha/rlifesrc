@@ -11,7 +11,7 @@
 //!
 //! This is the library for rlifesrc. There is also a
 //! [command-line tool with a TUI](https://github.com/AlephAlpha/rlifesrc/tree/master/tui)
-//! and a [web app complied to WASM](https://github.com/AlephAlpha/rlifesrc/tree/master/web).
+//! and a [web app using WebAssembly](https://github.com/AlephAlpha/rlifesrc/tree/master/web).
 //!
 //! You can try the web app [here](https://alephalpha.github.io/rlifesrc/).
 //!

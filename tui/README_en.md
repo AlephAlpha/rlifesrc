@@ -1,6 +1,6 @@
 # [rlifesrc](https://github.com/AlephAlpha/rlifesrc)
 
-[![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc) [![Crates.io](https://img.shields.io/crates/v/rlifesrc)](https://crates.io/crates/rlifesrc) [![中文](https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87-brightgreen)](README.md)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/AlephAlpha/rlifesrc/test)](https://github.com/AlephAlpha/rlifesrc/actions) [![Crates.io](https://img.shields.io/crates/v/rlifesrc)](https://crates.io/crates/rlifesrc) [![中文](https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87-brightgreen)](README.md)
 
 __Rust Life Search__, or __rlifesrc__, is a Game of Life pattern searcher written in Rust.
 
@@ -8,7 +8,7 @@ The program is based on David Bell's [lifesrc](https://github.com/DavidKinder/Xl
 
 Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules. Supports for Generations rules are experimental.
 
-This is the command-line tool and the TUI. There is also a [web app complied to WASM](https://github.com/AlephAlpha/rlifesrc/tree/master/web).
+This is the command-line tool and the TUI. There is also a [web app using WebAssembly](https://github.com/AlephAlpha/rlifesrc/tree/master/web).
 
 
 - [rlifesrc](#rlifesrc)

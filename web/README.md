@@ -1,10 +1,10 @@
 # [rlifesrc-web](https://github.com/AlephAlpha/rlifesrc)
 
-[![Travis (.org)](https://img.shields.io/travis/AlephAlpha/rlifesrc)](https://travis-ci.org/AlephAlpha/rlifesrc) [![English](https://img.shields.io/badge/readme-English-brightgreen)](src/help.md)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/AlephAlpha/rlifesrc/test)](https://github.com/AlephAlpha/rlifesrc/actions) [![English](https://img.shields.io/badge/readme-English-brightgreen)](src/help.md)
 
 试玩 Rust。尝试写一个生命游戏搜索工具。具体来说就是照抄 David Bell 写的 [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) 和 Jason Summers 写的 [WinLifeSearch](https://github.com/jsummers/winlifesearch/)。其具体的算法可见 [Dean Hickerson 的说明](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN)。
 
-由于是从一种没学过的语言（C）抄到一种没用过的语言（Rust），而且在不懂 JavaScript 的情况下弄成一个网页，写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
+写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
 支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
 
@@ -18,9 +18,7 @@
 
 ## 编译
 
-目前我把编译的工具从 `cargo-web` 换成了 `wasm-bindgen` ，编译变得有点复杂。详见 [`deploy.sh`](./deploy.sh) 文件，其中包含了编译和部署到 GitHub Pages 上的过程，与编译有关的是 `echo "Building..."` 后面的五行。
-
-要注意一下几点：
+编译过程比较复杂，我用 Github Actions 自动完成，参见[`build-web.yml`](./../.github/workflows/build-web.yml)。如果要手动编译的话：
 
 1. 编译前要安装**最新版**的 [`wasm-bindgen`](https://github.com/rustwasm/wasm-bindgen)：
 
@@ -30,15 +28,26 @@
 
     `wasm-bindgen` 版本不对的话会无法编译。如果升级到最新版还是不对，可以试试先删掉 `Cargo.lock` 再重新编译。
 
-2. 由于是编译成 wasm，还要给 Rust 添加相应的 target：
+2. 由于是编译成 WebAssembly，还要给 Rust 添加相应的 target：
 
     ```bash
     rustup target add wasm32-unknown-unknown
     ```
 
-3. `deploy.sh` 中，`$build` 指的是 `cargo build` 输出的目录；`$deploy` 指的是部署用的目录，`wasm-bindgen` 也会输出于此处。可以根据需要修改 `$deploy` 目录，但 `$build` 不要乱改。
+3. 现在 [`yew`](https://github.com/yewstack/yew) 是从**绝对路径**读取 worker 所在的文件。由于我是部署到 `https://alephalpha.github.io/rlifesrc/`，所以把这个路径默认设为 `rlifesrc/worker.js`；如果部署到的地址不同，可以在**编译时**通过环境变量 `RLIFESRC_PATH` 修改此路径。比如说要改成 `worker.js` 的话：
 
-4. 现在 [`yew`](https://github.com/yewstack/yew) 是从**绝对路径**读取 worker 所在的文件。由于我是部署到 `https://alephalpha.github.io/rlifesrc/`，所以把这个路径默认设为 `"rlifesrc/worker.js"`；如果部署到的地址不同，可以在**编译时**通过环境变量 `RLIFESRC_PATH` 修改此路径。
+    ```bash
+    export RLIFESRC_PATH=worker.js
+    ```
+
+4. 完成以上准备工作之后，可以编译了。假设要把编译的结果输出到 `target/deploy` 目录：
+
+    ```bash
+    cargo build --release --release --target wasm32-unknown-unknown --manifest-path web/Cargo.toml
+    wasm-bindgen --target web --no-typescript --out-dir target/deploy target/wasm32-unknown-unknown/release/main.wasm
+    wasm-bindgen --target no-modules --no-typescript --out-dir target/deploy target/wasm32-unknown-unknown/release/worker.wasm
+    cp -r web/static/* target/deploy
+    ```
 
 5. 如果只是想在本地使用网页版，完全可以不用编译，只需要把编译好的版本 `git clone` 下来，用 python 自带的服务器功能：
 
@@ -47,7 +56,7 @@
     python3 -m http.server
     ```
 
-    然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面说的问题4，不要先 `cd` 到 `rlifesrc` 再运行服务器。
+    然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面第3步说的问题，不要先 `cd` 到 `rlifesrc` 再运行服务器。
 
 ## 用法
 

@@ -14,7 +14,9 @@ before_install:
   - rustup target add wasm32-unknown-unknown
 script:
   - cargo fmt --all -- --check
-  - cargo clippy -- --deny=warnings
+  - cargo clippy -- -D warnings
   - cargo build --verbose
   - cargo test --verbose --all-features
-  - cd web && cargo build --target wasm32-unknown-unknown --verbose && cd ..
+  - cargo run 16 5 3 0 1 --no-tui
+  - cargo clippy --target wasm32-unknown-unknown --manifest-path web/Cargo.toml -- -D warnings
+  - cargo build --target wasm32-unknown-unknown --manifest-path web/Cargo.toml --verbose
