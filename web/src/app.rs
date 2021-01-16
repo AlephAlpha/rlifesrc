@@ -256,7 +256,9 @@ impl App {
                     <a href="https://www.muicss.com">
                         { "MUI CSS" }
                     </a>
-                    { format!(" | Last updated at {}", BUILD_TIME) }
+                </div>
+                <div class="mui--text-caption mui--text-center">
+                    { format!("Last updated at {}", BUILD_TIME) }
                 </div>
             </footer>
         }
