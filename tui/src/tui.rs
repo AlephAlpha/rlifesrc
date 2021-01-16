@@ -1,7 +1,10 @@
 use async_std::task;
 use crossterm::{
     cursor::{Hide, MoveTo, MoveToNextLine, Show},
-    event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers},
+    event::{
+        DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent, MouseEvent,
+        MouseEventKind,
+    },
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
     ExecutableCommand, QueueableCommand, Result as CrosstermResult,
@@ -18,6 +21,15 @@ const VIEW_FREQ: u64 = 5000;
 #[cfg(not(debug_assertions))]
 const VIEW_FREQ: u64 = 100000;
 
+/// Different modes to handle events.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    /// Searching or paused.
+    Main,
+    /// Asking for quit.
+    AskingQuit,
+}
+
 struct App<'a, W: Write> {
     gen: isize,
     period: isize,
@@ -29,13 +41,13 @@ struct App<'a, W: Write> {
     output: &'a mut W,
     term_size: (u16, u16),
     world_size: (isize, isize),
-    asking_quit: bool,
+    mode: Mode,
 }
 
 impl<'a, W: Write> App<'a, W> {
-    fn new(search: Box<dyn Search>, reset: bool, output: &'a mut W) -> Self {
+    fn new(search: Box<dyn Search>, reset: bool, output: &'a mut W) -> CrosstermResult<Self> {
         let period = search.config().period;
-        App {
+        let mut app = App {
             gen: 0,
             period,
             search,
@@ -46,8 +58,10 @@ impl<'a, W: Write> App<'a, W> {
             output,
             term_size: (80, 24),
             world_size: (80, 24),
-            asking_quit: false,
-        }
+            mode: Mode::Main,
+        };
+        app.init()?;
+        Ok(app)
     }
 
     /// Initializes the screen.
@@ -55,6 +69,7 @@ impl<'a, W: Write> App<'a, W> {
         self.output
             .execute(EnterAlternateScreen)?
             .execute(Hide)?
+            .execute(EnableMouseCapture)?
             .execute(SetTitle("rlifesrc"))?;
         terminal::enable_raw_mode()?;
         self.term_size = terminal::size()?;
@@ -75,6 +90,7 @@ impl<'a, W: Write> App<'a, W> {
     fn quit(&mut self) -> CrosstermResult<()> {
         terminal::disable_raw_mode()?;
         self.output
+            .execute(DisableMouseCapture)?
             .execute(Show)?
             .execute(ResetColor)?
             .execute(LeaveAlternateScreen)?;
@@ -224,7 +240,7 @@ impl<'a, W: Write> App<'a, W> {
             .queue(Print(format!("{:1$}", ASK_QUIT, self.term_size.0 as usize)))?
             .flush()?;
 
-        self.asking_quit = true;
+        self.mode = Mode::AskingQuit;
         Ok(())
     }
 
@@ -235,56 +251,31 @@ impl<'a, W: Write> App<'a, W> {
         // reader: &mut EventStream,
         is_searching: bool,
     ) -> CrosstermResult<bool> {
-        /// A macro to generate constant key events.
-        macro_rules! const_key {
-            ($name:ident => $key:expr) => {
-                const $name: Event = Event::Key(KeyEvent {
-                    code: $key,
-                    modifiers: KeyModifiers::empty(),
-                });
-            };
-            ($name:ident => upper $key:expr) => {
-                const $name: Event = Event::Key(KeyEvent {
-                    code: $key,
-                    modifiers: KeyModifiers::SHIFT,
-                });
+        /// A macro to generate constant key events patterns.
+        macro_rules! key_event {
+            ($code:pat) => {
+                Some(Event::Key(KeyEvent {
+                    code: $code,
+                    ..
+                }))
             };
         }
 
-        const_key!(KEY_Y => KeyCode::Char('y'));
-        const_key!(KEY_UPPER_Y => upper KeyCode::Char('Y'));
-        const_key!(KEY_Q => KeyCode::Char('q'));
-        const_key!(KEY_UPPER_Q => upper KeyCode::Char('Q'));
-        const_key!(KEY_SPACE => KeyCode::Char(' '));
-        const_key!(KEY_ESC => KeyCode::Esc);
-        const_key!(KEY_ENTER => KeyCode::Enter);
-        const_key!(KEY_PAGEUP => KeyCode::PageUp);
-        const_key!(KEY_PAGEDOWN => KeyCode::PageDown);
+        /// A macro to generate constant mouse events patterns.
+        macro_rules! mouse_event {
+            ($kind:pat) => {
+                Some(Event::Mouse(MouseEvent {
+                    kind: $kind,
+                    ..
+                }))
+            };
+        }
 
-        if self.asking_quit {
-            match event {
-                Some(KEY_Y) | Some(KEY_UPPER_Y) | Some(KEY_ENTER) => return Ok(true),
-                Some(Event::Resize(width, height)) => {
-                    self.term_size = (width, height);
-                    self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
-                    self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
-                    self.output
-                        .queue(ResetColor)?
-                        .queue(Clear(ClearType::All))?;
-                    self.update()?;
-                    self.ask_quit()?;
-                }
-                Some(_) => {
-                    self.asking_quit = false;
-                    self.update()?;
-                }
-                None => {
-                    return Ok(true);
-                }
-            }
-        } else {
-            match event {
-                Some(KEY_Q) | Some(KEY_UPPER_Q) | Some(KEY_ESC) => {
+        match self.mode {
+            Mode::Main => match event {
+                key_event!(KeyCode::Char('q'))
+                | key_event!(KeyCode::Char('Q'))
+                | key_event!(KeyCode::Esc) => {
                     if is_searching {
                         self.pause();
                     }
@@ -295,15 +286,15 @@ impl<'a, W: Write> App<'a, W> {
                         return Ok(true);
                     }
                 }
-                Some(KEY_PAGEDOWN) => {
+                key_event!(KeyCode::PageDown) | mouse_event!(MouseEventKind::ScrollDown) => {
                     self.gen = (self.gen + 1) % self.period;
                     self.update()?;
                 }
-                Some(KEY_PAGEUP) => {
+                key_event!(KeyCode::PageUp) | mouse_event!(MouseEventKind::ScrollUp) => {
                     self.gen = (self.gen + self.period - 1) % self.period;
                     self.update()?;
                 }
-                Some(KEY_SPACE) | Some(KEY_ENTER) => {
+                key_event!(KeyCode::Char(' ')) | key_event!(KeyCode::Enter) => {
                     if is_searching {
                         self.pause();
                     } else {
@@ -335,7 +326,29 @@ impl<'a, W: Write> App<'a, W> {
                     }
                     return Ok(true);
                 }
-            }
+            },
+            Mode::AskingQuit => match event {
+                key_event!(KeyCode::Char('y'))
+                | key_event!(KeyCode::Char('Y'))
+                | key_event!(KeyCode::Enter) => return Ok(true),
+                Some(Event::Resize(width, height)) => {
+                    self.term_size = (width, height);
+                    self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
+                    self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
+                    self.output
+                        .queue(ResetColor)?
+                        .queue(Clear(ClearType::All))?;
+                    self.update()?;
+                    self.ask_quit()?;
+                }
+                Some(_) => {
+                    self.mode = Mode::Main;
+                    self.update()?;
+                }
+                None => {
+                    return Ok(true);
+                }
+            },
         }
 
         Ok(false)
@@ -363,16 +376,24 @@ impl<'a, W: Write> App<'a, W> {
     }
 }
 
+impl<'a, W: Write> Drop for App<'a, W> {
+    fn drop(&mut self) {
+        self.quit().unwrap()
+    }
+}
+
 /// Runs the search with a TUI.
 ///
 /// If `reset` is true, the time will be reset when starting a new search.
 pub(crate) fn tui(search: Box<dyn Search>, reset: bool) -> CrosstermResult<()> {
     let mut stdout = stdout();
     let mut reader = EventStream::new();
-    let mut app = App::new(search, reset, &mut stdout);
-    app.init()?;
-    task::block_on(app.main_loop(&mut reader))?;
-    app.quit()?;
-    println!("{}", app.search.rle_gen(app.gen));
+    let result;
+    {
+        let mut app = App::new(search, reset, &mut stdout)?;
+        task::block_on(app.main_loop(&mut reader))?;
+        result = app.search.rle_gen(app.gen);
+    }
+    println!("{}", result);
     Ok(())
 }

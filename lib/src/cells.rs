@@ -8,7 +8,7 @@ use std::{
     ops::{Deref, Not},
 };
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", doc))]
 use serde::{Deserialize, Serialize};
 
 /// Possible states of a known cell.
@@ -19,12 +19,14 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct State(pub usize);
 
+/// The Dead state.
 pub const DEAD: State = State(0);
+/// The Alive state.
 pub const ALIVE: State = State(1);
 
 /// Flips the state.
 ///
-/// For Generations rules, the `not` of a dying state is `ALIVE`.
+/// For Generations rules, the `not` of a dying state is [`ALIVE`].
 impl Not for State {
     type Output = State;
 
@@ -45,18 +47,18 @@ pub type Coord = (isize, isize, isize);
 /// A cell in the cellular automaton.
 ///
 /// The name `LifeCell` is chosen to avoid ambiguity with
-/// [`std::cell::Cell`](https://doc.rust-lang.org/std/cell/struct.Cell.html).
+/// [`std::cell::Cell`].
 pub struct LifeCell<'a, R: Rule> {
     /// The coordinates of a cell.
     pub coord: Coord,
 
     /// The background state of the cell.
     ///
-    /// For rules without `B0`, it is always `DEAD`.
+    /// For rules without `B0`, it is always [`DEAD`].
     ///
     /// For rules with `B0`, the background changes periodically.
-    /// For example, for non-Generations rules, it is `DEAD` on even generations,
-    /// `ALIVE` on odd generations.
+    /// For example, for non-Generations rules, it is [`DEAD`] on even generations,
+    /// [`ALIVE`] on odd generations.
     pub(crate) background: State,
 
     /// The state of the cell.
@@ -97,7 +99,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
     /// Generates a new cell with background state, such that its neighborhood
     /// descriptor says that all neighboring cells also have the same state.
     ///
-    /// `first_gen` and `first_col` are set to `false`.
+    /// `is_front` are set to `false`.
     pub(crate) fn new(coord: Coord, background: State, succ_state: State) -> Self {
         LifeCell {
             coord,
@@ -113,7 +115,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
         }
     }
 
-    /// Returns a `CellRef` from a `LifeCell`.
+    /// Returns a [`CellRef`] from a [`LifeCell`].
     pub(crate) fn borrow(&self) -> CellRef<'a, R> {
         let cell = unsafe { (self as *const LifeCell<'a, R>).as_ref().unwrap() };
         CellRef { cell }
@@ -130,7 +132,7 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
     }
 }
 
-/// A reference to a `LifeCell` which has the same lifetime as the cell
+/// A reference to a [`LifeCell`] which has the same lifetime as the cell
 /// it refers to.
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Copy(bound = ""))]

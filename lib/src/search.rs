@@ -7,7 +7,7 @@ use crate::{
 };
 use rand::{thread_rng, Rng};
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", doc))]
 use serde::{Deserialize, Serialize};
 
 /// Search status.
@@ -93,7 +93,7 @@ impl<'a, R: Rule> World<'a, R> {
                 .all(|&neigh| self.consistify(neigh.unwrap()))
     }
 
-    /// Deduces all the consequences by `consistify` and symmetry.
+    /// Deduces all the consequences by [`consistify`](Self::consistify) and symmetry.
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
@@ -181,10 +181,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// (and returns `false`).
     ///
     /// It also records the number of steps it has walked in the parameter
-    /// `step`. A step consists of a `proceed` and a `backup`.
-    ///
-    /// The difference between `step` and `self.steps` is that the former
-    /// will be reset in each `search`.
+    /// `step`. A step consists of a [`proceed`](Self::proceed) and a [`backup`](Self::backup).
     fn go(&mut self, step: &mut u64) -> bool {
         loop {
             *step += 1;
@@ -202,7 +199,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Makes a decision.
     ///
     /// Chooses an unknown cell, assigns a state for it,
-    /// and push a reference to it to the `set_stack`.
+    /// and push a reference to it to the [`set_stack`](#structfield.set_stack).
     ///
     /// Returns `None` is there is no unknown cell,
     /// `Some(false)` if the new state leads to an immediate conflict.
@@ -222,9 +219,9 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// The search function.
     ///
-    /// Returns `Found` if a result is found,
-    /// `None` if such pattern does not exist,
-    /// `Searching` if the number of steps exceeds `max_step`
+    /// Returns [`Status::Found`] if a result is found,
+    /// [`Status::None`] if such pattern does not exist,
+    /// [`Status::Searching`] if the number of steps exceeds `max_step`
     /// and no results are found.
     pub fn search(&mut self, max_step: Option<u64>) -> Status {
         let mut step_count = 0;

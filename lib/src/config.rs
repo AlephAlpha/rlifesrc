@@ -14,7 +14,9 @@ use std::{
     str::FromStr,
 };
 
-#[cfg(feature = "serde")]
+#[cfg(doc)]
+use crate::cells::{ALIVE, DEAD};
+#[cfg(any(feature = "serde", doc))]
 use serde::{Deserialize, Serialize};
 
 /// Transformations (rotations and reflections) after the last generation
@@ -283,22 +285,22 @@ pub enum SearchOrder {
 pub enum NewState {
     /// Chooses the background state.
     ///
-    /// For rules without `B0`, it always chooses `DEAD`.
+    /// For rules without `B0`, it always chooses [`DEAD`].
     ///
     /// For rules with `B0`, the background changes periodically.
     /// For example, for non-Generations rules,
-    /// it chooses `DEAD` on even generations,
-    /// `ALIVE` on odd generations.
+    /// it chooses [`DEAD`] on even generations,
+    /// [`ALIVE`] on odd generations.
     ChooseDead,
 
     /// Chooses the opposite of the background state.
     ///
-    /// For rules without `B0`, it always chooses `ALIVE`.
+    /// For rules without `B0`, it always chooses [`ALIVE`].
     ///
     /// For rules with `B0`, the background changes periodically.
     /// For example, for non-Generations rules,
-    /// it chooses `ALIVE` on even generations,
-    /// `DEAD` on odd generations.
+    /// it chooses [`ALIVE`] on even generations,
+    /// [`DEAD`] on odd generations.
     #[derivative(Default)]
     ChooseAlive,
 
@@ -375,10 +377,10 @@ pub struct Config {
     #[derivative(Default(value = "true"))]
     pub non_empty_front: bool,
 
-    /// Whether to automatically reduce the `max_cell_count`
+    /// Whether to automatically reduce the [`max_cell_count`](#structfield.max_cell_count)
     /// when a result is found.
     ///
-    /// The `max_cell_count` will be set to the cell count of
+    /// The [`max_cell_count`](#structfield.max_cell_count) will be set to the cell count of
     /// the current result minus one.
     pub reduce_max: bool,
 

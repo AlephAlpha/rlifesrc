@@ -130,7 +130,7 @@ fn snowflakes() -> Result<(), Error> {
 }
 
 #[test]
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", doc))]
 fn ser() -> Result<(), Error> {
     let config = Config::new(16, 5, 3).set_translate(0, 1);
     let mut search = config.world()?;

@@ -1,4 +1,4 @@
-//! A trait for `World`.
+//! A trait for [`World`].
 use crate::{
     cells::{Coord, State, ALIVE, DEAD},
     config::Config,
@@ -9,18 +9,18 @@ use crate::{
 };
 use std::fmt::Write;
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", doc))]
 use crate::save::WorldSer;
 
-/// A trait for `World`.
+/// A trait for [`World`].
 ///
 /// So that we can switch between different rule types using trait objects.
 pub trait Search {
     /// The search function.
     ///
-    /// Returns `Found` if a result is found,
-    /// `None` if such pattern does not exist,
-    /// `Searching` if the number of steps exceeds `max_step`
+    /// Returns [`Status::Found`] if a result is found,
+    /// [`Status::None`] if such pattern does not exist,
+    /// [`Status::Searching`] if the number of steps exceeds `max_step`
     /// and no results are found.
     fn search(&mut self, max_step: Option<u64>) -> Status;
 
@@ -35,7 +35,7 @@ pub trait Search {
 
     /// Whether the rule contains `B0`.
     ///
-    /// In other words, whether a cell would become `Alive` in the next
+    /// In other words, whether a cell would become [`ALIVE`] in the next
     /// generation, if all its neighbors in this generation are dead.
     fn is_b0_rule(&self) -> bool;
 
@@ -58,8 +58,8 @@ pub trait Search {
     /// during the search.
     fn set_max_cell_count(&mut self, max_cell_count: Option<usize>);
 
-    #[cfg(feature = "serde")]
-    /// Saves the world as a `WorldSer`,
+    #[cfg(any(feature = "serde", doc))]
+    /// Saves the world as a [`WorldSer`],
     /// which can be easily serialized.
     fn ser(&self) -> WorldSer;
 
@@ -133,7 +133,7 @@ pub trait Search {
     }
 }
 
-/// The `Search` trait is implemented for every `World`.
+/// The [`Search`] trait is implemented for every [`World`].
 impl<'a, R: Rule> Search for World<'a, R> {
     fn search(&mut self, max_step: Option<u64>) -> Status {
         self.search(max_step)
@@ -171,7 +171,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.set_max_cell_count(max_cell_count)
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(any(feature = "serde", doc))]
     fn ser(&self) -> WorldSer {
         self.ser()
     }

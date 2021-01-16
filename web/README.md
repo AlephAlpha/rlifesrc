@@ -43,20 +43,22 @@
 4. 完成以上准备工作之后，可以编译了。假设要把编译的结果输出到 `target/deploy` 目录：
 
     ```bash
-    cargo build --release --release --target wasm32-unknown-unknown --manifest-path web/Cargo.toml
+    cargo build --release --target wasm32-unknown-unknown --manifest-path web/Cargo.toml
     wasm-bindgen --target web --no-typescript --out-dir target/deploy target/wasm32-unknown-unknown/release/main.wasm
     wasm-bindgen --target no-modules --no-typescript --out-dir target/deploy target/wasm32-unknown-unknown/release/worker.wasm
     cp -r web/static/* target/deploy
     ```
 
-5. 如果只是想在本地使用网页版，完全可以不用编译，只需要把编译好的版本 `git clone` 下来，用 python 自带的服务器功能：
+如果只是想在本地使用网页版，完全可以不用编译，只需要把编译好的版本 `git clone` 下来，用 Python 自带的服务器功能：
 
-    ```bash
-    git clone --single-branch --branch=gh-pages --depth 1 https://github.com/AlephAlpha/rlifesrc.git
-    python3 -m http.server
-    ```
+```bash
+git clone --single-branch --branch=gh-pages --depth 1 https://github.com/AlephAlpha/rlifesrc.git
+python3 -m http.server
+```
 
-    然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面第3步说的问题，不要先 `cd` 到 `rlifesrc` 再运行服务器。
+然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面第3步说的问题，不要先 `cd` 到 `rlifesrc` 再运行服务器。
+
+注意由于浏览器同源策略的问题， `git clone` 下来后无法直接在浏览器中打开运行。
 
 ## 用法
 

@@ -42,12 +42,14 @@ pub struct World<'a, R: Rule> {
     /// It is used in the backtracking.
     pub(crate) set_stack: Vec<SetCell<'a, R>>,
 
-    /// The position in the `set_stack` of the next cell to be examined.
+    /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
     ///
-    /// See `proceed` for details.
+    /// See [`proceed`](Self::proceed) for details.
     pub(crate) check_index: usize,
 
     /// The starting point to look for an unknown cell.
+    ///
+    /// There must be no unknown cell before this cell.
     pub(crate) next_unknown: Option<CellRef<'a, R>>,
 }
 
@@ -317,7 +319,8 @@ impl<'a, R: Rule> World<'a, R> {
     /// Sets states for the cells.
     ///
     /// All cells are set to unknown unless they are on the boundary,
-    /// or are marked as known in `init_pred_succ` or `init_sym`.
+    /// or are marked as known in [`init_pred_succ`](Self::init_pred_succ)
+    /// or [`init_sym`](Self::init_sym).
     fn init_state(mut self) -> Self {
         for x in 0..self.config.width {
             for y in 0..self.config.height {
@@ -337,8 +340,9 @@ impl<'a, R: Rule> World<'a, R> {
         self
     }
 
-    /// Set the `next` of a cell to be `self.next_unknown`
-    /// and set `self.next_unknown` to be this cell.
+    /// Set the [`next`](LifeCell#structfield.next) of a cell to be
+    /// [`next_unknown`](#structfield.next_unknown) and set
+    /// [`next_unknown`](#structfield.next_unknown) to be this cell.
     fn set_next(&mut self, coord: Coord) {
         if let Some(cell) = self.find_cell(coord) {
             if cell.state.get().is_none() {
@@ -394,7 +398,7 @@ impl<'a, R: Rule> World<'a, R> {
         self
     }
 
-    /// Finds a cell by its coordinates. Returns a `CellRef`.
+    /// Finds a cell by its coordinates. Returns a [`CellRef`].
     pub(crate) fn find_cell(&self, coord: Coord) -> Option<CellRef<'a, R>> {
         let (x, y, t) = coord;
         if x >= -1
@@ -429,13 +433,14 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Sets the `state` of a cell, push it to the `set_stack`,
+    /// Sets the [`state`](LifeCell#structfield.state) of a cell,
+    /// push it to the [`set_stack`](#structfield.set_stack),
     /// and update the neighborhood descriptor of its neighbors.
     ///
     /// The original state of the cell must be unknown.
     ///
-    /// Return `false` if the number of living cells exceeds the `max_cell_count`
-    /// or the front becomes empty.
+    /// Return `false` if the number of living cells exceeds the
+    /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
     pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: Reason) -> bool {
         cell.state.set(Some(state));
         let mut result = true;
@@ -458,7 +463,7 @@ impl<'a, R: Rule> World<'a, R> {
         result
     }
 
-    /// Clears the `state` of a cell,
+    /// Clears the [`state`](LifeCell#structfield.state) of a cell,
     /// and update the neighborhood descriptor of its neighbors.
     pub(crate) fn clear_cell(&mut self, cell: CellRef<'a, R>) {
         let old_state = cell.state.take();
@@ -473,7 +478,7 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Gets a references to the first unknown cell since `self.next_unknown`.
+    /// Gets a references to the first unknown cell since [`next_unknown`](#structfield.next_unknown).
     pub(crate) fn get_unknown(&mut self) -> Option<CellRef<'a, R>> {
         while let Some(cell) = self.next_unknown {
             if cell.state.get().is_none() {
@@ -505,7 +510,7 @@ impl<'a, R: Rule> World<'a, R> {
             .ok_or(Error::GetCellError(coord))
     }
 
-    /// Minumum number of known living cells in all generation.
+    /// Minimum number of known living cells in all generation.
     ///
     /// For Generations rules, dying cells are not counted.
     pub(crate) fn cell_count(&self) -> usize {

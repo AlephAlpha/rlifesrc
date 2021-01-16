@@ -22,3 +22,7 @@ thiserror = "1.0.23"
 [features]
 default = []
 js = ["serde", "getrandom/js"]
+
+[package.metadata.docs.rs]
+features = ["serde"]
+rustdoc-args = ["--cfg", "docsrs"]

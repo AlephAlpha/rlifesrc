@@ -1,4 +1,4 @@
-use rlifesrc_lib::{Config, Search, Status, WorldSer};
+use rlifesrc_lib::{save::WorldSer, Config, Search, Status};
 use serde::{Deserialize, Serialize};
 use std::{option_env, time::Duration};
 use yew::{

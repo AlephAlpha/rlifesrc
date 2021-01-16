@@ -1,3 +1,5 @@
+//! All kinds of errors in this crate.
+
 use crate::cells::Coord;
 use ca_rules::ParseRuleError;
 use thiserror::Error;

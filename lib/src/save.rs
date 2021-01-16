@@ -1,4 +1,4 @@
-#![cfg(feature = "serde")]
+#![cfg(any(feature = "serde", doc))]
 //! Saves the world.
 
 use crate::{
@@ -12,9 +12,9 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
-/// A representation of `SetCell` which can be easily serialized.
+/// A representation of setting a cell which can be easily serialized.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-struct SetCellSer {
+pub struct SetCellSer {
     /// The coordinates of the set cell.
     coord: Coord,
 
@@ -37,6 +37,8 @@ impl<'a, R: Rule> SetCell<'a, R> {
 
 /// A representation of the world which can be easily serialized.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg(any(feature = "serde", doc))]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct WorldSer {
     /// World configuration.
     config: Config,
@@ -47,18 +49,18 @@ pub struct WorldSer {
     /// A stack to records the cells whose values are set during the search.
     ///
     /// The cells in this table always have known states.
-    ///
-    /// It is used in the backtracking.
     set_stack: Vec<SetCellSer>,
 
-    /// The position in the `set_stack` of the next cell to be examined.
+    /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
     ///
-    /// See `proceed` for details.
+    /// Be careful when modifying this value.
+    /// If you have changed other things in the saved file, please set this value to `0`,
+    /// otherwise rlifesrc might gives the wrong result.
     check_index: usize,
 }
 
 impl WorldSer {
-    /// Restores the world from the `WorldSer`, with the given rule.
+    /// Restores the world from the [`WorldSer`], with the given rule.
     fn world_with_rule<'a, R: Rule>(&self, rule: R) -> Result<World<'a, R>, Error> {
         let mut world = World::new(&self.config, rule);
         for &SetCellSer {
@@ -81,7 +83,7 @@ impl WorldSer {
         Ok(world)
     }
 
-    /// Restores the world from the `WorldSer`.
+    /// Restores the world from the [`WorldSer`].
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
         if let Ok(rule) = self.config.rule_string.parse::<Life>() {
             let world = self.world_with_rule(rule)?;
@@ -113,7 +115,7 @@ impl WorldSer {
 }
 
 impl<'a, R: Rule> World<'a, R> {
-    /// Saves the world as a `WorldSer`.
+    /// Saves the world as a [`WorldSer`].
     pub fn ser(&self) -> WorldSer {
         WorldSer {
             config: self.config.clone(),

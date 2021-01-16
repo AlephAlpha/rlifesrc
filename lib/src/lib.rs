@@ -53,15 +53,12 @@ mod search;
 mod traits;
 mod world;
 
-#[cfg(feature = "serde")]
-mod save;
+#[cfg(any(feature = "serde", doc))]
+pub mod save;
 
-pub use cells::{State, ALIVE, DEAD};
+pub use cells::{Coord, State, ALIVE, DEAD};
 pub use config::{Config, NewState, SearchOrder, Symmetry, Transform};
 pub use error::Error;
 pub use search::Status;
 pub use traits::Search;
 pub use world::World;
-
-#[cfg(feature = "serde")]
-pub use save::WorldSer;
