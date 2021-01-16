@@ -1,0 +1,77 @@
+name: Build and Deploy Web Version
+
+on:
+  push:
+    branches-ignore:
+      - gh-pages
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: target/deploy
+      TARGET_PATH: target/wasm32-unknown-unknown/release
+      RLIFESRC_PATH: rlifesrc/worker.js
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Install wasm-bindgen
+        uses: jetli/wasm-bindgen-action@v0.1.0
+        with:
+          version: latest
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target wasm32-unknown-unknown --manifest-path web/Cargo.toml
+
+      - name: Run wasm-bindgen
+        run: |
+          wasm-bindgen --target web --no-typescript --out-dir $DEPLOY_PATH $TARGET_PATH/main.wasm
+          wasm-bindgen --target no-modules --no-typescript --out-dir $DEPLOY_PATH $TARGET_PATH/worker.wasm
+
+      - name: Copy files
+        run: cp -r web/static/* $DEPLOY_PATH
+
+      - name: Upload build result
+        uses: actions/upload-artifact@v2
+        with:
+          name: deploy
+          path: ${{ env.DEPLOY_PATH }}
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: target/deploy
+    if: github.ref == 'refs/heads/master' && ! startsWith(github.event.head_commit.message, ':construction:')
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Download build result
+        uses: actions/download-artifact@v2
+        with:
+          name: deploy
+          path: ${{ env.DEPLOY_PATH }}
+
+      - name: Deploy to GitHub Pages
+        if: success()
+        uses: JamesIves/github-pages-deploy-action@3.7.1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: ${{ env.DEPLOY_PATH }}
