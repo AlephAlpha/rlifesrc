@@ -11,6 +11,7 @@ readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
+build_timestamp = "0.1.0"
 js-sys = "0.3.46"
 lazy_static = "1.4.0"
 pulldown-cmark = "0.8.0"

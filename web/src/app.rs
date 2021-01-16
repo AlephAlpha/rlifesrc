@@ -4,6 +4,7 @@ use crate::{
     worker::{Request, Response, Worker},
     world::World,
 };
+use build_timestamp::build_time;
 use js_sys::Array;
 use rlifesrc_lib::{Config, Status};
 use std::time::Duration;
@@ -39,6 +40,8 @@ const INIT_WORLD: &str = "x = 16, y = 16, rule = B3/S23\n\
                           ????????????????$\n\
                           ????????????????$\n\
                           ????????????????!";
+
+build_time!("%Y-%m-%d %H:%M:%S UTC");
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -253,6 +256,7 @@ impl App {
                     <a href="https://www.muicss.com">
                         { "MUI CSS" }
                     </a>
+                    { format!(" | Last updated at {}", BUILD_TIME) }
                 </div>
             </footer>
         }
