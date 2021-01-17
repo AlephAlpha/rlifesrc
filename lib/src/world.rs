@@ -157,7 +157,7 @@ impl<'a, R: Rule> World<'a, R> {
         .init_pred_succ()
         .init_sym()
         .init_state()
-        .init_search_order(search_order)
+        .init_search_order()
     }
 
     /// Links the cells to their neighbors.
@@ -357,43 +357,9 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Sets the search order.
-    fn init_search_order(mut self, search_order: SearchOrder) -> Self {
-        match search_order {
-            SearchOrder::ColumnFirst => {
-                for x in (0..self.config.width).rev() {
-                    for y in (0..self.config.height).rev() {
-                        for t in (0..self.config.period).rev() {
-                            self.set_next((x, y, t))
-                        }
-                    }
-                }
-            }
-            SearchOrder::RowFirst => {
-                for y in (0..self.config.height).rev() {
-                    for x in (0..self.config.width).rev() {
-                        for t in (0..self.config.period).rev() {
-                            self.set_next((x, y, t))
-                        }
-                    }
-                }
-            }
-            SearchOrder::Diagonal => {
-                let size = self.config.height;
-                for i in (0..size).rev() {
-                    for j in (i + 1..size).rev() {
-                        for t in (0..self.config.period).rev() {
-                            self.set_next((j, size + i - j, t))
-                        }
-                    }
-                }
-                for i in (0..size).rev() {
-                    for j in (0..=i).rev() {
-                        for t in (0..self.config.period).rev() {
-                            self.set_next((j, i - j, t))
-                        }
-                    }
-                }
-            }
+    fn init_search_order(mut self) -> Self {
+        for coord in self.config.search_order_iter() {
+            self.set_next(coord);
         }
         self
     }

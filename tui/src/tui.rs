@@ -1,10 +1,7 @@
 use async_std::task;
 use crossterm::{
     cursor::{Hide, MoveTo, MoveToNextLine, Show},
-    event::{
-        DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent, MouseEvent,
-        MouseEventKind,
-    },
+    event::{Event, EventStream, KeyCode, KeyEvent},
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
     ExecutableCommand, QueueableCommand, Result as CrosstermResult,
@@ -69,7 +66,6 @@ impl<'a, W: Write> App<'a, W> {
         self.output
             .execute(EnterAlternateScreen)?
             .execute(Hide)?
-            .execute(EnableMouseCapture)?
             .execute(SetTitle("rlifesrc"))?;
         terminal::enable_raw_mode()?;
         self.term_size = terminal::size()?;
@@ -90,7 +86,6 @@ impl<'a, W: Write> App<'a, W> {
     fn quit(&mut self) -> CrosstermResult<()> {
         terminal::disable_raw_mode()?;
         self.output
-            .execute(DisableMouseCapture)?
             .execute(Show)?
             .execute(ResetColor)?
             .execute(LeaveAlternateScreen)?;
@@ -261,16 +256,6 @@ impl<'a, W: Write> App<'a, W> {
             };
         }
 
-        /// A macro to generate constant mouse events patterns.
-        macro_rules! mouse_event {
-            ($kind:pat) => {
-                Some(Event::Mouse(MouseEvent {
-                    kind: $kind,
-                    ..
-                }))
-            };
-        }
-
         match self.mode {
             Mode::Main => match event {
                 key_event!(KeyCode::Char('q'))
@@ -286,11 +271,11 @@ impl<'a, W: Write> App<'a, W> {
                         return Ok(true);
                     }
                 }
-                key_event!(KeyCode::PageDown) | mouse_event!(MouseEventKind::ScrollDown) => {
+                key_event!(KeyCode::PageDown) => {
                     self.gen = (self.gen + 1) % self.period;
                     self.update()?;
                 }
-                key_event!(KeyCode::PageUp) | mouse_event!(MouseEventKind::ScrollUp) => {
+                key_event!(KeyCode::PageUp) => {
                     self.gen = (self.gen + self.period - 1) % self.period;
                     self.update()?;
                 }
