@@ -456,16 +456,51 @@ impl<'a, R: Rule> World<'a, R> {
         None
     }
 
-    /// Tests whether the world is nonempty,
-    /// and whether the minimal period of the pattern equals to the given period.
-    pub(crate) fn nontrivial(&self) -> bool {
-        self.cell_count[0] > 0
-            && (1..self.config.period).all(|t| {
-                self.config.period % t != 0
-                    || self
+    /// Tests if the result is "uninteresting".
+    pub(crate) fn is_uninteresting(&self) -> bool {
+        self.is_trivial() || self.is_subperiod_oscillator() || self.is_subperiod_spaceship()
+    }
+
+    /// Tests if the result is trivial.
+    fn is_trivial(&self) -> bool {
+        self.cell_count[0] == 0
+    }
+
+    /// Tests if the result is an oscillator of subperiod.
+    fn is_subperiod_oscillator(&self) -> bool {
+        self.config.period > 1
+            && (1..self.config.period).any(|t| {
+                self.config.period % t == 0
+                    && self
                         .cells
                         .chunks(self.config.period as usize)
-                        .any(|c| c[0].state.get() != c[t as usize].state.get())
+                        .all(|c| c[0].state.get() == c[t as usize].state.get())
+            })
+    }
+
+    /// Tests if the result is a spaceship of subperiod.
+    fn is_subperiod_spaceship(&self) -> bool {
+        (self.config.dx != 0 || self.config.dy != 0)
+            && (1..self.config.period).any(|f| {
+                self.config.period % f == 0
+                    && self.config.dx % f == 0
+                    && self.config.dy % f == 0
+                    && {
+                        let t = self.config.period / f;
+                        let dx = self.config.dx / f;
+                        let dy = self.config.dy / f;
+                        self.cells
+                            .iter()
+                            .step_by(self.config.period as usize)
+                            .all(|c| {
+                                let (x, y, _) = c.coord;
+                                c.state.get()
+                                    == self.find_cell((x - dx, y - dy, t)).map_or_else(
+                                        || self.find_cell((x, y, t)).map(|c1| c1.background),
+                                        |c1| c1.state.get(),
+                                    )
+                            })
+                    }
             })
     }
 
