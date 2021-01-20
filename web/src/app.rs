@@ -258,7 +258,9 @@ impl App {
                     </a>
                 </div>
                 <div class="mui--text-caption mui--text-center">
-                    { format!("Last updated at {}", BUILD_TIME) }
+                    <a href="https://github.com/AlephAlpha/rlifesrc/blob/master/CHANGELOG.md">
+                        { format!("Last updated at {}", BUILD_TIME) }
+                    </a>
                 </div>
             </footer>
         }
