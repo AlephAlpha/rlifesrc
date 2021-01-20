@@ -1,7 +1,9 @@
 //! Parsing command-line arguments.
 
 use clap::{App, AppSettings, Arg, Error, ErrorKind, Result as ClapResult};
-use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, Search, SearchOrder, Symmetry, Transform};
+use rlifesrc_lib::{
+    rules::NtLifeGen, Config, NewState, Search, SearchOrder, SkipLevel, Symmetry, Transform,
+};
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
@@ -235,6 +237,14 @@ impl Args {
                          the current result minus one.\n",
                     )
                     .long("reduce"),
+            )
+            .arg(
+                Arg::with_name("SKIP")
+                    .help("What patterns are considered boring and should be skip")
+                    .long("skip")
+                    .takes_value(true)
+                    .possible_values(&["trivial", "stable", "subposci", "subpship", "sym"])
+                    .default_value("subpship"),
             );
 
         #[cfg(feature = "tui")]
@@ -317,6 +327,14 @@ impl Args {
         };
         let non_empty_front = matches.is_present("FRONT");
         let reduce_max = matches.is_present("REDUCE");
+        let skip_level = match matches.value_of("SKIP").unwrap() {
+            "trivial" => SkipLevel::SkipTrivial,
+            "stable" => SkipLevel::SkipStable,
+            "subposci" => SkipLevel::SkipSubperiodOscillator,
+            "subpship" => SkipLevel::SkipSubperiodSpaceship,
+            "sym" => SkipLevel::SkipSymmetric,
+            _ => SkipLevel::SkipSubperiodSpaceship,
+        };
 
         let rule_string = matches.value_of("RULE").unwrap().to_string();
 
@@ -357,7 +375,8 @@ impl Args {
             .set_non_empty_front(non_empty_front)
             .set_reduce_max(reduce_max)
             .set_rule_string(rule_string)
-            .set_diagonal_width(diagonal_width);
+            .set_diagonal_width(diagonal_width)
+            .set_skip_level(skip_level);
 
         let search = config.world().unwrap();
 

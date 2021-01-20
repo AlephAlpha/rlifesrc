@@ -2,7 +2,7 @@
 
 use crate::{
     cells::{CellRef, Coord, LifeCell, State, DEAD},
-    config::{Config, SearchOrder, Symmetry, Transform},
+    config::{Config, SearchOrder, SkipLevel, Symmetry, Transform},
     error::Error,
     rules::Rule,
     search::{Reason, SetCell},
@@ -456,9 +456,19 @@ impl<'a, R: Rule> World<'a, R> {
         None
     }
 
-    /// Tests if the result is "uninteresting".
-    pub(crate) fn is_uninteresting(&self) -> bool {
-        self.is_trivial() || self.is_subperiod_oscillator() || self.is_subperiod_spaceship()
+    /// Tests if the result is borling.
+    pub(crate) fn is_boring(&self) -> bool {
+        match self.config.skip_level {
+            SkipLevel::SkipTrivial => self.is_trivial(),
+            SkipLevel::SkipStable => self.is_trivial() || self.is_stable(),
+            SkipLevel::SkipSubperiodOscillator => {
+                self.is_trivial() || self.is_subperiod_oscillator()
+            }
+            SkipLevel::SkipSubperiodSpaceship => self.is_trivial() || self.is_subperiod_spaceship(),
+            SkipLevel::SkipSymmetric => {
+                self.is_trivial() || self.is_subperiod_spaceship() || self.is_boring_sym()
+            }
+        }
     }
 
     /// Tests if the result is trivial.
@@ -466,42 +476,79 @@ impl<'a, R: Rule> World<'a, R> {
         self.cell_count[0] == 0
     }
 
-    /// Tests if the result is an oscillator of subperiod.
-    fn is_subperiod_oscillator(&self) -> bool {
+    /// Tests if the result is stable.
+    fn is_stable(&self) -> bool {
         self.config.period > 1
-            && (1..self.config.period).any(|t| {
-                self.config.period % t == 0
-                    && self
-                        .cells
-                        .chunks(self.config.period as usize)
-                        .all(|c| c[0].state.get() == c[t as usize].state.get())
-            })
+            && self
+                .cells
+                .chunks(self.config.period as usize)
+                .all(|c| c[0].state.get() == c[1].state.get())
     }
 
-    /// Tests if the result is a spaceship of subperiod.
+    /// Tests if the result is an oscillator
+    /// whose actual period is smaller than the given period.
+    fn is_subperiod_oscillator(&self) -> bool {
+        (1..self.config.period).any(|t| {
+            self.config.period % t == 0
+                && self
+                    .cells
+                    .chunks(self.config.period as usize)
+                    .all(|c| c[0].state.get() == c[t as usize].state.get())
+        })
+    }
+
+    /// Tests if the result is an oscillator or a spaceship
+    /// whose actual period is smaller than the given period.
     fn is_subperiod_spaceship(&self) -> bool {
-        (self.config.dx != 0 || self.config.dy != 0)
-            && (1..self.config.period).any(|f| {
-                self.config.period % f == 0
-                    && self.config.dx % f == 0
-                    && self.config.dy % f == 0
-                    && {
-                        let t = self.config.period / f;
-                        let dx = self.config.dx / f;
-                        let dy = self.config.dy / f;
-                        self.cells
-                            .iter()
-                            .step_by(self.config.period as usize)
-                            .all(|c| {
-                                let (x, y, _) = c.coord;
-                                c.state.get()
-                                    == self.find_cell((x - dx, y - dy, t)).map_or_else(
-                                        || self.find_cell((x, y, t)).map(|c1| c1.background),
-                                        |c1| c1.state.get(),
-                                    )
-                            })
-                    }
-            })
+        (1..self.config.period).any(|f| {
+            self.config.period % f == 0 && self.config.dx % f == 0 && self.config.dy % f == 0 && {
+                let t = self.config.period / f;
+                let dx = self.config.dx / f;
+                let dy = self.config.dy / f;
+                self.cells
+                    .iter()
+                    .step_by(self.config.period as usize)
+                    .all(|c| {
+                        let (x, y, _) = c.coord;
+                        c.state.get()
+                            == self.find_cell((x - dx, y - dy, t)).map_or_else(
+                                || self.find_cell((x, y, t)).map(|c1| c1.background),
+                                |c1| c1.state.get(),
+                            )
+                    })
+            }
+        })
+    }
+
+    /// Tests if the result is invariant under the current [`Transform`].
+    /// For example, if it has `D2|` symmetry when the [`Transform`] is `F2|`.
+    fn is_boring_sym(&self) -> bool {
+        self.config.transform != Transform::Id
+            && self
+                .cells
+                .iter()
+                .step_by(self.config.period as usize)
+                .all(|c| {
+                    let (x, y, t) = c.coord;
+                    let (new_x, new_y) = match self.config.transform {
+                        Transform::Id => (x, y),
+                        Transform::Rotate90 => (self.config.height - 1 - y, x),
+                        Transform::Rotate180 => {
+                            (self.config.width - 1 - x, self.config.height - 1 - y)
+                        }
+                        Transform::Rotate270 => (y, self.config.width - 1 - x),
+                        Transform::FlipRow => (x, self.config.height - 1 - y),
+                        Transform::FlipCol => (self.config.width - 1 - x, y),
+                        Transform::FlipDiag => (y, x),
+                        Transform::FlipAntidiag => {
+                            (self.config.height - 1 - y, self.config.width - 1 - x)
+                        }
+                    };
+                    c.state.get()
+                        == self
+                            .find_cell((new_x, new_y, t))
+                            .map_or(Some(c.background), |c1| c1.state.get())
+                })
     }
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.

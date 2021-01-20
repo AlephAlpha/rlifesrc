@@ -226,7 +226,7 @@ impl Debug for Symmetry {
 }
 
 impl Symmetry {
-    /// Whether this transformation requires the world to be square.
+    /// Whether this symmetry requires the world to be square.
     ///
     /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
     pub fn square_world(self) -> bool {
@@ -314,6 +314,33 @@ pub enum NewState {
     Random,
 }
 
+/// What patterns are considered boring and should be skip.
+#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq, PartialOrd, Ord)]
+#[derivative(Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SkipLevel {
+    /// Only skips trivial (empty) patterns.
+    SkipTrivial,
+
+    /// Skips stable patterns when period > 1.
+    SkipStable,
+
+    /// Skips stable patterns, and oscillators
+    /// whose actual periods are smaller than the given period.
+    SkipSubperiodOscillator,
+
+    /// Skips stable patterns, and oscillators and spaceships
+    /// whose actual periods are smaller than the given period.
+    #[derivative(Default)]
+    SkipSubperiodSpaceship,
+
+    /// Skips all the above, and symmetric patterns which are invariant
+    /// under the current [`Transform`].
+    ///
+    /// For example, skips patterns with `D2|` symmetry when the [`Transform`] is `F2|`.
+    SkipSymmetric,
+}
+
 /// World configuration.
 ///
 /// The world will be generated from this configuration.
@@ -393,6 +420,9 @@ pub struct Config {
     /// If the diagonal width is `n`, the cells at position `(x, y)`
     /// where `abs(x - y) >= n` are assumed to be dead.
     pub diagonal_width: Option<isize>,
+
+    /// What patterns are considered boring and should be skip.
+    pub skip_level: SkipLevel,
 }
 
 impl Config {
@@ -465,6 +495,12 @@ impl Config {
     /// Sets the diagonal width.
     pub fn set_diagonal_width<T: Into<Option<isize>>>(mut self, diagonal_width: T) -> Self {
         self.diagonal_width = diagonal_width.into();
+        self
+    }
+
+    /// Sets the skip level.
+    pub fn set_skip_level(mut self, skip_level: SkipLevel) -> Self {
+        self.skip_level = skip_level;
         self
     }
 

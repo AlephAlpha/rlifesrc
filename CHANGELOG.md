@@ -4,6 +4,7 @@
 
 - Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
 - When the world is square and the diagonal width is not larger than width of the world, `Automatic` search order would choose `Diagonal`.
+- Now you can specify the skip level (TODO: Add documentation).
 - Update dependencies.
 
 ### Breaking change:

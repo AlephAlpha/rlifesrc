@@ -233,7 +233,7 @@ impl<'a, R: Rule> World<'a, R> {
                 if !result && !self.backup() {
                     return Status::None;
                 }
-            } else if !self.is_uninteresting() {
+            } else if !self.is_boring() {
                 if self.config.reduce_max {
                     self.config.max_cell_count = Some(self.cell_count() - 1);
                 }
