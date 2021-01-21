@@ -500,7 +500,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Tests if the result is an oscillator or a spaceship
     /// whose actual period is smaller than the given period.
     fn is_subperiod_spaceship(&self) -> bool {
-        (1..self.config.period).any(|f| {
+        (2..=self.config.period).any(|f| {
             self.config.period % f == 0 && self.config.dx % f == 0 && self.config.dy % f == 0 && {
                 let t = self.config.period / f;
                 let dx = self.config.dx / f;
