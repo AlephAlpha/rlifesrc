@@ -102,6 +102,13 @@ OPTIONS:
             以及相应的 Generations 规则
              [默认: B3/S23]
 
+        --skip <SKIP>              
+            跳过哪些“无聊”的图样
+            subposci 表示子周期振荡子；
+            subpship 表示子周期飞船；
+            sym 表示在当前变换下不变的对称图样。
+             [default: subpship]  [possible values: trivial, stable, subposci, subpship, sym]
+
     -s, --symmetry <SYMMETRY>
             图样的对称性
             其中一些对称性可能需要加上引号。
@@ -145,6 +152,7 @@ rlifesrc 16 5 3 0 1
 10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)，详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
 
 8 种不同的变换，对应二面体群 _D_<sub>8</sub> 的 8 个元素。
+
 * `Id` 表示恒等变换。
 * `R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。
 * `F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。
@@ -155,6 +163,14 @@ rlifesrc 16 5 3 0 1
 搜索顺序中的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。当世界为正方形，且对角宽度不大于世界宽度的一半时，会选择对角顺序。
 
 对角搜索顺序要求世界是正方形。
+
+跳过“无聊”图样时支持以下等级。
+
+* `trivial`：只跳过平凡的（即空白的）图样；
+* `stable`：周期大于 1 时跳过静止的图样；
+* `subposci`：跳过静止的图样，以及实际周期小于指定周期的振荡子；
+* `subpship`：跳过静止的图样，以及实际周期小于指定周期的振荡子和飞船；
+* `sym`：跳过以上全部，以及在当前变换下不变的对称图样；比如说，当变换为 `F|` 时跳过 `D2|` 对称的图样。
 
 ### 命令行
 

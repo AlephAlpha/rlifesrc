@@ -171,6 +171,20 @@ python3 -m http.server
   如何为未知的细胞选取状态。
 
   有先选活、先选死、随机选取三种选项。搜索振荡子时随机选取可能效果更佳。
+  </dd>
+
+  <dt>Skip Level</dt>
+  <dd>
+  跳过哪些“无聊”的图样。
+
+  支持的等级如下：
+
+  * `Trivial`：只跳过平凡的（即空白的）图样；
+  * `Stable`：周期大于 1 时跳过静止的图样；
+  * `Subperiod Oscillator`：跳过静止的图样，以及实际周期小于指定周期的振荡子；
+  * `Subperiod Spaceship`：跳过静止的图样，以及实际周期小于指定周期的振荡子和飞船；
+  * `Boring Symmetric`：跳过以上全部，以及在当前变换下不变的对称图样；比如说，当变换为 `Flip|` 时跳过 `D2|` 对称的图样。
+  </dd>
 
   <dt>Non empty front</dt>
   <dd>

@@ -1,4 +1,6 @@
-use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
+use rlifesrc_lib::{
+    rules::NtLifeGen, Config, NewState, SearchOrder, SkipLevel, Symmetry, Transform,
+};
 use wasm_bindgen::prelude::wasm_bindgen;
 use yew::{
     html, html::ChangeData, Callback, Component, ComponentLink, Html, Properties, ShouldRender,
@@ -37,6 +39,7 @@ pub enum Msg {
     SetChoose(NewState),
     SetMax(Option<usize>),
     SetDiag(Option<isize>),
+    SetSkip(SkipLevel),
     SetFront,
     SetReduce,
     None,
@@ -89,6 +92,7 @@ impl Component for Settings {
             Msg::SetChoose(new_state) => self.config.new_state = new_state,
             Msg::SetMax(max_cell_count) => self.config.max_cell_count = max_cell_count,
             Msg::SetDiag(diagonal_width) => self.config.diagonal_width = diagonal_width,
+            Msg::SetSkip(skip_level) => self.config.skip_level = skip_level,
             Msg::SetFront => self.config.non_empty_front ^= true,
             Msg::SetReduce => self.config.reduce_max ^= true,
             Msg::Apply => {
@@ -155,6 +159,7 @@ impl Settings {
                 { self.set_max() }
                 { self.set_order() }
                 { self.set_choose() }
+                { self.set_skip() }
                 { self.set_front() }
                 { self.set_reduce() }
             </div>
@@ -578,6 +583,41 @@ impl Settings {
                     <option> { "Alive" } </option>
                     <option> { "Dead" } </option>
                     <option> { "Random" } </option>
+                </select>
+            </div>
+        }
+    }
+
+    fn set_skip(&self) -> Html {
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Select(s) = e {
+                match s.value().as_ref() {
+                    "Trivial" => Msg::SetSkip(SkipLevel::SkipTrivial),
+                    "Stable" => Msg::SetSkip(SkipLevel::SkipStable),
+                    "Subperiod Oscillator" => Msg::SetSkip(SkipLevel::SkipSubperiodOscillator),
+                    "Subperiod Spaceship" => Msg::SetSkip(SkipLevel::SkipSubperiodSpaceship),
+                    "Boring Symmetric" => Msg::SetSkip(SkipLevel::SkipSymmetric),
+                    _ => Msg::None,
+                }
+            } else {
+                Msg::None
+            }
+        });
+        html! {
+            <div class="mui-select">
+                <label for="set_skip">
+                    <abbr title="What patterns are considered boring and should be skip.\n\
+                        When a skip level is chosen, all levels above it is also skipped.">
+                        { "Skip Level" }
+                    </abbr>
+                    { ":" }
+                </label>
+                <select id="set_skip" onchange=onchange>
+                    <option> { "Trivial" } </option>
+                    <option> { "Stable" } </option>
+                    <option> { "Subperiod Oscillator" } </option>
+                    <option> { "Subperiod Spaceship" } </option>
+                    <option> { "Boring Symmetric" } </option>
                 </select>
             </div>
         }

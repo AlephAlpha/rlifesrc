@@ -521,7 +521,7 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Tests if the result is invariant under the current [`Transform`].
-    /// For example, if it has `D2|` symmetry when the [`Transform`] is `F2|`.
+    /// For example, if it has `D2|` symmetry when the [`Transform`] is `F|`.
     fn is_boring_sym(&self) -> bool {
         self.config.transform != Transform::Id
             && self

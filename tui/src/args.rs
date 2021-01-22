@@ -40,7 +40,11 @@ impl Args {
                  * Dying cells are represented by uppercase letters starting from `B`;\n\
                  * Unknown cells are represented by `?`;\n\
                  * Each line is ended with `$`;\n\
-                 * The whole pattern is ended with `!`",
+                 * The whole pattern is ended with `!`\n\
+                 \n\
+                 For a more detailed help, please visit:\n\
+                 https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README.md (In Chinese)\n\
+                 https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README_en.md (In English)\n",
             )
             .settings(&[AppSettings::AllowNegativeNumbers, AppSettings::ColoredHelp])
             .arg(
@@ -241,6 +245,12 @@ impl Args {
             .arg(
                 Arg::with_name("SKIP")
                     .help("What patterns are considered boring and should be skip")
+                    .long_help(
+                        "What patterns are considered boring and should be skip\n\
+                         subposci means subperiod oscillators;\n\
+                         subpship means subperiod spaceships;\n\
+                         sym means symmetric patterns invariant under current transformation.\n",
+                    )
                     .long("skip")
                     .takes_value(true)
                     .possible_values(&["trivial", "stable", "subposci", "subpship", "sym"])

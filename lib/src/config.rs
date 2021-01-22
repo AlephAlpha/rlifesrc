@@ -337,7 +337,7 @@ pub enum SkipLevel {
     /// Skips all the above, and symmetric patterns which are invariant
     /// under the current [`Transform`].
     ///
-    /// For example, skips patterns with `D2|` symmetry when the [`Transform`] is `F2|`.
+    /// For example, skips patterns with `D2|` symmetry when the [`Transform`] is `F|`.
     SkipSymmetric,
 }
 
