@@ -2,13 +2,13 @@
 
 ## Unreleased (but already released to the web version)
 
-- Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
+- Now you can specify the [skip level](web/src/help.md#skip-level).
 - When the world is square and the diagonal width is not larger than width of the world, `Automatic` search order would choose `Diagonal`.
-- Now you can specify the skip level (TODO: Add documentation).
+- Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
 - Update dependencies.
 
 ### Breaking change:
-- Save file no longer compatible.
+- Save files are no longer compatible.
 
 ## 0.3.5 - 2020/12/22
 
