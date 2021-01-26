@@ -29,9 +29,10 @@ jobs:
       - name: Deploy to rlifesrc-doc
         uses: cpina/github-action-push-to-another-repository@master
         env:
-          API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         with:
-          source-directory: "target/doc"
-          destination-github-username: "AlephAlpha"
-          destination-repository-name: "rlifesrc-doc"
+          source-directory: target/doc
+          destination-github-username: AlephAlpha
+          destination-repository-name: rlifesrc-doc
+          target-branch: main
           user-email: alephalpha911@gmail.com
