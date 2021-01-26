@@ -44,12 +44,6 @@ jobs:
       - name: Copy files
         run: cp -r web/static/* ${DEPLOY_PATH}
 
-      - name: Build documentations
-        run: cargo doc --features=serde --document-private-items --manifest-path lib/Cargo.toml
-
-      - name: Copy files
-        run: cp -r target/doc ${DEPLOY_PATH}/doc
-
       - name: Upload build result
         uses: actions/upload-artifact@v2
         with:

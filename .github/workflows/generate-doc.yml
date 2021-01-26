@@ -1,0 +1,37 @@
+name: Generate Documentation
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  doc:
+    name: Doc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Generate Doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --all-features --document-private-items
+
+      - name: Deploy to rlifesrc-doc
+        uses: cpina/github-action-push-to-another-repository@master
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          source-directory: "target/doc"
+          destination-github-username: "AlephAlpha"
+          destination-repository-name: "rlifesrc-doc"
+          user-email: alephalpha911@gmail.com
