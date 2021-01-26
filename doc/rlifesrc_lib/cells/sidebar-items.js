@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["ALIVE","The Alive state."],["DEAD","The Dead state."]],"struct":[["CellRef","A reference to a [`LifeCell`] which has the same lifetime as the cell it refers to."],["LifeCell","A cell in the cellular automaton."],["State","Possible states of a known cell."]],"type":[["Coord","The coordinates of a cell."]]});

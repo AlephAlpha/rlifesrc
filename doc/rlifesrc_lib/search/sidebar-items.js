@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Reason","Reasons for setting a cell."],["Status","Search status."]],"struct":[["SetCell","Records the cells whose values are set and their reasons."]]});

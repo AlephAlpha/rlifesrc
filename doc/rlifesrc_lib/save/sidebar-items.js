@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["SetCellSer","A representation of setting a cell which can be easily serialized."],["WorldSer","A representation of the world which can be easily serialized."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ImplFlags","Flags to imply the state of a cell and its neighbors."],["NbhdDesc","The neighborhood descriptor."],["NbhdDescGen","The neighborhood descriptor."],["NtLife","Non-totalistic Life-like rules."],["NtLifeGen","Non-totalistic Life-like Generations rules."]]});
