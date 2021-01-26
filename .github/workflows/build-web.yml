@@ -38,11 +38,17 @@ jobs:
 
       - name: Run wasm-bindgen
         run: |
-          wasm-bindgen --target web --no-typescript --out-dir $DEPLOY_PATH $TARGET_PATH/main.wasm
-          wasm-bindgen --target no-modules --no-typescript --out-dir $DEPLOY_PATH $TARGET_PATH/worker.wasm
+          wasm-bindgen --target web --no-typescript --out-dir ${DEPLOY_PATH} ${TARGET_PATH}/main.wasm
+          wasm-bindgen --target no-modules --no-typescript --out-dir ${DEPLOY_PATH} ${TARGET_PATH}/worker.wasm
 
       - name: Copy files
-        run: cp -r web/static/* $DEPLOY_PATH
+        run: cp -r web/static/* ${DEPLOY_PATH}
+
+      - name: Build documentations
+        run: cargo doc --features=serde --document-private-items --manifest-path lib/Cargo.toml
+
+      - name: Copy files
+        run: cp -r target/doc ${DEPLOY_PATH}/doc
 
       - name: Upload build result
         uses: actions/upload-artifact@v2
