@@ -40,6 +40,8 @@ pub(crate) enum Reason {
     /// leads to a conflict.
     ///
     /// Remembers the number of remaining states to try.
+    ///
+    /// Only used in Generations rules.
     TryAnother(usize),
 }
 

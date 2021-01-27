@@ -2,6 +2,7 @@
 #![macro_use]
 
 /// Implements `Rule` trait for a rule and the corresponding Generations rule.
+#[doc(hidden)]
 macro_rules! impl_rule {
     {
         $(#[$doc_desc:meta])*

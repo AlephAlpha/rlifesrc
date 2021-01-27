@@ -3,6 +3,7 @@
 //! For the notations of rule strings, please see
 //! [this article on LifeWiki](https://conwaylife.com/wiki/Rulestring).
 
+#[doc(hidden)]
 mod macros;
 
 mod life;
