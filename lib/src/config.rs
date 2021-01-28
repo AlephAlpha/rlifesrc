@@ -186,6 +186,39 @@ pub enum Symmetry {
     D8,
 }
 
+impl PartialOrd for Symmetry {
+    /// We say that symmetry `a` is smaller than symmetry `b`,
+    /// when all patterns with symmetry `b` also have symmetry `a`.
+    ///
+    /// For example, `Symmetry::C1` is smaller than all other symmetries.
+    fn partial_cmp(&self, other: &Symmetry) -> Option<Ordering> {
+        if self == other {
+            return Some(Ordering::Equal);
+        }
+        match (self, other) {
+            (Symmetry::C1, _) => Some(Ordering::Less),
+            (Symmetry::D8, _) => Some(Ordering::Greater),
+            (_, Symmetry::C1) => Some(Ordering::Greater),
+            (_, Symmetry::D8) => Some(Ordering::Less),
+            (Symmetry::C2, Symmetry::C4) => Some(Ordering::Less),
+            (Symmetry::C2, Symmetry::D4Ortho) => Some(Ordering::Less),
+            (Symmetry::C2, Symmetry::D4Diag) => Some(Ordering::Less),
+            (Symmetry::C4, Symmetry::C2) => Some(Ordering::Greater),
+            (Symmetry::D4Ortho, Symmetry::C2) => Some(Ordering::Greater),
+            (Symmetry::D4Diag, Symmetry::C2) => Some(Ordering::Greater),
+            (Symmetry::D2Row, Symmetry::D4Ortho) => Some(Ordering::Less),
+            (Symmetry::D4Ortho, Symmetry::D2Row) => Some(Ordering::Greater),
+            (Symmetry::D2Col, Symmetry::D4Ortho) => Some(Ordering::Less),
+            (Symmetry::D4Ortho, Symmetry::D2Col) => Some(Ordering::Greater),
+            (Symmetry::D2Diag, Symmetry::D4Diag) => Some(Ordering::Less),
+            (Symmetry::D4Diag, Symmetry::D2Diag) => Some(Ordering::Greater),
+            (Symmetry::D2Antidiag, Symmetry::D4Diag) => Some(Ordering::Less),
+            (Symmetry::D4Diag, Symmetry::D2Antidiag) => Some(Ordering::Greater),
+            _ => None,
+        }
+    }
+}
+
 impl FromStr for Symmetry {
     type Err = String;
 
