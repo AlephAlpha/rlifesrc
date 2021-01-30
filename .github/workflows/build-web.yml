@@ -73,7 +73,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: build
+    needs: [test, build]
     runs-on: ubuntu-latest
     env:
       DEPLOY_PATH: target/deploy

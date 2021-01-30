@@ -569,10 +569,10 @@ impl Settings {
                         selected=self.config.search_order == Some(SearchOrder::Diagonal)>
                         { "Diagonal" }
                     </option>
-                    <option value="Custom Order"
+                    <option value=""
                         disabled=true
                         selected=matches!(self.config.search_order, Some(SearchOrder::FromVec(_)))>
-                        { "Diagonal" }
+                        { "Custom Order" }
                     </option>
                 </select>
             </div>
