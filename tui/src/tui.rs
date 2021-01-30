@@ -134,7 +134,7 @@ impl<'a, W: Write> App<'a, W> {
         for y in 0..self.world_size.1 {
             let mut line = String::new();
             for x in 0..self.world_size.0 {
-                let state = self.search.get_cell_state((x, y, self.gen)).unwrap();
+                let state = self.search.get_cell_state((x, y, self.gen));
                 match state {
                     Some(DEAD) => line.push('.'),
                     Some(ALIVE) => {

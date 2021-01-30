@@ -7,6 +7,7 @@
 - Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
 - Now `rlifesrc-lib` supports specifying the search order by a vector of coordinates. This is not yet supported in either the TUI or the Web version, but you can hack the save file.
 - The `non empty front` option is removed. Now `rlifesrc` would automatically force the front to be non-empty when it can be proved that no solution would be missed.
+- Fix some bugs.
 - Update dependencies.
 
 ## 0.3.5 - 2020/12/22

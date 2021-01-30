@@ -104,6 +104,17 @@ fn diagonal() -> Result<(), Error> {
 }
 
 #[test]
+fn diagonal_width() -> Result<(), Error> {
+    let config = Config::new(10, 10, 4)
+        .set_translate(1, 1)
+        .set_search_order(Some(SearchOrder::Diagonal))
+        .set_diagonal_width(4);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+    Ok(())
+}
+
+#[test]
 fn b0() -> Result<(), Error> {
     let config = Config::new(3, 3, 2).set_rule_string("B026/S1");
     let mut search = config.world()?;

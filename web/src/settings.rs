@@ -1,6 +1,7 @@
 use rlifesrc_lib::{
     rules::NtLifeGen, Config, NewState, SearchOrder, SkipLevel, Symmetry, Transform,
 };
+use std::matches;
 use wasm_bindgen::prelude::wasm_bindgen;
 use yew::{
     html, html::ChangeData, Callback, Component, ComponentLink, Html, Properties, ShouldRender,
@@ -425,20 +426,32 @@ impl Settings {
                     { ":" }
                 </label>
                 <select id="set_trans" onchange=onchange>
-                    <option> { "Id" } </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.transform == Transform::Id>
+                        { "Id" }
+                    </option>
+                    <option selected=self.config.transform == Transform::Rotate90
+                        disabled=self.config.width != self.config.height>
                         { "Rotate 90°" }
                     </option>
-                    <option> { "Rotate 180°" } </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.transform == Transform::Rotate180>
+                        { "Rotate 180°" }
+                    </option>
+                    <option selected=self.config.transform == Transform::Rotate270
+                        disabled=self.config.width != self.config.height>
                         { "Rotate 270°" }
                     </option>
-                    <option> { "Flip |" } </option>
-                    <option> { "Flip -" } </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.transform == Transform::FlipCol>
+                        { "Flip |" }
+                    </option>
+                    <option selected=self.config.transform == Transform::FlipRow>
+                        { "Flip -" }
+                    </option>
+                    <option selected=self.config.transform == Transform::FlipDiag
+                        disabled=self.config.width != self.config.height>
                         { "Flip \\" }
                     </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.transform == Transform::FlipAntidiag
+                        disabled=self.config.width != self.config.height>
                         { "Flip /" }
                     </option>
                 </select>
@@ -475,24 +488,39 @@ impl Settings {
                     { ":" }
                 </label>
                 <select id="set_sym" onchange=onchange>
-                    <option> { "C1" } </option>
-                    <option> { "C2" } </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.symmetry == Symmetry::C1>
+                        { "C1" }
+                    </option>
+                    <option selected=self.config.symmetry == Symmetry::C2>
+                        { "C2" }
+                    </option>
+                    <option selected=self.config.symmetry == Symmetry::C4
+                        disabled=self.config.width != self.config.height>
                         { "C4" }
                     </option>
-                    <option> { "D2|" } </option>
-                    <option> { "D2-" } </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.symmetry == Symmetry::D2Col>
+                        { "D2|" }
+                    </option>
+                    <option selected=self.config.symmetry == Symmetry::D2Row>
+                        { "D2-" }
+                    </option>
+                    <option selected=self.config.symmetry == Symmetry::D2Diag
+                        disabled=self.config.width != self.config.height>
                         { "D2\\" }
                     </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.symmetry == Symmetry::D2Antidiag
+                        disabled=self.config.width != self.config.height>
                         { "D2/" }
                     </option>
-                    <option> { "D4+" } </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.symmetry == Symmetry::D4Ortho>
+                        { "D4+" }
+                    </option>
+                    <option selected=self.config.symmetry == Symmetry::D4Diag
+                        disabled=self.config.width != self.config.height>
                         { "D4X" }
                     </option>
-                    <option disabled=self.config.width != self.config.height>
+                    <option selected=self.config.symmetry == Symmetry::D8
+                        disabled=self.config.width != self.config.height>
                         { "D8" }
                     </option>
                 </select>
@@ -525,10 +553,25 @@ impl Settings {
                     { ":" }
                 </label>
                 <select id="set_order" onchange=onchange>
-                    <option> { "Automatic" } </option>
-                    <option value="Column"> { "Column first" } </option>
-                    <option value="Row"> { "Row first" } </option>
-                    <option value="Diagonal" disabled=self.config.width != self.config.height>
+                    <option selected=self.config.search_order.is_none()>
+                        { "Automatic" }
+                    </option>
+                    <option value="Column"
+                        selected=self.config.search_order == Some(SearchOrder::ColumnFirst)>
+                        { "Column first" }
+                    </option>
+                    <option value="Row"
+                        selected=self.config.search_order == Some(SearchOrder::RowFirst)>
+                        { "Row first" }
+                    </option>
+                    <option value="Diagonal"
+                        disabled=self.config.width != self.config.height
+                        selected=self.config.search_order == Some(SearchOrder::Diagonal)>
+                        { "Diagonal" }
+                    </option>
+                    <option value="Custom Order"
+                        disabled=true
+                        selected=matches!(self.config.search_order, Some(SearchOrder::FromVec(_)))>
                         { "Diagonal" }
                     </option>
                 </select>
@@ -557,10 +600,16 @@ impl Settings {
                     </abbr>
                     { ":" }
                 </label>
-                <select id="set_order" onchange=onchange>
-                    <option> { "Alive" } </option>
-                    <option> { "Dead" } </option>
-                    <option> { "Random" } </option>
+                <select id="set_choose" onchange=onchange>
+                    <option selected=self.config.new_state == NewState::ChooseAlive>
+                        { "Alive" }
+                    </option>
+                    <option selected=self.config.new_state == NewState::ChooseDead>
+                        { "Dead" }
+                    </option>
+                    <option selected=self.config.new_state == NewState::Random>
+                        { "Random" }
+                    </option>
                 </select>
             </div>
         }
@@ -591,11 +640,21 @@ impl Settings {
                     { ":" }
                 </label>
                 <select id="set_skip" onchange=onchange>
-                    <option> { "Trivial" } </option>
-                    <option> { "Stable" } </option>
-                    <option> { "Subperiod Oscillator" } </option>
-                    <option selected=true> { "Subperiod Spaceship" } </option>
-                    <option> { "Boring Symmetric" } </option>
+                    <option selected=self.config.skip_level == SkipLevel::SkipTrivial>
+                        { "Trivial" }
+                    </option>
+                    <option selected=self.config.skip_level == SkipLevel::SkipStable>
+                        { "Stable" }
+                    </option>
+                    <option selected=self.config.skip_level == SkipLevel::SkipSubperiodOscillator>
+                        { "Subperiod Oscillator" }
+                    </option>
+                    <option selected=self.config.skip_level == SkipLevel::SkipSubperiodSpaceship>
+                        { "Subperiod Spaceship" }
+                    </option>
+                    <option selected=self.config.skip_level == SkipLevel::SkipSymmetric>
+                        { "Boring Symmetric" }
+                    </option>
                 </select>
             </div>
         }

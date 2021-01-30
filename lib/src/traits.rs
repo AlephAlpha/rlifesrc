@@ -2,7 +2,6 @@
 use crate::{
     cells::{Coord, State, ALIVE, DEAD},
     config::Config,
-    error::Error,
     rules::Rule,
     search::Status,
     world::World,
@@ -25,7 +24,7 @@ pub trait Search {
     fn search(&mut self, max_step: Option<u64>) -> Status;
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
-    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error>;
+    fn get_cell_state(&self, coord: Coord) -> Option<State>;
 
     /// World configuration.
     fn config(&self) -> &Config;
@@ -86,7 +85,7 @@ pub trait Search {
         .unwrap();
         for y in 0..self.config().height {
             for x in 0..self.config().width {
-                let state = self.get_cell_state((x, y, t)).unwrap();
+                let state = self.get_cell_state((x, y, t));
                 match state {
                     Some(DEAD) => str.push('.'),
                     Some(ALIVE) => {
@@ -120,7 +119,7 @@ pub trait Search {
         let mut str = String::new();
         for y in 0..self.config().height {
             for x in 0..self.config().width {
-                let state = self.get_cell_state((x, y, t)).unwrap();
+                let state = self.get_cell_state((x, y, t));
                 match state {
                     Some(DEAD) => str.push('.'),
                     Some(_) => str.push('o'),
@@ -139,7 +138,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.search(max_step)
     }
 
-    fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error> {
+    fn get_cell_state(&self, coord: Coord) -> Option<State> {
         self.get_cell_state(coord)
     }
 

@@ -3,7 +3,6 @@
 use crate::{
     cells::{CellRef, Coord, LifeCell, State, DEAD},
     config::{Config, SearchOrder, SkipLevel, Symmetry, Transform},
-    error::Error,
     rules::Rule,
     search::{Reason, SetCell},
 };
@@ -136,6 +135,11 @@ impl<'a, R: Rule> World<'a, R> {
         ];
         for x in -1..=self.config.width {
             for y in -1..=self.config.height {
+                if let Some(d) = self.config.diagonal_width {
+                    if (x - y).abs() > d + 1 {
+                        continue;
+                    }
+                }
                 for t in 0..self.config.period {
                     let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
                     for (i, (nx, ny)) in NBHD.iter().enumerate() {
@@ -160,6 +164,11 @@ impl<'a, R: Rule> World<'a, R> {
     fn init_pred_succ(mut self) -> Self {
         for x in -1..=self.config.width {
             for y in -1..=self.config.height {
+                if let Some(d) = self.config.diagonal_width {
+                    if (x - y).abs() > d + 1 {
+                        continue;
+                    }
+                }
                 for t in 0..self.config.period {
                     let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
@@ -180,6 +189,8 @@ impl<'a, R: Rule> World<'a, R> {
                             && x < self.config.width
                             && 0 <= y
                             && y < self.config.height
+                            && (self.config.diagonal_width.is_none()
+                                || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
                             self.set_stack.push(SetCell::new(cell, Reason::Deduce));
@@ -210,6 +221,11 @@ impl<'a, R: Rule> World<'a, R> {
     fn init_sym(mut self) -> Self {
         for x in -1..=self.config.width {
             for y in -1..=self.config.height {
+                if let Some(d) = self.config.diagonal_width {
+                    if (x - y).abs() > d + 1 {
+                        continue;
+                    }
+                }
                 for t in 0..self.config.period {
                     let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
@@ -264,6 +280,8 @@ impl<'a, R: Rule> World<'a, R> {
                             && x < self.config.width
                             && 0 <= y
                             && y < self.config.height
+                            && (self.config.diagonal_width.is_none()
+                                || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
                             self.set_stack.push(SetCell::new(cell, Reason::Deduce));
@@ -304,7 +322,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// [`next_unknown`](#structfield.next_unknown) to be this cell.
     fn set_next(&mut self, coord: Coord) {
         if let Some(cell) = self.find_cell(coord) {
-            if cell.state.get().is_none() {
+            if cell.state.get().is_none() && cell.next.is_none() {
                 let next = mem::replace(&mut self.next_unknown, Some(cell));
                 let cell_ptr = self.find_cell_mut(coord).unwrap();
                 unsafe {
@@ -350,6 +368,8 @@ impl<'a, R: Rule> World<'a, R> {
             && y <= self.config.height
             && t >= 0
             && t < self.config.period
+            && (self.config.diagonal_width.is_none()
+                || (x - y).abs() <= self.config.diagonal_width.unwrap() + 1)
         {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
             Some(&mut self.cells[index as usize])
@@ -469,11 +489,7 @@ impl<'a, R: Rule> World<'a, R> {
                     .step_by(self.config.period as usize)
                     .all(|c| {
                         let (x, y, _) = c.coord;
-                        c.state.get()
-                            == self.find_cell((x - dx, y - dy, t)).map_or_else(
-                                || self.find_cell((x, y, t)).map(|c1| c1.background),
-                                |c1| c1.state.get(),
-                            )
+                        c.state.get() == self.get_cell_state((x - dx, y - dy, t))
                     })
             }
         })
@@ -503,18 +519,17 @@ impl<'a, R: Rule> World<'a, R> {
                             (self.config.height - 1 - y, self.config.width - 1 - x)
                         }
                     };
-                    c.state.get()
-                        == self
-                            .find_cell((new_x, new_y, t))
-                            .map_or(Some(c.background), |c1| c1.state.get())
+                    c.state.get() == self.get_cell_state((new_x, new_y, t))
                 })
     }
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
-    pub fn get_cell_state(&self, coord: Coord) -> Result<Option<State>, Error> {
-        self.find_cell(self.config.translate(coord))
-            .map(|cell| cell.state.get())
-            .ok_or(Error::GetCellError(coord))
+    pub fn get_cell_state(&self, coord: Coord) -> Option<State> {
+        let (x, y, t) = self.config.translate(coord);
+        self.find_cell((x, y, t)).map_or_else(
+            || self.find_cell((0, 0, t)).map(|c1| c1.background),
+            |c1| c1.state.get(),
+        )
     }
 
     /// Minimum number of known living cells in all generation.
