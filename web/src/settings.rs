@@ -594,7 +594,7 @@ impl Settings {
                     <option> { "Trivial" } </option>
                     <option> { "Stable" } </option>
                     <option> { "Subperiod Oscillator" } </option>
-                    <option> { "Subperiod Spaceship" } </option>
+                    <option selected=true> { "Subperiod Spaceship" } </option>
                     <option> { "Boring Symmetric" } </option>
                 </select>
             </div>
