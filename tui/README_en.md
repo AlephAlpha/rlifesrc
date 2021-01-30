@@ -43,13 +43,6 @@ FLAGS:
             Prints all possible results instead of only the first one
             Only useful when --no-tui is set.
 
-    -f, --front
-            Force the front to be nonempty
-            Depending on the search order, the 'front' means:
-            * the first row, when the search order is row first;
-            * the first column, when the search order is column first;
-            * the first row plus the first column, when the search order is diagonal.
-
     -n, --no-tui
             Starts searching immediately, without entering the TUI
 

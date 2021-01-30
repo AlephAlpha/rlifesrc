@@ -51,6 +51,14 @@ pub struct World<'a, R: Rule> {
     ///
     /// There must be no unknown cell before this cell.
     pub(crate) next_unknown: Option<CellRef<'a, R>>,
+
+    /// Whether to force the first row/column to be nonempty.
+    ///
+    /// Depending on the search order, the 'front' means:
+    /// * the first row, when the search order is row first;
+    /// * the first column, when the search order is column first;
+    /// * the first row plus the first column, when the search order is diagonal.
+    pub(crate) non_empty_front: bool,
 }
 
 impl<'a, R: Rule> World<'a, R> {
@@ -61,31 +69,7 @@ impl<'a, R: Rule> World<'a, R> {
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
         let mut cells = Vec::with_capacity(size);
 
-        // Whether to consider only the first generation of the front.
-        let front_gen0 = !rule.has_b0()
-            && config.diagonal_width.is_none()
-            && match search_order {
-                SearchOrder::ColumnFirst => {
-                    config.dy == 0
-                        && config.dx >= 0
-                        && (config.transform == Transform::Id
-                            || config.transform == Transform::FlipRow)
-                }
-                SearchOrder::RowFirst => {
-                    config.dx == 0
-                        && config.dy >= 0
-                        && (config.transform == Transform::Id
-                            || config.transform == Transform::FlipCol)
-                }
-                SearchOrder::Diagonal => false,
-            };
-
-        // Whether to consider only half of the first generation of the front.
-        let front_half = config.diagonal_width.is_none()
-            && match config.symmetry {
-                Symmetry::D2Diag | Symmetry::D2Antidiag | Symmetry::D4Diag => false,
-                _ => front_gen0,
-            };
+        let is_front = config.is_front_fn(rule.has_b0(), &search_order);
 
         // Fills the vector with dead cells,
         // and checks whether it is on the first row or column.
@@ -106,35 +90,9 @@ impl<'a, R: Rule> World<'a, R> {
                         DEAD
                     };
                     let mut cell = LifeCell::new((x, y, t), state, succ_state);
-                    match search_order {
-                        SearchOrder::ColumnFirst => {
-                            if front_gen0 {
-                                if x == (config.dx - 1).max(0)
-                                    && t == 0
-                                    && (!front_half || 2 * y < config.height)
-                                {
-                                    cell.is_front = true
-                                }
-                            } else if x == 0 {
-                                cell.is_front = true
-                            }
-                        }
-                        SearchOrder::RowFirst => {
-                            if front_gen0 {
-                                if y == (config.dy - 1).max(0)
-                                    && t == 0
-                                    && (!front_half || 2 * x < config.width)
-                                {
-                                    cell.is_front = true
-                                }
-                            } else if y == 0 {
-                                cell.is_front = true
-                            }
-                        }
-                        SearchOrder::Diagonal => {
-                            if x == 0 || y == 0 {
-                                cell.is_front = true
-                            }
+                    if let Some(is_front) = &is_front {
+                        if is_front((x, y, t)) {
+                            cell.is_front = true;
                         }
                     }
                     cells.push(cell);
@@ -152,12 +110,13 @@ impl<'a, R: Rule> World<'a, R> {
             set_stack: Vec::with_capacity(size),
             check_index: 0,
             next_unknown: None,
+            non_empty_front: is_front.is_some(),
         }
         .init_nbhd()
         .init_pred_succ()
         .init_sym()
         .init_state()
-        .init_search_order()
+        .init_search_order(search_order.as_ref())
     }
 
     /// Links the cells to their neighbors.
@@ -357,8 +316,8 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Sets the search order.
-    fn init_search_order(mut self) -> Self {
-        for coord in self.config.search_order_iter() {
+    fn init_search_order(mut self, search_order: &SearchOrder) -> Self {
+        for coord in self.config.search_order_iter(search_order) {
             self.set_next(coord);
         }
         self
@@ -421,7 +380,7 @@ impl<'a, R: Rule> World<'a, R> {
         }
         if cell.is_front && state == cell.background {
             self.front_cell_count -= 1;
-            if self.config.non_empty_front && self.front_cell_count == 0 {
+            if self.non_empty_front && self.front_cell_count == 0 {
                 result = false;
             }
         }

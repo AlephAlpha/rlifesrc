@@ -6,6 +6,8 @@ The program is based on David Bell's [lifesrc](https://github.com/DavidKinder/Xl
 
 Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules. Supports for Generations rules are experimental.
 
+See also the documentation for [`rlifesrc-lib`](https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/) and the [Changelog](https://github.com/AlephAlpha/rlifesrc/blob/master/CHANGELOG.md).
+
 ## Usage
 
 This algorithm is suitable for long and thin or flat and wide patterns, but it can also search for other patterns.
@@ -124,16 +126,6 @@ The levels are:
 * `Subperiod Oscillator`: Skips stable patterns, and oscillators whose actual periods are smaller than the given period;
 * `Subperiod Spaceship`: Skips stable patterns, and oscillators and spaceships whose actual periods are smaller than the given period;
 * `Boring Symmetric`: Skips all the above, and symmetric patterns which are invariant under the current transformation. For example, skips patterns with `D2|` symmetry when the transformation is `Flip|`.
-
-### Non empty front
-
-Force the front to be nonempty.
-
-Depending on the search order, the 'front' means:
-
-* the first row, when the search order is row first;
-* the first column, when the search order is column first;
-* the first row plus the first column, when the search order is diagonal.
 
 ### Reduce max cell count
 

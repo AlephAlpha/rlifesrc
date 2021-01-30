@@ -220,19 +220,6 @@ impl Args {
                     .validator(|d| d.parse::<u32>().map(|_| ()).map_err(|e| e.to_string())),
             )
             .arg(
-                Arg::with_name("FRONT")
-                    .help("Force the first row or column to be nonempty")
-                    .long_help(
-                        "Force the front to be nonempty\n\
-                         Depending on the search order, the 'front' means:\n\
-                         * the first row, when the search order is row first;\n\
-                         * the first column, when the search order is column first;\n\
-                         * the first row plus the first column, when the search order is diagonal.\n",
-                    )
-                    .short("f")
-                    .long("front"),
-            )
-            .arg(
                 Arg::with_name("REDUCE")
                     .help("Reduce the max cell count when a result is found")
                     .long_help(
@@ -335,7 +322,6 @@ impl Args {
             0 => None,
             i => Some(i),
         };
-        let non_empty_front = matches.is_present("FRONT");
         let reduce_max = matches.is_present("REDUCE");
         let skip_level = match matches.value_of("SKIP").unwrap() {
             "trivial" => SkipLevel::SkipTrivial,
@@ -382,7 +368,6 @@ impl Args {
             .set_search_order(search_order)
             .set_new_state(new_state)
             .set_max_cell_count(max_cell_count)
-            .set_non_empty_front(non_empty_front)
             .set_reduce_max(reduce_max)
             .set_rule_string(rule_string)
             .set_diagonal_width(diagonal_width)

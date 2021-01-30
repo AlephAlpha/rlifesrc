@@ -8,7 +8,7 @@
 
 支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
 
-[点此试用。](https://alephalpha.github.io/rlifesrc/)
+[点此试用。](https://alephalpha.github.io/rlifesrc/)（[国内镜像](https://alephalpha.gitee.io/rlifesrc/)）
 
 这里是 rlifesrc 的网页版。文本界面的说明见[`tui/`](../tui/README.md) 目录中的 `README.md`。
 
@@ -184,18 +184,6 @@ python3 -m http.server
   * `Subperiod Oscillator`：跳过静止的图样，以及实际周期小于指定周期的振荡子；
   * `Subperiod Spaceship`：跳过静止的图样，以及实际周期小于指定周期的振荡子和飞船；
   * `Boring Symmetric`：跳过以上全部，以及在当前变换下不变的对称图样；比如说，当变换为 `Flip|` 时跳过 `D2|` 对称的图样。
-  </dd>
-
-  <dt>Non empty front</dt>
-  <dd>
-  强制要求“前线”非空。
-
-  根据搜索顺序的不同，此处的“前线”指的是：
-  * 第一行，若搜索顺序是先搜行；
-  * 第一列，若搜索顺序是先搜列；
-  * 第一行加第一列，若搜索顺序是对角方向。
-
-  在搜索宽扁或者瘦高的不对称或沿长边 `C2` 对称的图样时，勾选此选项可去掉大量的重复搜索。
   </dd>
 
   <dt>Reduce max cell count</dt>

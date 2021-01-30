@@ -40,7 +40,6 @@ pub enum Msg {
     SetMax(Option<usize>),
     SetDiag(Option<isize>),
     SetSkip(SkipLevel),
-    SetFront,
     SetReduce,
     None,
 }
@@ -93,7 +92,6 @@ impl Component for Settings {
             Msg::SetMax(max_cell_count) => self.config.max_cell_count = max_cell_count,
             Msg::SetDiag(diagonal_width) => self.config.diagonal_width = diagonal_width,
             Msg::SetSkip(skip_level) => self.config.skip_level = skip_level,
-            Msg::SetFront => self.config.non_empty_front ^= true,
             Msg::SetReduce => self.config.reduce_max ^= true,
             Msg::Apply => {
                 self.callback.emit(self.config.clone());
@@ -160,7 +158,6 @@ impl Settings {
                 { self.set_order() }
                 { self.set_choose() }
                 { self.set_skip() }
-                { self.set_front() }
                 { self.set_reduce() }
             </div>
         }
@@ -377,25 +374,6 @@ impl Settings {
                     value=value
                     min="0"
                     onchange=onchange/>
-            </div>
-        }
-    }
-
-    fn set_front(&self) -> Html {
-        html! {
-            <div class="mui-checkbox">
-                <label>
-                    <input id="set_front"
-                        type="checkbox"
-                        checked=self.config.non_empty_front
-                        onclick=self.link.callback(|_| Msg::SetFront)/>
-                    <abbr title="Depending on the search order, the 'front' means:\n\
-                        * the first row, when the search order is row first;\n\
-                        * the first column, when the search order is column first;\n\
-                        * the first row plus the first column, when the search order is diagonal.">
-                        { "Force the front to be nonempty" }
-                    </abbr>
-                </label>
             </div>
         }
     }

@@ -12,6 +12,8 @@ This is the library for rlifesrc. There is also a [command-line tool with a TUI]
 
 You can try the web app [here](https://alephalpha.github.io/rlifesrc/).
 
+For the documentation of released version of this crate, please visit [docs.rs](https://docs.rs/rlifesrc-lib/). There is also [a documentation for the unreleased version on GitHub](https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/), which includes private functions and methods.
+
 # Example
 
 Finds the [25P3H1V0.1](https://conwaylife.com/wiki/25P3H1V0.1) spaceship.

@@ -1,4 +1,4 @@
-#![cfg(any(feature = "save", doc))]
+#![cfg(any(feature = "serde", doc))]
 //! Saves the world.
 
 use crate::{

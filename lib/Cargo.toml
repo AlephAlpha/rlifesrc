@@ -18,12 +18,10 @@ rand = "0.8.3"
 getrandom = "0.2.2"
 serde = { version = "1.0.123", features = ["derive"], optional = true }
 thiserror = "1.0.23"
-typetag = { version = "0.1.7", optional = true }
 
 [features]
 default = []
-save = ["serde", "typetag"]
-js = ["save", "getrandom/js"]
+js = ["serde", "getrandom/js"]
 
 [package.metadata.docs.rs]
 features = ["serde"]

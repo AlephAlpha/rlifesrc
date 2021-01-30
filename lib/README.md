@@ -12,6 +12,8 @@
 
 [点此试用网页版。](https://alephalpha.github.io/rlifesrc/)
 
+已发布的版本的文档可见 [docs.rs](https://docs.rs/rlifesrc-lib/)；GitHub 上未发布的版本的文档可见[此处](https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/)，其中包含了不公开的函数和方法。
+
 # 例子
 
 试找 [25P3H1V0.1](https://conwaylife.com/wiki/25P3H1V0.1) 飞船。

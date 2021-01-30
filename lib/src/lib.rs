@@ -50,11 +50,10 @@ mod config;
 mod error;
 pub mod rules;
 mod search;
-pub mod search_order;
 mod traits;
 mod world;
 
-#[cfg(any(feature = "save", doc))]
+#[cfg(any(feature = "serde", doc))]
 pub mod save;
 
 pub use cells::{Coord, State, ALIVE, DEAD};
