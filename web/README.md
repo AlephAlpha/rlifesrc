@@ -136,7 +136,7 @@ python3 -m http.server
 
   8 种不同的变换，对应二面体群 _D_<sub>8</sub> 的 8 个元素。`Id` 表示恒等变换。`Rotate` 表示旋转， 后面的数字表示逆时针旋转的角度。`Flip` 表示翻转， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `Flip |`。
 
-  注意有些变换要求世界是正方形。
+  注意有些变换要求世界是正方形，有些则要求没有对角宽度。
   </dd>
 
   <dt>Symmetry</dt>
@@ -145,7 +145,7 @@ python3 -m http.server
 
   10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。这些对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)。详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
 
-  注意有些对称性要求世界是正方形。
+  注意有些对称性要求世界是正方形，有些则要求没有对角宽度。
   </dd>
 
   <dt>Max cell count</dt>

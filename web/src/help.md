@@ -83,7 +83,7 @@ After the last generation in a period, the pattern will return to the first gene
 
 For example, if you want to find a vertical spaceship with [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship), you can set the transformation to `F|`.
 
-Some transformations require that the world is square.
+Some transformations require that the world is square. Some are only valid when the world have no diagonal width.
 
 ### Symmetry
 
@@ -91,7 +91,7 @@ Symmetry of the pattern.
 
 10 different symmetries correspond to the 10 subgroups of the dihedral group _D_<sub>8</sub>. The notations are stolen from Oscar Cunningham's [Logic Life Search](https://github.com/OscarCunningham/logic-life-search). Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
 
-Some symmetries require that the world is square.
+Some symmetries require that the world is square. Some are only valid when the world have no diagonal width.
 
 ### Max cell count
 
@@ -107,7 +107,7 @@ It will always search all generations of one cell before going to another cell.
 
 `Automatic` means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns. When the world is square and the diagonal width is not larger than width of the world, it would choose diagonal.
 
-Diagonal search order requires  that the world is square.
+Diagonal search order requires that the world is square.
 
 ### Choice of state for unknown cells
 

@@ -1,9 +1,6 @@
 name: Mirror this repo to Gitee
 
-on:
-  push:
-    branches-ignore:
-      - gh-pages
+on: push
 
 jobs:
   mirror:

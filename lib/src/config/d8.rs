@@ -11,6 +11,7 @@ use std::{
     cmp::Ordering,
     fmt::{self, Display, Formatter},
     matches,
+    ops::Mul,
     str::FromStr,
     vec,
 };
@@ -37,6 +38,7 @@ use serde::{Deserialize, Serialize};
 /// The symbol after it is the axis of reflection.
 ///
 /// Some of the transformations are only valid when the world is square.
+/// and some are only valid when the world has no diagonal width.
 #[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -49,6 +51,8 @@ pub enum Transform {
     /// `R90`.
     ///
     /// 90° rotation counterclockwise.
+    ///
+    /// Requires the world to be square and have no diagonal width.
     #[cfg_attr(feature = "serde", serde(rename = "R90"))]
     Rotate90,
     /// `R180`.
@@ -59,26 +63,36 @@ pub enum Transform {
     /// `R270`.
     ///
     /// 270° rotation counterclockwise.
+    ///
+    /// Requires the world to be square and have no diagonal width.
     #[cfg_attr(feature = "serde", serde(rename = "R270"))]
     Rotate270,
     /// `F-`.
     ///
     /// Reflection across the middle row.
+    ///
+    /// Requires the world to have no diagonal width.
     #[cfg_attr(feature = "serde", serde(rename = "F-"))]
     FlipRow,
     /// `F|`.
     ///
     /// Reflection across the middle column.
+    ///
+    /// Requires the world to have no diagonal width.
     #[cfg_attr(feature = "serde", serde(rename = "F|"))]
     FlipCol,
     /// `F\`.
     ///
     /// Reflection across the diagonal.
+    ///
+    /// Requires the world to be square.
     #[cfg_attr(feature = "serde", serde(rename = "F\\"))]
     FlipDiag,
     /// `F/`.
     ///
     /// Reflection across the antidiagonal.
+    ///
+    /// Requires the world to be square.
     #[cfg_attr(feature = "serde", serde(rename = "F/"))]
     FlipAntidiag,
 }
@@ -118,18 +132,92 @@ impl Display for Transform {
     }
 }
 
+impl Mul for Transform {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            (Transform::Id, Transform::Id)
+            | (Transform::Rotate90, Transform::Rotate270)
+            | (Transform::Rotate180, Transform::Rotate180)
+            | (Transform::Rotate270, Transform::Rotate90)
+            | (Transform::FlipRow, Transform::FlipRow)
+            | (Transform::FlipCol, Transform::FlipCol)
+            | (Transform::FlipDiag, Transform::FlipDiag)
+            | (Transform::FlipAntidiag, Transform::FlipAntidiag) => Transform::Id,
+            (Transform::Id, Transform::Rotate90)
+            | (Transform::Rotate90, Transform::Id)
+            | (Transform::Rotate180, Transform::Rotate270)
+            | (Transform::Rotate270, Transform::Rotate180)
+            | (Transform::FlipRow, Transform::FlipAntidiag)
+            | (Transform::FlipCol, Transform::FlipDiag)
+            | (Transform::FlipDiag, Transform::FlipRow)
+            | (Transform::FlipAntidiag, Transform::FlipCol) => Transform::Rotate90,
+            (Transform::Id, Transform::Rotate180)
+            | (Transform::Rotate90, Transform::Rotate90)
+            | (Transform::Rotate180, Transform::Id)
+            | (Transform::Rotate270, Transform::Rotate270)
+            | (Transform::FlipRow, Transform::FlipCol)
+            | (Transform::FlipCol, Transform::FlipRow)
+            | (Transform::FlipDiag, Transform::FlipAntidiag)
+            | (Transform::FlipAntidiag, Transform::FlipDiag) => Transform::Rotate180,
+            (Transform::Id, Transform::Rotate270)
+            | (Transform::Rotate90, Transform::Rotate180)
+            | (Transform::Rotate180, Transform::Rotate90)
+            | (Transform::Rotate270, Transform::Id)
+            | (Transform::FlipRow, Transform::FlipDiag)
+            | (Transform::FlipCol, Transform::FlipAntidiag)
+            | (Transform::FlipDiag, Transform::FlipCol)
+            | (Transform::FlipAntidiag, Transform::FlipRow) => Transform::Rotate270,
+            (Transform::Id, Transform::FlipRow)
+            | (Transform::Rotate90, Transform::FlipAntidiag)
+            | (Transform::Rotate180, Transform::FlipCol)
+            | (Transform::Rotate270, Transform::FlipDiag)
+            | (Transform::FlipRow, Transform::Id)
+            | (Transform::FlipCol, Transform::Rotate180)
+            | (Transform::FlipDiag, Transform::Rotate90)
+            | (Transform::FlipAntidiag, Transform::Rotate270) => Transform::FlipRow,
+            (Transform::Id, Transform::FlipCol)
+            | (Transform::Rotate90, Transform::FlipDiag)
+            | (Transform::Rotate180, Transform::FlipRow)
+            | (Transform::Rotate270, Transform::FlipAntidiag)
+            | (Transform::FlipRow, Transform::Rotate180)
+            | (Transform::FlipCol, Transform::Id)
+            | (Transform::FlipDiag, Transform::Rotate270)
+            | (Transform::FlipAntidiag, Transform::Rotate90) => Transform::FlipCol,
+            (Transform::Id, Transform::FlipDiag)
+            | (Transform::Rotate90, Transform::FlipRow)
+            | (Transform::Rotate180, Transform::FlipAntidiag)
+            | (Transform::Rotate270, Transform::FlipCol)
+            | (Transform::FlipRow, Transform::Rotate270)
+            | (Transform::FlipCol, Transform::Rotate90)
+            | (Transform::FlipDiag, Transform::Id)
+            | (Transform::FlipAntidiag, Transform::Rotate180) => Transform::FlipDiag,
+            (Transform::Id, Transform::FlipAntidiag)
+            | (Transform::Rotate90, Transform::FlipCol)
+            | (Transform::Rotate180, Transform::FlipDiag)
+            | (Transform::Rotate270, Transform::FlipRow)
+            | (Transform::FlipRow, Transform::Rotate90)
+            | (Transform::FlipCol, Transform::Rotate270)
+            | (Transform::FlipDiag, Transform::Rotate180)
+            | (Transform::FlipAntidiag, Transform::Id) => Transform::FlipAntidiag,
+        }
+    }
+}
+
 impl Transform {
     /// Whether this transformation requires the world to be square.
     ///
     /// Returns `true` for `R90`, `R270`, `F\` and `F/`.
-    pub fn square_world(self) -> bool {
-        matches!(
-            self,
-            Transform::Rotate90
-                | Transform::Rotate270
-                | Transform::FlipDiag
-                | Transform::FlipAntidiag,
-        )
+    pub fn require_square_world(self) -> bool {
+        !self.is_in(Symmetry::D4Ortho)
+    }
+
+    /// Whether this transformation requires the world to have no diagonal width.
+    ///
+    /// Returns `true` for `R90`, `R270`, `F-` and `F|`.
+    pub fn require_no_diagonal_width(self) -> bool {
+        !self.is_in(Symmetry::D4Diag)
     }
 
     /// The inverse of this transformation.
@@ -192,7 +280,8 @@ impl Transform {
 /// [Logic Life Search](https://github.com/OscarCunningham/logic-life-search).
 /// Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
 ///
-/// Some of the symmetries are only valid when the world is square.
+/// Some of the symmetries are only valid when the world is square,
+/// and some are only valid when the world has no diagonal width.
 #[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -209,77 +298,59 @@ pub enum Symmetry {
     /// `C4`.
     ///
     /// Symmetry under 90° rotation.
+    ///
+    /// Requires the world to be square and have no diagonal width.
     C4,
     /// `D2-`.
     ///
     /// Symmetry under reflection across the middle row.
+    ///
+    /// Requires the world to have no diagonal width.
     #[cfg_attr(feature = "serde", serde(rename = "D2-"))]
     D2Row,
     /// `D2|`.
     ///
     /// Symmetry under reflection across the middle column.
+    ///
+    /// Requires the world to have no diagonal width.
     #[cfg_attr(feature = "serde", serde(rename = "D2|"))]
     D2Col,
     /// `D2\`.
     ///
     /// Symmetry under reflection across the diagonal.
+    ///
+    /// Requires the world to be square.
     #[cfg_attr(feature = "serde", serde(rename = "D2\\"))]
     D2Diag,
     /// `D2/`.
     ///
     /// Symmetry under reflection across the antidiagonal.
+    ///
+    /// Requires the world to be square.
     #[cfg_attr(feature = "serde", serde(rename = "D2/"))]
     D2Antidiag,
     /// `D4+`.
     ///
     /// Symmetry under reflections across the middle row
     /// and the middle column.
+    ///
+    /// Requires the world to have no diagonal width.
     #[cfg_attr(feature = "serde", serde(rename = "D4+"))]
     D4Ortho,
     /// `D4X`.
     ///
     /// Symmetry under reflections across the diagonal
     /// and the antidiagonal.
+    ///
+    /// Requires the world to be square.
     #[cfg_attr(feature = "serde", serde(rename = "D4X"))]
     D4Diag,
     /// `D8`.
     ///
     /// Symmetry under all 8 transformations.
-    D8,
-}
-
-impl PartialOrd for Symmetry {
-    /// We say that symmetry `a` is smaller than symmetry `b`,
-    /// when the symmetry group of `a` is a subgroup of that of `b`,
-    /// i.e., all patterns with symmetry `b` also have symmetry `a`.
     ///
-    /// For example, `Symmetry::C1` is smaller than all other symmetries.
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self == other {
-            return Some(Ordering::Equal);
-        }
-        match (self, other) {
-            (Symmetry::C1, _)
-            | (_, Symmetry::D8)
-            | (Symmetry::C2, Symmetry::C4)
-            | (Symmetry::C2, Symmetry::D4Ortho)
-            | (Symmetry::C2, Symmetry::D4Diag)
-            | (Symmetry::D2Row, Symmetry::D4Ortho)
-            | (Symmetry::D2Col, Symmetry::D4Ortho)
-            | (Symmetry::D2Diag, Symmetry::D4Diag)
-            | (Symmetry::D2Antidiag, Symmetry::D4Diag) => Some(Ordering::Less),
-            (Symmetry::D8, _)
-            | (_, Symmetry::C1)
-            | (Symmetry::C4, Symmetry::C2)
-            | (Symmetry::D4Ortho, Symmetry::C2)
-            | (Symmetry::D4Diag, Symmetry::C2)
-            | (Symmetry::D4Ortho, Symmetry::D2Row)
-            | (Symmetry::D4Ortho, Symmetry::D2Col)
-            | (Symmetry::D4Diag, Symmetry::D2Diag)
-            | (Symmetry::D4Diag, Symmetry::D2Antidiag) => Some(Ordering::Greater),
-            _ => None,
-        }
-    }
+    /// Requires the world to be square and have no diagonal width.
+    D8,
 }
 
 impl FromStr for Symmetry {
@@ -321,18 +392,58 @@ impl Display for Symmetry {
     }
 }
 
+impl PartialOrd for Symmetry {
+    /// We say that symmetry `a` is smaller than symmetry `b`,
+    /// when the symmetry group of `a` is a subgroup of that of `b`,
+    /// i.e., all patterns with symmetry `b` also have symmetry `a`.
+    ///
+    /// For example, `Symmetry::C1` is smaller than all other symmetries.
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self == other {
+            return Some(Ordering::Equal);
+        }
+        match (self, other) {
+            (Symmetry::C1, _)
+            | (_, Symmetry::D8)
+            | (Symmetry::C2, Symmetry::C4)
+            | (Symmetry::C2, Symmetry::D4Ortho)
+            | (Symmetry::C2, Symmetry::D4Diag)
+            | (Symmetry::D2Row, Symmetry::D4Ortho)
+            | (Symmetry::D2Col, Symmetry::D4Ortho)
+            | (Symmetry::D2Diag, Symmetry::D4Diag)
+            | (Symmetry::D2Antidiag, Symmetry::D4Diag) => Some(Ordering::Less),
+            (Symmetry::D8, _)
+            | (_, Symmetry::C1)
+            | (Symmetry::C4, Symmetry::C2)
+            | (Symmetry::D4Ortho, Symmetry::C2)
+            | (Symmetry::D4Diag, Symmetry::C2)
+            | (Symmetry::D4Ortho, Symmetry::D2Row)
+            | (Symmetry::D4Ortho, Symmetry::D2Col)
+            | (Symmetry::D4Diag, Symmetry::D2Diag)
+            | (Symmetry::D4Diag, Symmetry::D2Antidiag) => Some(Ordering::Greater),
+            _ => None,
+        }
+    }
+}
+
 impl Symmetry {
     /// Whether this symmetry requires the world to be square.
     ///
     /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
-    pub fn square_world(self) -> bool {
+    pub fn require_square_world(self) -> bool {
         matches!(
-            self,
-            Symmetry::C4
-                | Symmetry::D2Diag
-                | Symmetry::D2Antidiag
-                | Symmetry::D4Diag
-                | Symmetry::D8
+            self.partial_cmp(&Symmetry::D4Ortho),
+            Some(Ordering::Greater) | None
+        )
+    }
+
+    /// Whether this transformation requires the world to have no diagonal width.
+    ///
+    /// Returns `true` for `C4`, `D2-`, `D2|`, `D4+` and `D8`.
+    pub fn require_no_diagonal_width(self) -> bool {
+        matches!(
+            self.partial_cmp(&Symmetry::D4Diag),
+            Some(Ordering::Greater) | None
         )
     }
 
@@ -413,5 +524,166 @@ impl Config {
             coord = self.transform.act_on(coord, self.width, self.height);
         }
         coord
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::{thread_rng, Rng};
+
+    const ALL_TRANSFORM: [Transform; 8] = [
+        Transform::Id,
+        Transform::Rotate90,
+        Transform::Rotate180,
+        Transform::Rotate270,
+        Transform::FlipRow,
+        Transform::FlipCol,
+        Transform::FlipDiag,
+        Transform::FlipAntidiag,
+    ];
+
+    const ALL_SYMMETRY: [Symmetry; 10] = [
+        Symmetry::C1,
+        Symmetry::C2,
+        Symmetry::C4,
+        Symmetry::D2Col,
+        Symmetry::D2Row,
+        Symmetry::D2Diag,
+        Symmetry::D2Antidiag,
+        Symmetry::D4Diag,
+        Symmetry::D4Ortho,
+        Symmetry::D8,
+    ];
+
+    #[test]
+    fn test_sym_tran_names() {
+        for &sym in &ALL_SYMMETRY {
+            assert!(Symmetry::from_str(&sym.to_string()) == Ok(sym))
+        }
+        for &trans in &ALL_TRANSFORM {
+            assert!(Transform::from_str(&trans.to_string()) == Ok(trans))
+        }
+    }
+
+    #[test]
+    fn test_symmetry_group_member() {
+        for &sym in &ALL_SYMMETRY {
+            for tran in sym.generators() {
+                assert!(tran.is_in(sym));
+            }
+            let members = sym.members();
+            for &tran in &ALL_TRANSFORM {
+                assert_eq!(tran.is_in(sym), members.contains(&tran));
+            }
+        }
+    }
+
+    #[test]
+    fn test_symmetry_subgroup() {
+        for &sym in &ALL_SYMMETRY {
+            for &sub_sym in &ALL_SYMMETRY {
+                let is_subgroup = sub_sym.members().into_iter().all(|tran| tran.is_in(sym));
+                assert_eq!(sub_sym <= sym, is_subgroup);
+            }
+        }
+    }
+
+    #[test]
+    fn test_transform_inverse() {
+        let width = 16;
+        let height = 16;
+        let mut rng = thread_rng();
+        for _ in 0..10 {
+            let x = rng.gen_range(0..width);
+            let y = rng.gen_range(0..height);
+            let coord = (x, y, 0);
+
+            for &tran in &ALL_TRANSFORM {
+                assert_eq!(
+                    coord,
+                    tran.inverse()
+                        .act_on(tran.act_on(coord, width, height), width, height),
+                    "{} ^ -1 != {}",
+                    tran,
+                    tran.inverse()
+                )
+            }
+        }
+    }
+
+    #[test]
+    fn test_transform_mul() {
+        let width = 16;
+        let height = 16;
+        let mut rng = thread_rng();
+        for _ in 0..10 {
+            let x = rng.gen_range(0..width);
+            let y = rng.gen_range(0..height);
+            let coord = (x, y, 0);
+
+            for &tran0 in &ALL_TRANSFORM {
+                for &tran1 in &ALL_TRANSFORM {
+                    assert_eq!(
+                        (tran0 * tran1).act_on(coord, width, height),
+                        tran1.act_on(tran0.act_on(coord, width, height), width, height),
+                        "{} * {} != {}",
+                        tran0,
+                        tran1,
+                        tran0 * tran1
+                    )
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_world_condition() {
+        for &tran in &ALL_TRANSFORM {
+            assert_eq!(
+                tran.require_square_world(),
+                matches!(
+                    tran,
+                    Transform::Rotate90
+                        | Transform::Rotate270
+                        | Transform::FlipDiag
+                        | Transform::FlipAntidiag
+                )
+            );
+            assert_eq!(
+                tran.require_no_diagonal_width(),
+                matches!(
+                    tran,
+                    Transform::Rotate90
+                        | Transform::Rotate270
+                        | Transform::FlipRow
+                        | Transform::FlipCol
+                )
+            );
+        }
+        for &sym in &ALL_SYMMETRY {
+            assert_eq!(
+                sym.require_square_world(),
+                matches!(
+                    sym,
+                    Symmetry::C4
+                        | Symmetry::D2Diag
+                        | Symmetry::D2Antidiag
+                        | Symmetry::D4Diag
+                        | Symmetry::D8
+                )
+            );
+            assert_eq!(
+                sym.require_no_diagonal_width(),
+                matches!(
+                    sym,
+                    Symmetry::C4
+                        | Symmetry::D2Row
+                        | Symmetry::D2Col
+                        | Symmetry::D4Ortho
+                        | Symmetry::D8
+                )
+            );
+        }
     }
 }

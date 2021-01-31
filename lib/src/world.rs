@@ -237,6 +237,8 @@ impl<'a, R: Rule> World<'a, R> {
                             && coord.0 < self.config.width
                             && 0 <= coord.1
                             && coord.1 < self.config.height
+                            && (self.config.diagonal_width.is_none()
+                                || (coord.0 - coord.1).abs() < self.config.diagonal_width.unwrap())
                         {
                             unsafe {
                                 let cell = cell_ptr.as_mut().unwrap();

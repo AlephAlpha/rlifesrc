@@ -151,7 +151,7 @@ rlifesrc 16 5 3 0 1
 * `F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。
 比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `F|`。
 
-注意有些变换和对称性要求世界是正方形。
+注意有些变换和对称性要求世界是正方形，有些则要求没有对角宽度。
 
 搜索顺序中的 “Automatic” 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。当世界为正方形，且对角宽度不大于世界宽度的一半时，会选择对角顺序。
 

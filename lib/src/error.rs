@@ -19,6 +19,9 @@ pub enum Error {
     /// Symmetry or transformation requires the world to be square.
     #[error("Symmetry or transformation requires the world to be square.")]
     SquareWorldError,
+    /// Symmetry or transformation requires the world to have no diagonal width.
+    #[error("Symmetry or transformation requires the world to have no diagonal width.")]
+    DiagonalWidthError,
     /// Width / height / period should be positive.
     #[error("Width / height / period should be positive.")]
     NonPositiveError,

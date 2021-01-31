@@ -335,19 +335,19 @@ impl Args {
         let rule_string = matches.value_of("RULE").unwrap().to_string();
 
         if width != height {
-            if transform.square_world() {
+            if transform.require_square_world() {
                 return Err(Error::with_description(
                     &format!(
-                        "The transformation '{:?}' is only valid for square worlds",
+                        "The transformation '{}' is only valid for square worlds",
                         transform
                     ),
                     ErrorKind::InvalidValue,
                 ));
             }
-            if symmetry.square_world() {
+            if symmetry.require_square_world() {
                 return Err(Error::with_description(
                     &format!(
-                        "The symmetry '{:?}' is only valid for square worlds",
+                        "The symmetry '{}' is only valid for square worlds",
                         symmetry
                     ),
                     ErrorKind::InvalidValue,
@@ -356,6 +356,27 @@ impl Args {
             if search_order == Some(SearchOrder::Diagonal) {
                 return Err(Error::with_description(
                     "Diagonal search order is only valid for square worlds",
+                    ErrorKind::InvalidValue,
+                ));
+            }
+        }
+
+        if diagonal_width.is_some() {
+            if transform.require_no_diagonal_width() {
+                return Err(Error::with_description(
+                    &format!(
+                        "The transformation '{}' is only valid for worlds without diagonal width",
+                        transform
+                    ),
+                    ErrorKind::InvalidValue,
+                ));
+            }
+            if symmetry.require_no_diagonal_width() {
+                return Err(Error::with_description(
+                    &format!(
+                        "The symmetry '{}' is only valid for worlds without diagonal width",
+                        symmetry
+                    ),
                     ErrorKind::InvalidValue,
                 ));
             }

@@ -231,6 +231,18 @@ impl Config {
         self
     }
 
+    /// Whether the configuration requires the world to be square.
+    pub fn require_square_world(&self) -> bool {
+        self.symmetry.require_square_world()
+            || self.transform.require_square_world()
+            || self.search_order == Some(SearchOrder::Diagonal)
+    }
+
+    /// Whether the configuration requires the world to have no diagonal width.
+    pub fn require_no_diagonal_width(&self) -> bool {
+        self.symmetry.require_no_diagonal_width() || self.transform.require_no_diagonal_width()
+    }
+
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
@@ -242,12 +254,11 @@ impl Config {
                 return Err(Error::NonPositiveError);
             }
         }
-        if (self.symmetry.square_world()
-            || self.transform.square_world()
-            || self.search_order == Some(SearchOrder::Diagonal))
-            && self.width != self.height
-        {
+        if self.require_square_world() && self.width != self.height {
             return Err(Error::SquareWorldError);
+        }
+        if self.require_no_diagonal_width() && self.diagonal_width.is_some() {
+            return Err(Error::DiagonalWidthError);
         }
         if let Ok(rule) = self.rule_string.parse::<Life>() {
             Ok(Box::new(World::new(&self, rule)))

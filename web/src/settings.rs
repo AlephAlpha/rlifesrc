@@ -63,19 +63,13 @@ impl Component for Settings {
         match msg {
             Msg::SetWidth(width) => {
                 self.config.width = width;
-                if self.config.transform.square_world()
-                    || self.config.symmetry.square_world()
-                    || self.config.search_order == Some(SearchOrder::Diagonal)
-                {
+                if self.config.require_square_world() {
                     self.config.height = width;
                 }
             }
             Msg::SetHeight(height) => {
                 self.config.height = height;
-                if self.config.transform.square_world()
-                    || self.config.symmetry.square_world()
-                    || self.config.search_order == Some(SearchOrder::Diagonal)
-                {
+                if self.config.require_square_world() {
                     self.config.width = height;
                 }
             }
@@ -342,6 +336,8 @@ impl Settings {
                     type="number"
                     value=value
                     min="0"
+                    max=self.config.width.max(self.config.height)
+                    disabled=self.config.require_no_diagonal_width()
                     onchange=onchange/>
             </div>
         }
@@ -430,20 +426,22 @@ impl Settings {
                         { "Id" }
                     </option>
                     <option selected=self.config.transform == Transform::Rotate90
-                        disabled=self.config.width != self.config.height>
+                        disabled=self.config.width != self.config.height || self.config.diagonal_width.is_some()>
                         { "Rotate 90°" }
                     </option>
                     <option selected=self.config.transform == Transform::Rotate180>
                         { "Rotate 180°" }
                     </option>
                     <option selected=self.config.transform == Transform::Rotate270
-                        disabled=self.config.width != self.config.height>
+                        disabled=self.config.width != self.config.height || self.config.diagonal_width.is_some()>
                         { "Rotate 270°" }
                     </option>
-                    <option selected=self.config.transform == Transform::FlipCol>
+                    <option selected=self.config.transform == Transform::FlipCol
+                        disabled=self.config.diagonal_width.is_some()>
                         { "Flip |" }
                     </option>
-                    <option selected=self.config.transform == Transform::FlipRow>
+                    <option selected=self.config.transform == Transform::FlipRow
+                        disabled=self.config.diagonal_width.is_some()>
                         { "Flip -" }
                     </option>
                     <option selected=self.config.transform == Transform::FlipDiag
@@ -495,13 +493,15 @@ impl Settings {
                         { "C2" }
                     </option>
                     <option selected=self.config.symmetry == Symmetry::C4
-                        disabled=self.config.width != self.config.height>
+                        disabled=self.config.width != self.config.height || self.config.diagonal_width.is_some()>
                         { "C4" }
                     </option>
-                    <option selected=self.config.symmetry == Symmetry::D2Col>
+                    <option selected=self.config.symmetry == Symmetry::D2Col
+                        disabled=self.config.diagonal_width.is_some()>
                         { "D2|" }
                     </option>
-                    <option selected=self.config.symmetry == Symmetry::D2Row>
+                    <option selected=self.config.symmetry == Symmetry::D2Row
+                        disabled=self.config.diagonal_width.is_some()>
                         { "D2-" }
                     </option>
                     <option selected=self.config.symmetry == Symmetry::D2Diag
@@ -512,7 +512,8 @@ impl Settings {
                         disabled=self.config.width != self.config.height>
                         { "D2/" }
                     </option>
-                    <option selected=self.config.symmetry == Symmetry::D4Ortho>
+                    <option selected=self.config.symmetry == Symmetry::D4Ortho
+                        disabled=self.config.diagonal_width.is_some()>
                         { "D4+" }
                     </option>
                     <option selected=self.config.symmetry == Symmetry::D4Diag
@@ -520,7 +521,7 @@ impl Settings {
                         { "D4X" }
                     </option>
                     <option selected=self.config.symmetry == Symmetry::D8
-                        disabled=self.config.width != self.config.height>
+                        disabled=self.config.width != self.config.height || self.config.diagonal_width.is_some()>
                         { "D8" }
                     </option>
                 </select>
