@@ -2,7 +2,7 @@
 
 use crate::{
     cells::{CellRef, Coord, LifeCell, State, DEAD},
-    config::{Config, SearchOrder, SkipLevel, Transform},
+    config::{Config, SearchOrder},
     rules::Rule,
     search::{Reason, SetCell},
 };
@@ -405,17 +405,10 @@ impl<'a, R: Rule> World<'a, R> {
 
     /// Tests if the result is borling.
     pub(crate) fn is_boring(&self) -> bool {
-        match self.config.skip_level {
-            SkipLevel::SkipTrivial => self.is_trivial(),
-            SkipLevel::SkipStable => self.is_trivial() || self.is_stable(),
-            SkipLevel::SkipSubperiodOscillator => {
-                self.is_trivial() || self.is_subperiod_oscillator()
-            }
-            SkipLevel::SkipSubperiodSpaceship => self.is_trivial() || self.is_subperiod_spaceship(),
-            SkipLevel::SkipSymmetric => {
-                self.is_trivial() || self.is_subperiod_spaceship() || self.is_boring_sym()
-            }
-        }
+        self.is_trivial()
+            || self.is_stable()
+            || (self.config.skip_subperiod && self.is_subperiodic())
+            || (self.config.skip_subsymmetry && self.is_subsymmetric())
     }
 
     /// Tests if the result is trivial.
@@ -432,21 +425,8 @@ impl<'a, R: Rule> World<'a, R> {
                 .all(|c| c[0].state.get() == c[1].state.get())
     }
 
-    /// Tests if the result is an oscillator
-    /// whose actual period is smaller than the given period.
-    fn is_subperiod_oscillator(&self) -> bool {
-        (1..self.config.period).any(|t| {
-            self.config.period % t == 0
-                && self
-                    .cells
-                    .chunks(self.config.period as usize)
-                    .all(|c| c[0].state.get() == c[t as usize].state.get())
-        })
-    }
-
-    /// Tests if the result is an oscillator or a spaceship
-    /// whose actual period is smaller than the given period.
-    fn is_subperiod_spaceship(&self) -> bool {
+    /// Tests if the fundamental period of the result is smaller than the given period.
+    fn is_subperiodic(&self) -> bool {
         (2..=self.config.period).any(|f| {
             self.config.period % f == 0 && self.config.dx % f == 0 && self.config.dy % f == 0 && {
                 let t = self.config.period / f;
@@ -463,22 +443,19 @@ impl<'a, R: Rule> World<'a, R> {
         })
     }
 
-    /// Tests if the result is invariant under the current [`Transform`].
-    /// For example, if it has `D2|` symmetry when the [`Transform`] is `F|`.
-    fn is_boring_sym(&self) -> bool {
-        self.config.transform != Transform::Id
-            && self
-                .cells
-                .iter()
-                .step_by(self.config.period as usize)
-                .all(|c| {
-                    let coord = self.config.transform.act_on(
-                        c.coord,
-                        self.config.width,
-                        self.config.height,
-                    );
+    /// Tests if the result is invariant under more transformations than
+    /// required by the given symmetry.
+    fn is_subsymmetric(&self) -> bool {
+        let cosets = self.config.symmetry.cosets();
+        self.cells
+            .iter()
+            .step_by(self.config.period as usize)
+            .all(|c| {
+                cosets.iter().skip(1).any(|t| {
+                    let coord = t.act_on(c.coord, self.config.width, self.config.height);
                     c.state.get() == self.get_cell_state(coord)
                 })
+            })
     }
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.

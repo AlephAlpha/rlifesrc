@@ -1,9 +1,7 @@
 //! Parsing command-line arguments.
 
 use clap::{App, AppSettings, Arg, Error, ErrorKind, Result as ClapResult};
-use rlifesrc_lib::{
-    rules::NtLifeGen, Config, NewState, Search, SearchOrder, SkipLevel, Symmetry, Transform,
-};
+use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, Search, SearchOrder, Symmetry, Transform};
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
@@ -227,21 +225,27 @@ impl Args {
                          The new max cell count will be set to the cell count of \
                          the current result minus one.\n",
                     )
-                    .long("reduce"),
+                    .long("reduce")
+                    .takes_value(false),
             )
             .arg(
-                Arg::with_name("SKIP")
-                    .help("What patterns are considered boring and should be skip")
+                Arg::with_name("SUBPERIOD")
+                    .help("Allow patterns with subperiod")
+                    .long_help("Allow patterns whose fundamental period are smaller than the given period")
+                    .long("subperiod")
+                    .takes_value(false),
+            )
+            .arg(
+                Arg::with_name("SKIPSUBSYM")
+                    .help("Skip patterns invariant under more transformations than the given symmetry")
                     .long_help(
-                        "What patterns are considered boring and should be skip\n\
-                         subposci means subperiod oscillators;\n\
-                         subpship means subperiod spaceships;\n\
-                         sym means symmetric patterns invariant under current transformation.\n",
-                    )
-                    .long("skip")
-                    .takes_value(true)
-                    .possible_values(&["trivial", "stable", "subposci", "subpship", "sym"])
-                    .default_value("subpship"),
+                            "Skip patterns which are invariant under more transformations than \
+                             required by the given symmetry.\n\
+                             In another word, skip patterns whose symmetry group properly contains \
+                             the given symmetry group.\n",
+                        )
+                    .long("skip-subsym")
+                    .takes_value(false),
             );
 
         #[cfg(feature = "tui")]
@@ -323,14 +327,8 @@ impl Args {
             i => Some(i),
         };
         let reduce_max = matches.is_present("REDUCE");
-        let skip_level = match matches.value_of("SKIP").unwrap() {
-            "trivial" => SkipLevel::SkipTrivial,
-            "stable" => SkipLevel::SkipStable,
-            "subposci" => SkipLevel::SkipSubperiodOscillator,
-            "subpship" => SkipLevel::SkipSubperiodSpaceship,
-            "sym" => SkipLevel::SkipSymmetric,
-            _ => SkipLevel::SkipSubperiodSpaceship,
-        };
+        let skip_subperiod = !matches.is_present("SUBPERIOD");
+        let skip_subsymmetry = matches.is_present("SKIPSUBSYM");
 
         let rule_string = matches.value_of("RULE").unwrap().to_string();
 
@@ -392,7 +390,8 @@ impl Args {
             .set_reduce_max(reduce_max)
             .set_rule_string(rule_string)
             .set_diagonal_width(diagonal_width)
-            .set_skip_level(skip_level);
+            .set_skip_subperiod(skip_subperiod)
+            .set_skip_subsymmetry(skip_subsymmetry);
 
         let search = config.world().unwrap();
 

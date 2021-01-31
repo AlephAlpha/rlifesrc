@@ -1,6 +1,4 @@
-use rlifesrc_lib::{
-    rules::NtLifeGen, Config, NewState, SearchOrder, SkipLevel, Symmetry, Transform,
-};
+use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
 use std::matches;
 use wasm_bindgen::prelude::wasm_bindgen;
 use yew::{
@@ -40,8 +38,9 @@ pub enum Msg {
     SetChoose(NewState),
     SetMax(Option<usize>),
     SetDiag(Option<isize>),
-    SetSkip(SkipLevel),
     SetReduce,
+    SetSkipSubperiod,
+    SetSkipSubsym,
     None,
 }
 
@@ -86,8 +85,9 @@ impl Component for Settings {
             Msg::SetChoose(new_state) => self.config.new_state = new_state,
             Msg::SetMax(max_cell_count) => self.config.max_cell_count = max_cell_count,
             Msg::SetDiag(diagonal_width) => self.config.diagonal_width = diagonal_width,
-            Msg::SetSkip(skip_level) => self.config.skip_level = skip_level,
             Msg::SetReduce => self.config.reduce_max ^= true,
+            Msg::SetSkipSubperiod => self.config.skip_subperiod ^= true,
+            Msg::SetSkipSubsym => self.config.skip_subsymmetry ^= true,
             Msg::Apply => {
                 self.callback.emit(self.config.clone());
                 return false;
@@ -152,8 +152,9 @@ impl Settings {
                 { self.set_max() }
                 { self.set_order() }
                 { self.set_choose() }
-                { self.set_skip() }
                 { self.set_reduce() }
+                { self.set_skip_subperiod() }
+                { self.set_skip_subsym() }
             </div>
         }
     }
@@ -371,23 +372,6 @@ impl Settings {
                     value=value
                     min="0"
                     onchange=onchange/>
-            </div>
-        }
-    }
-
-    fn set_reduce(&self) -> Html {
-        html! {
-            <div class="mui-checkbox">
-                <label>
-                    <input id="set_reduce"
-                        type="checkbox"
-                        checked=self.config.reduce_max
-                        onclick=self.link.callback(|_| Msg::SetReduce)/>
-                    <abbr title="The new max cell count will be set to the cell count of \
-                        the current result minus one.">
-                        { "Reduce the max cell count when a result is found" }
-                    </abbr>
-                </label>
             </div>
         }
     }
@@ -616,47 +600,53 @@ impl Settings {
         }
     }
 
-    fn set_skip(&self) -> Html {
-        let onchange = self.link.callback(|e: ChangeData| {
-            if let ChangeData::Select(s) = e {
-                match s.value().as_ref() {
-                    "Trivial" => Msg::SetSkip(SkipLevel::SkipTrivial),
-                    "Stable" => Msg::SetSkip(SkipLevel::SkipStable),
-                    "Subperiod Oscillator" => Msg::SetSkip(SkipLevel::SkipSubperiodOscillator),
-                    "Subperiod Spaceship" => Msg::SetSkip(SkipLevel::SkipSubperiodSpaceship),
-                    "Boring Symmetric" => Msg::SetSkip(SkipLevel::SkipSymmetric),
-                    _ => Msg::None,
-                }
-            } else {
-                Msg::None
-            }
-        });
+    fn set_reduce(&self) -> Html {
         html! {
-            <div class="mui-select">
-                <label for="set_skip">
-                    <abbr title="What patterns are considered boring and should be skip.\n\
-                        When a skip level is chosen, all levels above it is also skipped.">
-                        { "Skip Level" }
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_reduce"
+                        type="checkbox"
+                        checked=self.config.reduce_max
+                        onclick=self.link.callback(|_| Msg::SetReduce)/>
+                    <abbr title="The new max cell count will be set to the cell count of \
+                        the current result minus one.">
+                        { "Reduce the max cell count when a result is found" }
                     </abbr>
-                    { ":" }
                 </label>
-                <select id="set_skip" onchange=onchange>
-                    <option selected=self.config.skip_level == SkipLevel::SkipTrivial>
-                        { "Trivial" }
-                    </option>
-                    <option selected=self.config.skip_level == SkipLevel::SkipStable>
-                        { "Stable" }
-                    </option>
-                    <option selected=self.config.skip_level == SkipLevel::SkipSubperiodOscillator>
-                        { "Subperiod Oscillator" }
-                    </option>
-                    <option selected=self.config.skip_level == SkipLevel::SkipSubperiodSpaceship>
-                        { "Subperiod Spaceship" }
-                    </option>
-                    <option selected=self.config.skip_level == SkipLevel::SkipSymmetric>
-                        { "Boring Symmetric" }
-                    </option>
-                </select>
+            </div>
+        }
+    }
+
+    fn set_skip_subperiod(&self) -> Html {
+        html! {
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_skip_subperiod"
+                        type="checkbox"
+                        checked=self.config.skip_subperiod
+                        onclick=self.link.callback(|_| Msg::SetSkipSubperiod)/>
+                    <abbr title="Skip patterns whose fundamental period are smaller than \
+                        the given period.">
+                        { "Skip patterns with subperiod." }
+                    </abbr>
+                </label>
+            </div>
+        }
+    }
+
+    fn set_skip_subsym(&self) -> Html {
+        html! {
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_skip_subsym"
+                        type="checkbox"
+                        checked=self.config.skip_subsymmetry
+                        onclick=self.link.callback(|_| Msg::SetSkipSubsym)/>
+                    <abbr title="Skip patterns which are invariant under more transformations than \
+                        required by the given symmetry.">
+                        { "Skip patterns invariant under more transformations than the given symmetry." }
+                    </abbr>
+                </label>
             </div>
         }
     }

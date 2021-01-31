@@ -11,7 +11,7 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 /// Search status.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Status {
     /// Initial status. Waiting to start.
@@ -27,7 +27,7 @@ pub enum Status {
 }
 
 /// Reasons for setting a cell.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(crate) enum Reason {
     /// Decides the state of a cell by choice.

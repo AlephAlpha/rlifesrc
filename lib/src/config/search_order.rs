@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// It will always search all generations of one cell
 /// before going to another cell.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SearchOrder {
     /// Searches all cells of one row before going to the next row.

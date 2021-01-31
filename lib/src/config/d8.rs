@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Some of the transformations are only valid when the world is square.
 /// and some are only valid when the world has no diagonal width.
-#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq, Hash)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Transform {
@@ -282,7 +282,7 @@ impl Transform {
 ///
 /// Some of the symmetries are only valid when the world is square,
 /// and some are only valid when the world has no diagonal width.
-#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq, Hash)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Symmetry {
@@ -487,19 +487,56 @@ impl Symmetry {
         }
     }
 
-    /// A minimal list of transformations that generates the symmetry group.
-    pub fn generators(self) -> Vec<Transform> {
+    /// A list of coset representatives,
+    /// seeing the symmetry group as a subgroup of _D_<sub>8</sub>.
+    ///
+    /// The first element in the result is always [`Transform::Id`].
+    pub fn cosets(self) -> Vec<Transform> {
         match self {
-            Symmetry::C1 => vec![],
-            Symmetry::C2 => vec![Transform::Rotate180],
-            Symmetry::C4 => vec![Transform::Rotate90],
-            Symmetry::D2Row => vec![Transform::FlipRow],
-            Symmetry::D2Col => vec![Transform::FlipCol],
-            Symmetry::D2Diag => vec![Transform::FlipDiag],
-            Symmetry::D2Antidiag => vec![Transform::FlipAntidiag],
-            Symmetry::D4Ortho => vec![Transform::FlipRow, Transform::FlipCol],
-            Symmetry::D4Diag => vec![Transform::FlipDiag, Transform::FlipAntidiag],
-            Symmetry::D8 => vec![Transform::Rotate90, Transform::FlipRow],
+            Symmetry::C1 => vec![
+                Transform::Id,
+                Transform::Rotate90,
+                Transform::Rotate180,
+                Transform::Rotate270,
+                Transform::FlipRow,
+                Transform::FlipCol,
+                Transform::FlipDiag,
+                Transform::FlipAntidiag,
+            ],
+            Symmetry::C2 => vec![
+                Transform::Id,
+                Transform::Rotate90,
+                Transform::FlipRow,
+                Transform::FlipDiag,
+            ],
+            Symmetry::C4 => vec![Transform::Id, Transform::FlipRow],
+            Symmetry::D2Row => vec![
+                Transform::Id,
+                Transform::FlipCol,
+                Transform::FlipDiag,
+                Transform::FlipAntidiag,
+            ],
+            Symmetry::D2Col => vec![
+                Transform::Id,
+                Transform::FlipRow,
+                Transform::FlipDiag,
+                Transform::FlipAntidiag,
+            ],
+            Symmetry::D2Diag => vec![
+                Transform::Id,
+                Transform::FlipRow,
+                Transform::FlipCol,
+                Transform::FlipAntidiag,
+            ],
+            Symmetry::D2Antidiag => vec![
+                Transform::Id,
+                Transform::FlipRow,
+                Transform::FlipCol,
+                Transform::FlipDiag,
+            ],
+            Symmetry::D4Ortho => vec![Transform::Id, Transform::FlipDiag],
+            Symmetry::D4Diag => vec![Transform::Id, Transform::FlipRow],
+            Symmetry::D8 => vec![Transform::Id],
         }
     }
 }
@@ -531,6 +568,7 @@ impl Config {
 mod tests {
     use super::*;
     use rand::{thread_rng, Rng};
+    use std::collections::HashSet;
 
     const ALL_TRANSFORM: [Transform; 8] = [
         Transform::Id,
@@ -569,9 +607,6 @@ mod tests {
     #[test]
     fn test_symmetry_group_member() {
         for &sym in &ALL_SYMMETRY {
-            for tran in sym.generators() {
-                assert!(tran.is_in(sym));
-            }
             let members = sym.members();
             for &tran in &ALL_TRANSFORM {
                 assert_eq!(tran.is_in(sym), members.contains(&tran));
@@ -586,6 +621,19 @@ mod tests {
                 let is_subgroup = sub_sym.members().into_iter().all(|tran| tran.is_in(sym));
                 assert_eq!(sub_sym <= sym, is_subgroup);
             }
+        }
+    }
+
+    #[test]
+    fn test_symmetry_coset() {
+        let group = ALL_TRANSFORM.iter().copied().collect::<HashSet<_>>();
+        for &sym in &ALL_SYMMETRY {
+            let all_cosets = sym
+                .cosets()
+                .into_iter()
+                .flat_map(|coset| sym.members().into_iter().map(move |elem| elem * coset))
+                .collect::<HashSet<_>>();
+            assert_eq!(all_cosets, group);
         }
     }
 

@@ -173,23 +173,21 @@ python3 -m http.server
   有先选活、先选死、随机选取三种选项。搜索振荡子时随机选取可能效果更佳。
   </dd>
 
-  <dt>Skip Level</dt>
-  <dd>
-  跳过哪些“无聊”的图样。
-
-  支持的等级如下：
-
-  * `Trivial`：只跳过平凡的（即空白的）图样；
-  * `Stable`：周期大于 1 时跳过静止的图样；
-  * `Subperiod Oscillator`：跳过静止的图样，以及实际周期小于指定周期的振荡子；
-  * `Subperiod Spaceship`：跳过静止的图样，以及实际周期小于指定周期的振荡子和飞船；
-  * `Boring Symmetric`：跳过以上全部，以及在当前变换下不变的对称图样；比如说，当变换为 `Flip|` 时跳过 `D2|` 对称的图样。
-  </dd>
-
-  <dt>Reduce max cell count</dt>
+  <dt>Reduce max cell count when a result is found</dt>
   <dd>
   搜到结果时自动缩小活细胞个数的上界。
 
   新的上界会被设置为当前的活细胞个数减一（只考虑活细胞最少的一代）。
+
+  <dt>Skip patterns with subperiod</dt>
+  <dd>
+  跳过基本周期小于指定周期的图样。
+  </dd>
+
+  <dt>Skip patterns invariant under more transformations than the given symmetry</dt>
+  <dd>
+  跳过在比指定的对称性更多的变换下不变对称图样。
+
+  也就是说，跳过对称群真包含指定的对称性的对称群的图样。
   </dd>
 </dl>

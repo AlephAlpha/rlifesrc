@@ -115,20 +115,18 @@ How to choose a state for unknown cells.
 
 `Random` might work better for oscillators.
 
-### Skip Level
-
-What patterns are considered boring and should be skip.
-
-The levels are:
-
-* `Trivial`: Only skips trivial (empty) patterns;
-* `Stable`: Skips stable patterns when period > 1;
-* `Subperiod Oscillator`: Skips stable patterns, and oscillators whose actual periods are smaller than the given period;
-* `Subperiod Spaceship`: Skips stable patterns, and oscillators and spaceships whose actual periods are smaller than the given period;
-* `Boring Symmetric`: Skips all the above, and symmetric patterns which are invariant under the current transformation. For example, skips patterns with `D2|` symmetry when the transformation is `Flip|`.
-
-### Reduce max cell count
+### Reduce the max cell count when a result is found
 
 Reduce the `Max cell count` when a result is found.
 
 The new `Max cell count` will be set to the cell count of the current result minus one.
+
+### Skip patterns with subperiod
+
+Skip patterns whose fundamental period are smaller than the given period.
+
+### Skip patterns invariant under more transformations than the given symmetry
+
+Skip patterns which are invariant under more transformations than  required by the given symmetry.
+
+In another word, skip patterns whose symmetry group properly contains the given symmetry group.

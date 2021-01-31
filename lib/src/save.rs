@@ -14,7 +14,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 /// A representation of setting a cell which can be easily serialized.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct SetCellSer {
     /// The coordinates of the set cell.
@@ -38,7 +38,7 @@ impl<'a, R: Rule> SetCell<'a, R> {
 }
 
 /// A representation of the world which can be easily serialized.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct WorldSer {
     /// World configuration.

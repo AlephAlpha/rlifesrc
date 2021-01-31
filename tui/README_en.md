@@ -53,6 +53,14 @@ FLAGS:
         --reset-time
             Resets the time when starting a new search
 
+        --skip-subsym    
+            Skip patterns which are invariant under more transformations than required by the given symmetry.
+            In another word, skip patterns whose symmetry group properly contains the given symmetry group.
+
+        --subperiod      
+            Allow patterns whose fundamental period are smaller than the given period
+
+
     -h, --help
             Prints help information
 
@@ -87,13 +95,6 @@ OPTIONS:
             Supports Life-like, isotropic non-totalistic, hexagonal, MAP rules, and their
             corresponding Generations rules.
              [default: B3/S23]
-
-        --skip <SKIP>              
-            What patterns are considered boring and should be skip
-            subposci means subperiod oscillators;
-            subpship means subperiod spaceships;
-            sym means symmetric patterns invariant under current transformation.
-             [default: subpship]  [possible values: trivial, stable, subposci, subpship, sym]
 
     -s, --symmetry <SYMMETRY>
             Symmetry of the pattern
@@ -149,14 +150,6 @@ Some of the symmetries and transformations are only valid when the world is squa
 “Automatic” in the search order means that it will start from the shorter side, i.e., start from the columns if there are more columns than rows, from the rows if there are more rows than columns. When the world is square and the diagonal width is not larger than width of the world, it would choose diagonal.
 
 Diagonal search order requires that the world is square.
-
-The following levels are supported when skipping boring patterns:
-
-* `trivial`：Only skips trivial (empty) patterns;
-* `stable`：Skips stable patterns when period > 1;
-* `subposci`：Skips stable patterns, and oscillators whose actual periods are smaller than the given period;
-* `subpship`：Skips stable patterns, and oscillators and spaceships whose actual periods are smaller than the given period;
-* `sym`：Skips all the above, and symmetric patterns which are invariant under the current transformation. For example, skips patterns with `D2|` symmetry when the transformation is `F|`.
 
 ### CLI
 

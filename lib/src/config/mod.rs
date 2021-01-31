@@ -21,7 +21,7 @@ use crate::cells::{ALIVE, DEAD};
 use serde::{Deserialize, Serialize};
 
 /// How to choose a state for an unknown cell.
-#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq, Hash)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum NewState {
@@ -55,38 +55,10 @@ pub enum NewState {
     /// the probability of each state is `1/n`.
     Random,
 }
-
-/// What patterns are considered boring and should be skip.
-#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq, PartialOrd, Ord)]
-#[derivative(Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum SkipLevel {
-    /// Only skips trivial (empty) patterns.
-    SkipTrivial,
-
-    /// Skips stable patterns when period > 1.
-    SkipStable,
-
-    /// Skips stable patterns, and oscillators
-    /// whose actual periods are smaller than the given period.
-    SkipSubperiodOscillator,
-
-    /// Skips stable patterns, and oscillators and spaceships
-    /// whose actual periods are smaller than the given period.
-    #[derivative(Default)]
-    SkipSubperiodSpaceship,
-
-    /// Skips all the above, and symmetric patterns which are invariant
-    /// under the current [`Transform`].
-    ///
-    /// For example, skips patterns with `D2|` symmetry when the [`Transform`] is `F|`.
-    SkipSymmetric,
-}
-
 /// World configuration.
 ///
 /// The world will be generated from this configuration.
-#[derive(Clone, Debug, Derivative, PartialEq, Eq)]
+#[derive(Clone, Debug, Derivative, PartialEq, Eq, Hash)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Config {
@@ -154,8 +126,16 @@ pub struct Config {
     /// where `abs(x - y) >= n` are assumed to be dead.
     pub diagonal_width: Option<isize>,
 
-    /// What patterns are considered boring and should be skip.
-    pub skip_level: SkipLevel,
+    /// Whether to skip patterns whose fundamental period are smaller than the given period.
+    #[derivative(Default(value = "true"))]
+    pub skip_subperiod: bool,
+
+    /// Whether to skip patterns which are invariant under more transformations than
+    /// required by the given symmetry.
+    ///
+    /// In another word, whether to skip patterns whose symmetry group properly contains
+    /// the given symmetry group.
+    pub skip_subsymmetry: bool,
 }
 
 impl Config {
@@ -225,9 +205,17 @@ impl Config {
         self
     }
 
-    /// Sets the skip level.
-    pub fn set_skip_level(mut self, skip_level: SkipLevel) -> Self {
-        self.skip_level = skip_level;
+    /// Sets whether to skip patterns whose fundamental period
+    /// is smaller than the given period.
+    pub fn set_skip_subperiod(mut self, skip_subperiod: bool) -> Self {
+        self.skip_subperiod = skip_subperiod;
+        self
+    }
+
+    /// Sets whether to skip patterns which are invariant under
+    /// more transformations than required by the given symmetry.
+    pub fn set_skip_subsymmetry(mut self, skip_subsymmetry: bool) -> Self {
+        self.skip_subsymmetry = skip_subsymmetry;
         self
     }
 

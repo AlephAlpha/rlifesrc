@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// During the search, the state of a cell is represented by `Option<State>`,
 /// where `None` means that the state of the cell is unknown.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct State(pub usize);
 
