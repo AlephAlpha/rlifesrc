@@ -8,7 +8,7 @@ use crate::{
 };
 use std::fmt::Write;
 
-#[cfg(any(feature = "serde", doc))]
+#[cfg(feature = "serde")]
 use crate::save::WorldSer;
 
 /// A trait for [`World`].
@@ -57,7 +57,7 @@ pub trait Search {
     /// during the search.
     fn set_max_cell_count(&mut self, max_cell_count: Option<usize>);
 
-    #[cfg(any(feature = "serde", doc))]
+    #[cfg(feature = "serde")]
     /// Saves the world as a [`WorldSer`],
     /// which can be easily serialized.
     fn ser(&self) -> WorldSer;
@@ -170,7 +170,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.set_max_cell_count(max_cell_count)
     }
 
-    #[cfg(any(feature = "serde", doc))]
+    #[cfg(feature = "serde")]
     fn ser(&self) -> WorldSer {
         self.ser()
     }

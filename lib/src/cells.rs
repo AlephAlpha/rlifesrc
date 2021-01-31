@@ -8,7 +8,7 @@ use std::{
     ops::{Deref, Not},
 };
 
-#[cfg(any(feature = "serde", doc))]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Possible states of a known cell.

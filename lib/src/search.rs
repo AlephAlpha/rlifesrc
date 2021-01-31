@@ -7,7 +7,7 @@ use crate::{
 };
 use rand::{thread_rng, Rng};
 
-#[cfg(any(feature = "serde", doc))]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Search status.

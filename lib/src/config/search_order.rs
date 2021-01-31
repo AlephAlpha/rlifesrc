@@ -1,7 +1,7 @@
 use super::{Config, Coord, Symmetry};
 use std::{borrow::Cow, cmp::Ordering};
 
-#[cfg(any(feature = "serde", doc))]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// The order to find a new unknown cell.

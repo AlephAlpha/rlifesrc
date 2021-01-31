@@ -9,12 +9,13 @@ use super::{Config, Coord};
 use derivative::Derivative;
 use std::{
     cmp::Ordering,
-    fmt::{self, Debug, Formatter},
+    fmt::{self, Display, Formatter},
     matches,
     str::FromStr,
+    vec,
 };
 
-#[cfg(any(feature = "serde", doc))]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Transformations (rotations and reflections) after the last generation
@@ -36,7 +37,7 @@ use serde::{Deserialize, Serialize};
 /// The symbol after it is the axis of reflection.
 ///
 /// Some of the transformations are only valid when the world is square.
-#[derive(Clone, Copy, Derivative, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Transform {
@@ -48,30 +49,37 @@ pub enum Transform {
     /// `R90`.
     ///
     /// 90° rotation counterclockwise.
+    #[cfg_attr(feature = "serde", serde(rename = "R90"))]
     Rotate90,
     /// `R180`.
     ///
     /// 180° rotation counterclockwise.
+    #[cfg_attr(feature = "serde", serde(rename = "R180"))]
     Rotate180,
     /// `R270`.
     ///
     /// 270° rotation counterclockwise.
+    #[cfg_attr(feature = "serde", serde(rename = "R270"))]
     Rotate270,
     /// `F-`.
     ///
     /// Reflection across the middle row.
+    #[cfg_attr(feature = "serde", serde(rename = "F-"))]
     FlipRow,
     /// `F|`.
     ///
     /// Reflection across the middle column.
+    #[cfg_attr(feature = "serde", serde(rename = "F|"))]
     FlipCol,
     /// `F\`.
     ///
     /// Reflection across the diagonal.
+    #[cfg_attr(feature = "serde", serde(rename = "F\\"))]
     FlipDiag,
     /// `F/`.
     ///
     /// Reflection across the antidiagonal.
+    #[cfg_attr(feature = "serde", serde(rename = "F/"))]
     FlipAntidiag,
 }
 
@@ -93,7 +101,7 @@ impl FromStr for Transform {
     }
 }
 
-impl Debug for Transform {
+impl Display for Transform {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         let s = match self {
             Transform::Id => "Id",
@@ -124,6 +132,15 @@ impl Transform {
         )
     }
 
+    /// The inverse of this transformation.
+    pub fn inverse(self) -> Self {
+        match self {
+            Transform::Rotate90 => Transform::Rotate270,
+            Transform::Rotate270 => Transform::Rotate90,
+            x => x,
+        }
+    }
+
     /// Whether the transformation is a member of the symmetry group,
     /// i.e., whether patterns with this symmetry are invariant under
     /// this transformation.
@@ -148,6 +165,21 @@ impl Transform {
             | (Transform::FlipAntidiag, Symmetry::D4Diag),
         )
     }
+
+    /// Apply the transformation on a coordinate.
+    pub fn act_on(self, coord: Coord, width: isize, height: isize) -> Coord {
+        let (x, y, t) = coord;
+        match self {
+            Transform::Id => (x, y, t),
+            Transform::Rotate90 => (y, width - 1 - x, t),
+            Transform::Rotate180 => (width - 1 - x, height - 1 - y, t),
+            Transform::Rotate270 => (height - 1 - y, x, t),
+            Transform::FlipRow => (x, height - 1 - y, t),
+            Transform::FlipCol => (width - 1 - x, y, t),
+            Transform::FlipDiag => (y, x, t),
+            Transform::FlipAntidiag => (height - 1 - y, width - 1 - x, t),
+        }
+    }
 }
 
 /// Symmetries of the pattern.
@@ -161,7 +193,7 @@ impl Transform {
 /// Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
 ///
 /// Some of the symmetries are only valid when the world is square.
-#[derive(Clone, Copy, Derivative, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Derivative, PartialEq, Eq)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Symmetry {
@@ -181,28 +213,34 @@ pub enum Symmetry {
     /// `D2-`.
     ///
     /// Symmetry under reflection across the middle row.
+    #[cfg_attr(feature = "serde", serde(rename = "D2-"))]
     D2Row,
     /// `D2|`.
     ///
     /// Symmetry under reflection across the middle column.
+    #[cfg_attr(feature = "serde", serde(rename = "D2|"))]
     D2Col,
     /// `D2\`.
     ///
     /// Symmetry under reflection across the diagonal.
+    #[cfg_attr(feature = "serde", serde(rename = "D2\\"))]
     D2Diag,
     /// `D2/`.
     ///
     /// Symmetry under reflection across the antidiagonal.
+    #[cfg_attr(feature = "serde", serde(rename = "D2/"))]
     D2Antidiag,
     /// `D4+`.
     ///
     /// Symmetry under reflections across the middle row
     /// and the middle column.
+    #[cfg_attr(feature = "serde", serde(rename = "D4+"))]
     D4Ortho,
     /// `D4X`.
     ///
     /// Symmetry under reflections across the diagonal
     /// and the antidiagonal.
+    #[cfg_attr(feature = "serde", serde(rename = "D4X"))]
     D4Diag,
     /// `D8`.
     ///
@@ -264,7 +302,7 @@ impl FromStr for Symmetry {
     }
 }
 
-impl Debug for Symmetry {
+impl Display for Symmetry {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         let s = match self {
             Symmetry::C1 => "C1",
@@ -297,44 +335,83 @@ impl Symmetry {
                 | Symmetry::D8
         )
     }
+
+    /// Transformations contained in the symmetry group.
+    pub fn members(self) -> Vec<Transform> {
+        match self {
+            Symmetry::C1 => vec![Transform::Id],
+            Symmetry::C2 => vec![Transform::Id, Transform::Rotate180],
+            Symmetry::C4 => vec![
+                Transform::Id,
+                Transform::Rotate90,
+                Transform::Rotate180,
+                Transform::Rotate270,
+            ],
+            Symmetry::D2Row => vec![Transform::Id, Transform::FlipRow],
+            Symmetry::D2Col => vec![Transform::Id, Transform::FlipCol],
+            Symmetry::D2Diag => vec![Transform::Id, Transform::FlipDiag],
+            Symmetry::D2Antidiag => vec![Transform::Id, Transform::FlipAntidiag],
+            Symmetry::D4Ortho => vec![
+                Transform::Id,
+                Transform::FlipRow,
+                Transform::FlipCol,
+                Transform::Rotate180,
+            ],
+            Symmetry::D4Diag => vec![
+                Transform::Id,
+                Transform::FlipDiag,
+                Transform::FlipAntidiag,
+                Transform::Rotate180,
+            ],
+            Symmetry::D8 => vec![
+                Transform::Id,
+                Transform::Rotate90,
+                Transform::Rotate180,
+                Transform::Rotate270,
+                Transform::FlipRow,
+                Transform::FlipCol,
+                Transform::FlipDiag,
+                Transform::FlipAntidiag,
+            ],
+        }
+    }
+
+    /// A minimal list of transformations that generates the symmetry group.
+    pub fn generators(self) -> Vec<Transform> {
+        match self {
+            Symmetry::C1 => vec![],
+            Symmetry::C2 => vec![Transform::Rotate180],
+            Symmetry::C4 => vec![Transform::Rotate90],
+            Symmetry::D2Row => vec![Transform::FlipRow],
+            Symmetry::D2Col => vec![Transform::FlipCol],
+            Symmetry::D2Diag => vec![Transform::FlipDiag],
+            Symmetry::D2Antidiag => vec![Transform::FlipAntidiag],
+            Symmetry::D4Ortho => vec![Transform::FlipRow, Transform::FlipCol],
+            Symmetry::D4Diag => vec![Transform::FlipDiag, Transform::FlipAntidiag],
+            Symmetry::D8 => vec![Transform::Rotate90, Transform::FlipRow],
+        }
+    }
 }
 
 impl Config {
     /// Applies the transformation and translation to a coord.
     pub(crate) fn translate(&self, coord: Coord) -> Coord {
-        let (mut x, mut y, mut t) = coord;
-        while t < 0 {
-            t += self.period;
-            let (new_x, new_y) = match self.transform {
-                Transform::Id => (x, y),
-                Transform::Rotate90 => (self.height - 1 - y, x),
-                Transform::Rotate180 => (self.width - 1 - x, self.height - 1 - y),
-                Transform::Rotate270 => (y, self.width - 1 - x),
-                Transform::FlipRow => (x, self.height - 1 - y),
-                Transform::FlipCol => (self.width - 1 - x, y),
-                Transform::FlipDiag => (y, x),
-                Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
-            };
-            x = new_x - self.dx;
-            y = new_y - self.dy;
+        let mut coord = coord;
+        while coord.2 < 0 {
+            coord = self
+                .transform
+                .inverse()
+                .act_on(coord, self.width, self.height);
+            coord.0 -= self.dx;
+            coord.1 -= self.dy;
+            coord.2 += self.period;
         }
-        while t >= self.period {
-            t -= self.period;
-            x += self.dx;
-            y += self.dy;
-            let (new_x, new_y) = match self.transform {
-                Transform::Id => (x, y),
-                Transform::Rotate90 => (y, self.width - 1 - x),
-                Transform::Rotate180 => (self.width - 1 - x, self.height - 1 - y),
-                Transform::Rotate270 => (self.height - 1 - y, x),
-                Transform::FlipRow => (x, self.height - 1 - y),
-                Transform::FlipCol => (self.width - 1 - x, y),
-                Transform::FlipDiag => (y, x),
-                Transform::FlipAntidiag => (self.height - 1 - y, self.width - 1 - x),
-            };
-            x = new_x;
-            y = new_y;
+        while coord.2 >= self.period {
+            coord.0 += self.dx;
+            coord.1 += self.dy;
+            coord.2 -= self.period;
+            coord = self.transform.act_on(coord, self.width, self.height);
         }
-        (x, y, t)
+        coord
     }
 }

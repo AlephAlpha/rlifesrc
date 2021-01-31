@@ -2,7 +2,7 @@
 
 use crate::{
     cells::{CellRef, Coord, LifeCell, State, DEAD},
-    config::{Config, SearchOrder, SkipLevel, Symmetry, Transform},
+    config::{Config, SearchOrder, SkipLevel, Transform},
     rules::Rule,
     search::{Reason, SetCell},
 };
@@ -230,43 +230,9 @@ impl<'a, R: Rule> World<'a, R> {
                     let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
                     let cell = self.find_cell((x, y, t)).unwrap();
 
-                    let sym_coords = match self.config.symmetry {
-                        Symmetry::C1 => vec![],
-                        Symmetry::C2 => {
-                            vec![(self.config.width - 1 - x, self.config.height - 1 - y, t)]
-                        }
-                        Symmetry::C4 => vec![
-                            (y, self.config.width - 1 - x, t),
-                            (self.config.width - 1 - x, self.config.height - 1 - y, t),
-                            (self.config.height - 1 - y, x, t),
-                        ],
-                        Symmetry::D2Row => vec![(x, self.config.height - 1 - y, t)],
-                        Symmetry::D2Col => vec![(self.config.width - 1 - x, y, t)],
-                        Symmetry::D2Diag => vec![(y, x, t)],
-                        Symmetry::D2Antidiag => {
-                            vec![(self.config.height - 1 - y, self.config.width - 1 - x, t)]
-                        }
-                        Symmetry::D4Ortho => vec![
-                            (self.config.width - 1 - x, y, t),
-                            (x, self.config.height - 1 - y, t),
-                            (self.config.width - 1 - x, self.config.height - 1 - y, t),
-                        ],
-                        Symmetry::D4Diag => vec![
-                            (y, x, t),
-                            (self.config.height - 1 - y, self.config.width - 1 - x, t),
-                            (self.config.width - 1 - x, self.config.height - 1 - y, t),
-                        ],
-                        Symmetry::D8 => vec![
-                            (y, self.config.width - 1 - x, t),
-                            (self.config.height - 1 - y, x, t),
-                            (self.config.width - 1 - x, y, t),
-                            (x, self.config.height - 1 - y, t),
-                            (y, x, t),
-                            (self.config.height - 1 - y, self.config.width - 1 - x, t),
-                            (self.config.width - 1 - x, self.config.height - 1 - y, t),
-                        ],
-                    };
-                    for coord in sym_coords {
+                    for transform in self.config.symmetry.members() {
+                        let coord =
+                            transform.act_on((x, y, t), self.config.width, self.config.height);
                         if 0 <= coord.0
                             && coord.0 < self.config.width
                             && 0 <= coord.1
@@ -504,22 +470,12 @@ impl<'a, R: Rule> World<'a, R> {
                 .iter()
                 .step_by(self.config.period as usize)
                 .all(|c| {
-                    let (x, y, t) = c.coord;
-                    let (new_x, new_y) = match self.config.transform {
-                        Transform::Id => (x, y),
-                        Transform::Rotate90 => (self.config.height - 1 - y, x),
-                        Transform::Rotate180 => {
-                            (self.config.width - 1 - x, self.config.height - 1 - y)
-                        }
-                        Transform::Rotate270 => (y, self.config.width - 1 - x),
-                        Transform::FlipRow => (x, self.config.height - 1 - y),
-                        Transform::FlipCol => (self.config.width - 1 - x, y),
-                        Transform::FlipDiag => (y, x),
-                        Transform::FlipAntidiag => {
-                            (self.config.height - 1 - y, self.config.width - 1 - x)
-                        }
-                    };
-                    c.state.get() == self.get_cell_state((new_x, new_y, t))
+                    let coord = self.config.transform.act_on(
+                        c.coord,
+                        self.config.width,
+                        self.config.height,
+                    );
+                    c.state.get() == self.get_cell_state(coord)
                 })
     }
 

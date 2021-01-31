@@ -53,7 +53,7 @@ mod search;
 mod traits;
 mod world;
 
-#[cfg(any(feature = "serde", doc))]
+#[cfg(feature = "serde")]
 pub mod save;
 
 pub use cells::{Coord, State, ALIVE, DEAD};
