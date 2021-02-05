@@ -53,47 +53,54 @@ pub enum Transform {
     /// 90° rotation counterclockwise.
     ///
     /// Requires the world to be square and have no diagonal width.
-    #[cfg_attr(feature = "serde", serde(rename = "R90"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "R90")))]
+    #[cfg_attr(feature = "serde", serde(alias = "R90"))]
     Rotate90,
     /// `R180`.
     ///
     /// 180° rotation counterclockwise.
-    #[cfg_attr(feature = "serde", serde(rename = "R180"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "R180")))]
+    #[cfg_attr(feature = "serde", serde(alias = "R180"))]
     Rotate180,
     /// `R270`.
     ///
     /// 270° rotation counterclockwise.
     ///
     /// Requires the world to be square and have no diagonal width.
-    #[cfg_attr(feature = "serde", serde(rename = "R270"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "R270")))]
+    #[cfg_attr(feature = "serde", serde(alias = "R270"))]
     Rotate270,
     /// `F-`.
     ///
     /// Reflection across the middle row.
     ///
     /// Requires the world to have no diagonal width.
-    #[cfg_attr(feature = "serde", serde(rename = "F-"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "F-")))]
+    #[cfg_attr(feature = "serde", serde(alias = "F-"))]
     FlipRow,
     /// `F|`.
     ///
     /// Reflection across the middle column.
     ///
     /// Requires the world to have no diagonal width.
-    #[cfg_attr(feature = "serde", serde(rename = "F|"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "F|")))]
+    #[cfg_attr(feature = "serde", serde(alias = "F|"))]
     FlipCol,
     /// `F\`.
     ///
     /// Reflection across the diagonal.
     ///
     /// Requires the world to be square.
-    #[cfg_attr(feature = "serde", serde(rename = "F\\"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "F\\")))]
+    #[cfg_attr(feature = "serde", serde(alias = "F\\"))]
     FlipDiag,
     /// `F/`.
     ///
     /// Reflection across the antidiagonal.
     ///
     /// Requires the world to be square.
-    #[cfg_attr(feature = "serde", serde(rename = "F/"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "F/")))]
+    #[cfg_attr(feature = "serde", serde(alias = "F/"))]
     FlipAntidiag,
 }
 
@@ -306,28 +313,32 @@ pub enum Symmetry {
     /// Symmetry under reflection across the middle row.
     ///
     /// Requires the world to have no diagonal width.
-    #[cfg_attr(feature = "serde", serde(rename = "D2-"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "D2-")))]
+    #[cfg_attr(feature = "serde", serde(alias = "D2-"))]
     D2Row,
     /// `D2|`.
     ///
     /// Symmetry under reflection across the middle column.
     ///
     /// Requires the world to have no diagonal width.
-    #[cfg_attr(feature = "serde", serde(rename = "D2|"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "D2|")))]
+    #[cfg_attr(feature = "serde", serde(alias = "D2|"))]
     D2Col,
     /// `D2\`.
     ///
     /// Symmetry under reflection across the diagonal.
     ///
     /// Requires the world to be square.
-    #[cfg_attr(feature = "serde", serde(rename = "D2\\"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "D2\\")))]
+    #[cfg_attr(feature = "serde", serde(alias = "D2\\"))]
     D2Diag,
     /// `D2/`.
     ///
     /// Symmetry under reflection across the antidiagonal.
     ///
     /// Requires the world to be square.
-    #[cfg_attr(feature = "serde", serde(rename = "D2/"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "D2/")))]
+    #[cfg_attr(feature = "serde", serde(alias = "D2/"))]
     D2Antidiag,
     /// `D4+`.
     ///
@@ -335,7 +346,8 @@ pub enum Symmetry {
     /// and the middle column.
     ///
     /// Requires the world to have no diagonal width.
-    #[cfg_attr(feature = "serde", serde(rename = "D4+"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "D4+")))]
+    #[cfg_attr(feature = "serde", serde(alias = "D4+"))]
     D4Ortho,
     /// `D4X`.
     ///
@@ -343,7 +355,8 @@ pub enum Symmetry {
     /// and the antidiagonal.
     ///
     /// Requires the world to be square.
-    #[cfg_attr(feature = "serde", serde(rename = "D4X"))]
+    #[cfg_attr(feature = "serde", serde(rename(serialize = "D4X")))]
+    #[cfg_attr(feature = "serde", serde(alias = "D4X"))]
     D4Diag,
     /// `D8`.
     ///

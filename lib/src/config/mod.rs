@@ -61,6 +61,7 @@ pub enum NewState {
 #[derive(Clone, Debug, Derivative, PartialEq, Eq, Hash)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct Config {
     /// Width.
     #[derivative(Default(value = "16"))]
