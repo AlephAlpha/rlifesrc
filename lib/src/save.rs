@@ -42,14 +42,17 @@ impl<'a, R: Rule> SetCell<'a, R> {
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct WorldSer {
     /// World configuration.
+    #[serde(default)]
     config: Config,
 
     /// Number of conflicts during the search.
+    #[serde(default)]
     conflicts: u64,
 
     /// A stack to records the cells whose values are set during the search.
     ///
     /// The cells in this table always have known states.
+    #[serde(default)]
     set_stack: Vec<SetCellSer>,
 
     /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
@@ -57,6 +60,7 @@ pub struct WorldSer {
     /// Be careful when modifying this value.
     /// If you have changed other things in the saved file, please set this value to `0`,
     /// otherwise rlifesrc might gives the wrong result.
+    #[serde(default)]
     check_index: usize,
 }
 
@@ -80,7 +84,9 @@ impl WorldSer {
             }
         }
         world.conflicts = self.conflicts;
-        world.check_index = self.check_index;
+        if self.check_index < self.set_stack.len() {
+            world.check_index = self.check_index;
+        }
         Ok(world)
     }
 
