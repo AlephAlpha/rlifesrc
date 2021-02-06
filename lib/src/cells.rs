@@ -42,7 +42,7 @@ impl Not for State {
 ///
 /// `(x-coordinate, y-coordinate, time)`.
 /// All three coordinates are 0-indexed.
-pub type Coord = (isize, isize, isize);
+pub type Coord = (i32, i32, i32);
 
 /// A cell in the cellular automaton.
 ///

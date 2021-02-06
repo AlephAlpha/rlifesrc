@@ -123,7 +123,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Note that for cells on the edges of the search range,
     /// some neighbors might point to `None`.
     fn init_nbhd(mut self) -> Self {
-        const NBHD: [(isize, isize); 8] = [
+        const NBHD: [(i32, i32); 8] = [
             (-1, -1),
             (-1, 0),
             (-1, 1),

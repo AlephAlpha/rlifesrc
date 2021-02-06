@@ -89,14 +89,14 @@ impl Args {
                     .help("Horizontal translation")
                     .default_value("0")
                     .index(4)
-                    .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
+                    .validator(|d| d.parse::<i32>().map(|_| ()).map_err(|e| e.to_string())),
             )
             .arg(
                 Arg::with_name("DY")
                     .help("Vertical translation")
                     .default_value("0")
                     .index(5)
-                    .validator(|d| d.parse::<isize>().map(|_| ()).map_err(|e| e.to_string())),
+                    .validator(|d| d.parse::<i32>().map(|_| ()).map_err(|e| e.to_string())),
             )
             .arg(
                 Arg::with_name("DIAG")

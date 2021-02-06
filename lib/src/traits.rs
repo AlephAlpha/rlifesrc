@@ -41,7 +41,7 @@ pub trait Search {
     /// Number of known living cells in some generation.
     ///
     /// For Generations rules, dying cells are not counted.
-    fn cell_count_gen(&self, t: isize) -> usize;
+    fn cell_count_gen(&self, t: i32) -> usize;
 
     /// Minumum number of known living cells in all generation.
     ///
@@ -73,7 +73,7 @@ pub trait Search {
     /// * **Unknown** cells are represented by `?`;
     /// * Each line is ended with `$`;
     /// * The whole pattern is ended with `!`.
-    fn rle_gen(&self, t: isize) -> String {
+    fn rle_gen(&self, t: i32) -> String {
         let mut str = String::new();
         writeln!(
             str,
@@ -115,7 +115,7 @@ pub trait Search {
     /// * **Dead** cells are represented by `.`;
     /// * **Living** and **Dying** cells are represented by `o`;
     /// * **Unknown** cells are represented by `?`.
-    fn plaintext_gen(&self, t: isize) -> String {
+    fn plaintext_gen(&self, t: i32) -> String {
         let mut str = String::new();
         for y in 0..self.config().height {
             for x in 0..self.config().width {
@@ -154,7 +154,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.rule.has_b0()
     }
 
-    fn cell_count_gen(&self, t: isize) -> usize {
+    fn cell_count_gen(&self, t: i32) -> usize {
         self.cell_count[t as usize]
     }
 

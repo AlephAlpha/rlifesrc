@@ -28,8 +28,8 @@ enum Mode {
 }
 
 struct App<'a, W: Write> {
-    gen: isize,
-    period: isize,
+    gen: i32,
+    period: i32,
     search: Box<dyn Search>,
     status: Status,
     start_time: Option<Instant>,
@@ -37,7 +37,7 @@ struct App<'a, W: Write> {
     reset: bool,
     output: &'a mut W,
     term_size: (u16, u16),
-    world_size: (isize, isize),
+    world_size: (i32, i32),
     mode: Mode,
 }
 
@@ -69,16 +69,8 @@ impl<'a, W: Write> App<'a, W> {
             .execute(SetTitle("rlifesrc"))?;
         terminal::enable_raw_mode()?;
         self.term_size = terminal::size()?;
-        self.world_size.0 = self
-            .search
-            .config()
-            .width
-            .min(self.term_size.0 as isize - 1);
-        self.world_size.1 = self
-            .search
-            .config()
-            .height
-            .min(self.term_size.1 as isize - 3);
+        self.world_size.0 = self.search.config().width.min(self.term_size.0 as i32 - 1);
+        self.world_size.1 = self.search.config().height.min(self.term_size.1 as i32 - 3);
         self.update()
     }
 
@@ -289,16 +281,9 @@ impl<'a, W: Write> App<'a, W> {
                 }
                 Some(Event::Resize(width, height)) => {
                     self.term_size = (width, height);
-                    self.world_size.0 = self
-                        .search
-                        .config()
-                        .width
-                        .min(self.term_size.0 as isize - 1);
-                    self.world_size.1 = self
-                        .search
-                        .config()
-                        .height
-                        .min(self.term_size.1 as isize - 3);
+                    self.world_size.0 = self.search.config().width.min(self.term_size.0 as i32 - 1);
+                    self.world_size.1 =
+                        self.search.config().height.min(self.term_size.1 as i32 - 3);
                     self.output
                         .queue(ResetColor)?
                         .queue(Clear(ClearType::All))?;
@@ -318,8 +303,8 @@ impl<'a, W: Write> App<'a, W> {
                 | key_event!(KeyCode::Enter) => return Ok(true),
                 Some(Event::Resize(width, height)) => {
                     self.term_size = (width, height);
-                    self.world_size.0 = self.world_size.0.min(self.term_size.0 as isize - 1);
-                    self.world_size.1 = self.world_size.1.min(self.term_size.1 as isize - 3);
+                    self.world_size.0 = self.world_size.0.min(self.term_size.0 as i32 - 1);
+                    self.world_size.1 = self.world_size.1.min(self.term_size.1 as i32 - 3);
                     self.output
                         .queue(ResetColor)?
                         .queue(Clear(ClearType::All))?;

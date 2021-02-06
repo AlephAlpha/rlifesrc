@@ -47,7 +47,7 @@ pub struct App {
     link: ComponentLink<Self>,
     config: Config,
     status: Status,
-    gen: isize,
+    gen: i32,
     cells: usize,
     world: String,
     max_partial: bool,

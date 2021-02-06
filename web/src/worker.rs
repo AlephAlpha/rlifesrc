@@ -13,7 +13,7 @@ pub enum Request {
     Start,
     Pause,
     SetWorld(Config),
-    DisplayGen(isize),
+    DisplayGen(i32),
     MaxPartial,
     Save,
     Load(WorldSer),
@@ -65,7 +65,7 @@ impl Worker {
         }
     }
 
-    fn update_world(&mut self, id: HandlerId, gen: isize) {
+    fn update_world(&mut self, id: HandlerId, gen: i32) {
         let world = self.search.rle_gen(gen);
         let count = self.search.cell_count_gen(gen);
         self.link.respond(id, Response::UpdateWorld((world, count)));

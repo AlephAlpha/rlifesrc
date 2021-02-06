@@ -262,7 +262,7 @@ impl Transform {
     }
 
     /// Apply the transformation on a coordinate.
-    pub fn act_on(self, coord: Coord, width: isize, height: isize) -> Coord {
+    pub fn act_on(self, coord: Coord, width: i32, height: i32) -> Coord {
         let (x, y, t) = coord;
         match self {
             Transform::Id => (x, y, t),

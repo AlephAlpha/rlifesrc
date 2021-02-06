@@ -65,21 +65,21 @@ pub enum NewState {
 pub struct Config {
     /// Width.
     #[derivative(Default(value = "16"))]
-    pub width: isize,
+    pub width: i32,
 
     /// Height.
     #[derivative(Default(value = "16"))]
-    pub height: isize,
+    pub height: i32,
 
     /// Period.
     #[derivative(Default(value = "1"))]
-    pub period: isize,
+    pub period: i32,
 
     /// Horizontal translation.
-    pub dx: isize,
+    pub dx: i32,
 
     /// Vertical translation.
-    pub dy: isize,
+    pub dy: i32,
 
     /// Transformations (rotations and reflections) after the last generation
     /// in a period.
@@ -125,7 +125,7 @@ pub struct Config {
     ///
     /// If the diagonal width is `n`, the cells at position `(x, y)`
     /// where `abs(x - y) >= n` are assumed to be dead.
-    pub diagonal_width: Option<isize>,
+    pub diagonal_width: Option<i32>,
 
     /// Whether to skip patterns whose fundamental period are smaller than the given period.
     #[derivative(Default(value = "true"))]
@@ -141,7 +141,7 @@ pub struct Config {
 
 impl Config {
     /// Sets up a new configuration with given size.
-    pub fn new(width: isize, height: isize, period: isize) -> Self {
+    pub fn new(width: i32, height: i32, period: i32) -> Self {
         Config {
             width,
             height,
@@ -151,7 +151,7 @@ impl Config {
     }
 
     /// Sets the translations `(dx, dy)`.
-    pub fn set_translate(mut self, dx: isize, dy: isize) -> Self {
+    pub fn set_translate(mut self, dx: i32, dy: i32) -> Self {
         self.dx = dx;
         self.dy = dy;
         self
@@ -201,7 +201,7 @@ impl Config {
     }
 
     /// Sets the diagonal width.
-    pub fn set_diagonal_width<T: Into<Option<isize>>>(mut self, diagonal_width: T) -> Self {
+    pub fn set_diagonal_width<T: Into<Option<i32>>>(mut self, diagonal_width: T) -> Self {
         self.diagonal_width = diagonal_width.into();
         self
     }
