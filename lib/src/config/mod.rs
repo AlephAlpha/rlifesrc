@@ -1,7 +1,7 @@
 //! World configuration.
 
 use crate::{
-    cells::Coord,
+    cells::{Coord, State},
     error::Error,
     rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
     traits::Search,
@@ -55,6 +55,18 @@ pub enum NewState {
     /// the probability of each state is `1/n`.
     Random,
 }
+
+/// A cell whose state is known before the search.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct KnownCell {
+    /// The coordinates of the set cell.
+    pub coord: Coord,
+
+    /// The state.
+    pub state: State,
+}
+
 /// World configuration.
 ///
 /// The world will be generated from this configuration.
@@ -137,6 +149,9 @@ pub struct Config {
     /// In another word, whether to skip patterns whose symmetry group properly contains
     /// the given symmetry group.
     pub skip_subsymmetry: bool,
+
+    /// Cells whose states are known before the search.
+    pub known_cells: Vec<KnownCell>,
 }
 
 impl Config {
@@ -217,6 +232,12 @@ impl Config {
     /// more transformations than required by the given symmetry.
     pub fn set_skip_subsymmetry(mut self, skip_subsymmetry: bool) -> Self {
         self.skip_subsymmetry = skip_subsymmetry;
+        self
+    }
+
+    /// Sets cells whose states are known before the search.
+    pub fn set_known_cells<T: Into<Vec<KnownCell>>>(mut self, known_cells: T) -> Self {
+        self.known_cells = known_cells.into();
         self
     }
 

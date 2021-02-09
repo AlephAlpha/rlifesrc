@@ -79,6 +79,8 @@ impl WorldSer {
                 if old_state != state {
                     return Err(Error::SetCellError(coord));
                 }
+            } else if state.0 >= world.rule.gen() {
+                return Err(Error::SetCellError(coord));
             } else {
                 world.set_cell(cell, state, reason);
             }

@@ -1,4 +1,4 @@
-use rlifesrc_lib::{Config, Error, SearchOrder, Status, Symmetry, Transform};
+use rlifesrc_lib::{Config, Error, KnownCell, SearchOrder, Status, Symmetry, Transform, ALIVE};
 
 #[test]
 fn default() -> Result<(), Error> {
@@ -137,6 +137,27 @@ fn snowflakes() -> Result<(), Error> {
         .set_rule_string("B2ci3ai4c8/S02ae3eijkq4iz5ar6i7e");
     let mut search = config.world()?;
     assert_eq!(search.search(None), Status::Found);
+    Ok(())
+}
+
+#[test]
+fn known_cells() -> Result<(), Error> {
+    let config = Config::new(3, 3, 1).set_known_cells(vec![
+        KnownCell {
+            coord: (0, 0, 0),
+            state: ALIVE,
+        },
+        KnownCell {
+            coord: (1, 0, 0),
+            state: ALIVE,
+        },
+        KnownCell {
+            coord: (2, 0, 0),
+            state: ALIVE,
+        },
+    ]);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::None);
     Ok(())
 }
 

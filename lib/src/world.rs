@@ -2,7 +2,7 @@
 
 use crate::{
     cells::{CellRef, Coord, LifeCell, State, DEAD},
-    config::{Config, SearchOrder},
+    config::{Config, KnownCell, SearchOrder},
     rules::Rule,
     search::{Reason, SetCell},
 };
@@ -115,7 +115,9 @@ impl<'a, R: Rule> World<'a, R> {
         .init_pred_succ()
         .init_sym()
         .init_state()
+        .init_known_cells(&config.known_cells)
         .init_search_order(search_order.as_ref())
+        .presearch()
     }
 
     /// Links the cells to their neighbors.
@@ -193,7 +195,7 @@ impl<'a, R: Rule> World<'a, R> {
                                 || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
-                            self.set_stack.push(SetCell::new(cell, Reason::Deduce));
+                            self.set_stack.push(SetCell::new(cell, Reason::Known));
                         }
                     }
 
@@ -252,7 +254,7 @@ impl<'a, R: Rule> World<'a, R> {
                                 || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
-                            self.set_stack.push(SetCell::new(cell, Reason::Deduce));
+                            self.set_stack.push(SetCell::new(cell, Reason::Known));
                         }
                     }
                 }
@@ -279,6 +281,18 @@ impl<'a, R: Rule> World<'a, R> {
                     if !self.set_stack.iter().any(|s| s.cell == cell) {
                         self.clear_cell(cell);
                     }
+                }
+            }
+        }
+        self
+    }
+
+    /// Sets the known cells.
+    fn init_known_cells(mut self, known_cells: &[KnownCell]) -> Self {
+        for &KnownCell { coord, state } in known_cells.iter() {
+            if let Some(cell) = self.find_cell(coord) {
+                if cell.state.get().is_none() && state.0 < self.rule.gen() {
+                    self.set_cell(cell, state, Reason::Known);
                 }
             }
         }

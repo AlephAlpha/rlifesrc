@@ -30,6 +30,9 @@ pub enum Status {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(crate) enum Reason {
+    /// Known before the search starts,
+    Known,
+
     /// Decides the state of a cell by choice.
     Decide,
 
@@ -170,8 +173,12 @@ impl<'a, R: Rule> World<'a, R> {
                 Reason::Deduce => {
                     self.clear_cell(cell);
                 }
+                Reason::Known => {
+                    break;
+                }
             }
         }
+        self.set_stack.clear();
         self.check_index = 0;
         self.next_unknown = None;
         false
@@ -193,6 +200,22 @@ impl<'a, R: Rule> World<'a, R> {
                 self.conflicts += 1;
                 if !self.backup() {
                     return false;
+                }
+            }
+        }
+    }
+
+    /// Deduce all cells that could be deduced before the first decision.
+    pub(crate) fn presearch(mut self) -> Self {
+        loop {
+            if self.proceed() {
+                self.set_stack.clear();
+                self.check_index = 0;
+                return self;
+            } else {
+                self.conflicts += 1;
+                if !self.backup() {
+                    return self;
                 }
             }
         }
