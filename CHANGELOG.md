@@ -5,7 +5,7 @@
 - Now you can choose to skip patterns with subperiod and/or subsymmetry.
 - When the world is square and the diagonal width is not larger than width of the world, `Automatic` search order would choose `Diagonal`.
 - Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
-- Now `rlifesrc-lib` supports specifying the search order by a vector of coordinates. This is not yet supported in either the TUI or the Web version, but you can hack the save file.
+- Now `rlifesrc-lib` supports specifying the search order by a vector of coordinates, and a list of cells known before starting to search. These are not yet supported in either the TUI or the Web version, but you can hack the save file.
 - The `non empty front` option is removed. Now `rlifesrc` would automatically force the front to be non-empty when it can be proved that no solution would be missed.
 - Fix some bugs.
 - Update dependencies.
