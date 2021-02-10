@@ -161,6 +161,7 @@ impl<'a, R: Rule> World<'a, R> {
                         }
                     } else {
                         let state = !cell.state.get().unwrap();
+                        self.level -= 1;
                         self.clear_cell(cell);
                         if self.set_cell(cell, state, Reason::Deduce) {
                             return true;
@@ -174,6 +175,7 @@ impl<'a, R: Rule> World<'a, R> {
                     let state = State((j + 1) % self.rule.gen());
                     self.clear_cell(cell);
                     let reason = if n == 1 {
+                        self.level -= 1;
                         Reason::Deduce
                     } else {
                         Reason::TryAnother(n - 1)

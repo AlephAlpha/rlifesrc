@@ -58,6 +58,9 @@ pub struct World<'a, R: Rule> {
     /// * the first column, when the search order is column first;
     /// * the first row plus the first column, when the search order is diagonal.
     pub(crate) non_empty_front: bool,
+
+    /// The global decision level for assigning the cell state.
+    pub(crate) level: u32,
 }
 
 impl<'a, R: Rule> World<'a, R> {
@@ -110,6 +113,7 @@ impl<'a, R: Rule> World<'a, R> {
             check_index: 0,
             next_unknown: None,
             non_empty_front: is_front.is_some(),
+            level: 0,
         }
         .init_nbhd()
         .init_pred_succ()
@@ -386,6 +390,10 @@ impl<'a, R: Rule> World<'a, R> {
                 result = false;
             }
         }
+        if let Reason::Decide = reason {
+            self.level += 1;
+        }
+        cell.level.set(self.level);
         self.set_stack.push(SetCell::new(cell, reason));
         result
     }

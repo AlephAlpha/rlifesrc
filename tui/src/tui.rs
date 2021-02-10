@@ -93,10 +93,11 @@ impl<'a, W: Write> App<'a, W> {
             .queue(Print(format!(
                 "{:1$}",
                 format!(
-                    "Gen: {}  Cells: {}  Confl: {}{}",
+                    "Gen: {}  Cells: {}  Confl: {}  Level: {}{}",
                     self.gen,
                     self.search.cell_count_gen(self.gen),
                     self.search.conflicts(),
+                    self.search.level(),
                     if self.status == Status::Searching {
                         String::new()
                     } else {

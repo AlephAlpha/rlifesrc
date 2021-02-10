@@ -93,6 +93,9 @@ pub struct LifeCell<'a, R: Rule> {
     ///
     /// Here the choice of row or column depends on the search order.
     pub(crate) is_front: bool,
+
+    /// The decision level for assigning the cell state.
+    pub(crate) level: Cell<u32>,
 }
 
 impl<'a, R: Rule> LifeCell<'a, R> {
@@ -112,6 +115,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             sym: Default::default(),
             next: Default::default(),
             is_front: false,
+            level: Cell::new(0),
         }
     }
 
@@ -128,6 +132,7 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
             .field("coord", &self.coord)
             .field("state", &self.state.get())
             .field("desc", &self.desc.get())
+            .field("level", &self.level.get())
             .finish()
     }
 }
