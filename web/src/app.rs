@@ -48,7 +48,7 @@ pub struct App {
     config: Config,
     status: Status,
     gen: i32,
-    cells: usize,
+    cells: u32,
     world: String,
     max_partial: bool,
     worker: Box<dyn Bridge<Worker>>,

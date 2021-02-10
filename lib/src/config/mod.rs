@@ -120,7 +120,7 @@ pub struct Config {
     /// exceed this number.
     ///
     /// `None` means that there is no limit for the cell count.
-    pub max_cell_count: Option<usize>,
+    pub max_cell_count: Option<u32>,
 
     /// Whether to automatically reduce the [`max_cell_count`](#structfield.max_cell_count)
     /// when a result is found.
@@ -197,7 +197,7 @@ impl Config {
     }
 
     /// Sets the maximal number of living cells.
-    pub fn set_max_cell_count<T: Into<Option<usize>>>(mut self, max_cell_count: T) -> Self {
+    pub fn set_max_cell_count<T: Into<Option<u32>>>(mut self, max_cell_count: T) -> Self {
         self.max_cell_count = max_cell_count.into();
         self
     }

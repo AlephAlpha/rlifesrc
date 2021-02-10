@@ -5,7 +5,9 @@ use crate::{
     rules::Rule,
     world::World,
 };
+use derivative::Derivative;
 use rand::{thread_rng, Rng};
+use std::fmt::{Debug, Error, Formatter};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -49,13 +51,23 @@ pub(crate) enum Reason {
 }
 
 /// Records the cells whose values are set and their reasons.
-#[derive(Clone, Copy)]
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Copy(bound = ""))]
 pub(crate) struct SetCell<'a, R: Rule> {
     /// The set cell.
     pub(crate) cell: CellRef<'a, R>,
 
     /// The reason for setting a cell.
     pub(crate) reason: Reason,
+}
+
+impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for SetCell<'a, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.debug_struct("SetCell")
+            .field("cell", &self.cell)
+            .field("reason", &self.reason)
+            .finish()
+    }
 }
 
 impl<'a, R: Rule> SetCell<'a, R> {
@@ -103,8 +115,8 @@ impl<'a, R: Rule> World<'a, R> {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     fn proceed(&mut self) -> bool {
-        while self.check_index < self.set_stack.len() {
-            let cell = self.set_stack[self.check_index].cell;
+        while self.check_index < self.set_stack.len() as u32 {
+            let cell = self.set_stack[self.check_index as usize].cell;
             let state = cell.state.get().unwrap();
 
             // Determines some cells by symmetry.
@@ -138,7 +150,7 @@ impl<'a, R: Rule> World<'a, R> {
             let cell = set_cell.cell;
             match set_cell.reason {
                 Reason::Decide => {
-                    self.check_index = self.set_stack.len();
+                    self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;
                     if R::IS_GEN {
                         let State(j) = cell.state.get().unwrap();
@@ -156,7 +168,7 @@ impl<'a, R: Rule> World<'a, R> {
                     }
                 }
                 Reason::TryAnother(n) => {
-                    self.check_index = self.set_stack.len();
+                    self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;
                     let State(j) = cell.state.get().unwrap();
                     let state = State((j + 1) % self.rule.gen());
@@ -205,7 +217,7 @@ impl<'a, R: Rule> World<'a, R> {
         }
     }
 
-    /// Deduce all cells that could be deduced before the first decision.
+    /// Deduces all cells that could be deduced before the first decision.
     pub(crate) fn presearch(mut self) -> Self {
         loop {
             if self.proceed() {
@@ -277,7 +289,7 @@ impl<'a, R: Rule> World<'a, R> {
     }
 
     /// Set the max cell counts.
-    pub(crate) fn set_max_cell_count(&mut self, max_cell_count: Option<usize>) {
+    pub(crate) fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
         self.config.max_cell_count = max_cell_count;
         if let Some(max) = self.config.max_cell_count {
             while self.cell_count() > max {

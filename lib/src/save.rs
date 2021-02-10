@@ -61,7 +61,7 @@ pub struct WorldSer {
     /// If you have changed other things in the saved file, please set this value to `0`,
     /// otherwise rlifesrc might gives the wrong result.
     #[serde(default)]
-    check_index: usize,
+    check_index: u32,
 }
 
 impl WorldSer {
@@ -86,7 +86,7 @@ impl WorldSer {
             }
         }
         world.conflicts = self.conflicts;
-        if self.check_index < self.set_stack.len() {
+        if self.check_index < self.set_stack.len() as u32 {
             world.check_index = self.check_index;
         }
         Ok(world)

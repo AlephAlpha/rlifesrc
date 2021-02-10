@@ -41,12 +41,12 @@ pub trait Search {
     /// Number of known living cells in some generation.
     ///
     /// For Generations rules, dying cells are not counted.
-    fn cell_count_gen(&self, t: i32) -> usize;
+    fn cell_count_gen(&self, t: i32) -> u32;
 
     /// Minumum number of known living cells in all generation.
     ///
     /// For Generations rules, dying cells are not counted.
-    fn cell_count(&self) -> usize;
+    fn cell_count(&self) -> u32;
 
     /// Number of conflicts during the search.
     fn conflicts(&self) -> u64;
@@ -55,7 +55,7 @@ pub trait Search {
     ///
     /// Currently this is the only parameter that you can change
     /// during the search.
-    fn set_max_cell_count(&mut self, max_cell_count: Option<usize>);
+    fn set_max_cell_count(&mut self, max_cell_count: Option<u32>);
 
     #[cfg(feature = "serde")]
     /// Saves the world as a [`WorldSer`],
@@ -154,11 +154,11 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.rule.has_b0()
     }
 
-    fn cell_count_gen(&self, t: i32) -> usize {
+    fn cell_count_gen(&self, t: i32) -> u32 {
         self.cell_count[t as usize]
     }
 
-    fn cell_count(&self) -> usize {
+    fn cell_count(&self) -> u32 {
         self.cell_count()
     }
 
@@ -166,7 +166,7 @@ impl<'a, R: Rule> Search for World<'a, R> {
         self.conflicts
     }
 
-    fn set_max_cell_count(&mut self, max_cell_count: Option<usize>) {
+    fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
         self.set_max_cell_count(max_cell_count)
     }
 

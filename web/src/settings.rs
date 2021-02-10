@@ -36,7 +36,7 @@ pub enum Msg {
     SetRule(String),
     SetOrder(Option<SearchOrder>),
     SetChoose(NewState),
-    SetMax(Option<usize>),
+    SetMax(Option<u32>),
     SetDiag(Option<i32>),
     SetReduce,
     SetSkipSubperiod,

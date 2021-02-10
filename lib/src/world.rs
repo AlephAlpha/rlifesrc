@@ -26,10 +26,10 @@ pub struct World<'a, R: Rule> {
     /// Number of known living cells in each generation.
     ///
     /// For Generations rules, dying cells are not counted.
-    pub(crate) cell_count: Vec<usize>,
+    pub(crate) cell_count: Vec<u32>,
 
     /// Number of unknown or living cells on the first row or column.
-    pub(crate) front_cell_count: usize,
+    pub(crate) front_cell_count: u32,
 
     /// Number of conflicts during the search.
     pub(crate) conflicts: u64,
@@ -44,7 +44,7 @@ pub struct World<'a, R: Rule> {
     /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
     ///
     /// See [`proceed`](Self::proceed) for details.
-    pub(crate) check_index: usize,
+    pub(crate) check_index: u32,
 
     /// The starting point to look for an unknown cell.
     ///
@@ -484,7 +484,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Minimum number of known living cells in all generation.
     ///
     /// For Generations rules, dying cells are not counted.
-    pub(crate) fn cell_count(&self) -> usize {
+    pub(crate) fn cell_count(&self) -> u32 {
         *self.cell_count.iter().min().unwrap()
     }
 }

@@ -21,7 +21,7 @@ pub enum Request {
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {
-    UpdateWorld((String, usize)),
+    UpdateWorld((String, u32)),
     UpdateStatus(Status),
     UpdateConfig(Config),
     Error(String),
@@ -35,7 +35,7 @@ pub enum WorkerMsg {
 pub struct Worker {
     status: Status,
     search: Box<dyn Search>,
-    max_partial_count: usize,
+    max_partial_count: u32,
     max_partial: String,
     link: AgentLink<Worker>,
     timeout_task: Option<TimeoutTask>,
