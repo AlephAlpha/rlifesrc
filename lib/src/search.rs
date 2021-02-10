@@ -300,7 +300,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
     fn analyze(&mut self, reason: Vec<CellRef<'a, R>>) -> bool {
-        if reason.is_empty() {
+        if reason.is_empty() || R::IS_GEN {
             return self.retreat();
         }
         let mut max_level = 0;
