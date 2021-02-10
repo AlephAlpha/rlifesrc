@@ -6,7 +6,7 @@ use crate::{
     rules::Rule,
     search::{Reason, SetCell},
 };
-use std::mem;
+use std::{matches, mem};
 
 /// The world.
 pub struct World<'a, R: Rule> {
@@ -115,6 +115,7 @@ impl<'a, R: Rule> World<'a, R> {
             non_empty_front: is_front.is_some(),
             level: 0,
         }
+        .init_border()
         .init_nbhd()
         .init_pred_succ()
         .init_sym()
@@ -122,6 +123,33 @@ impl<'a, R: Rule> World<'a, R> {
         .init_known_cells(&config.known_cells)
         .init_search_order(search_order.as_ref())
         .presearch()
+    }
+
+    /// Initialize the cells at the borders.
+    fn init_border(mut self) -> Self {
+        for x in -1..=self.config.width {
+            for y in -1..=self.config.height {
+                if let Some(d) = self.config.diagonal_width {
+                    let abs = (x - y).abs();
+                    if abs >= d {
+                        if abs == d || abs == d + 1 {
+                            for t in 0..self.config.period {
+                                let cell = self.find_cell((x, y, t)).unwrap();
+                                self.set_stack.push(SetCell::new(cell, Reason::Known));
+                            }
+                        }
+                        continue;
+                    }
+                }
+                for t in 0..self.config.period {
+                    if x == -1 || x == self.config.width || y == -1 || y == self.config.height {
+                        let cell = self.find_cell((x, y, t)).unwrap();
+                        self.set_stack.push(SetCell::new(cell, Reason::Known));
+                    }
+                }
+            }
+        }
+        self
     }
 
     /// Links the cells to their neighbors.
@@ -372,7 +400,12 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// Return `false` if the number of living cells exceeds the
     /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
-    pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: Reason) -> bool {
+    pub(crate) fn set_cell(
+        &mut self,
+        cell: CellRef<'a, R>,
+        state: State,
+        reason: Reason<'a, R>,
+    ) -> bool {
         cell.state.set(Some(state));
         let mut result = true;
         cell.update_desc(Some(state), true);
@@ -390,7 +423,7 @@ impl<'a, R: Rule> World<'a, R> {
                 result = false;
             }
         }
-        if let Reason::Decide = reason {
+        if matches!(reason, Reason::Decide | Reason::TryAnother(_)) {
             self.level += 1;
         }
         cell.level.set(self.level);
@@ -401,6 +434,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// Clears the [`state`](LifeCell#structfield.state) of a cell,
     /// and update the neighborhood descriptor of its neighbors.
     pub(crate) fn clear_cell(&mut self, cell: CellRef<'a, R>) {
+        cell.seen.set(false);
         let old_state = cell.state.take();
         if old_state != None {
             cell.update_desc(old_state, false);

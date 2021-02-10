@@ -96,6 +96,9 @@ pub struct LifeCell<'a, R: Rule> {
 
     /// The decision level for assigning the cell state.
     pub(crate) level: Cell<u32>,
+
+    /// Whether the cell has been seen in the analysis.
+    pub(crate) seen: Cell<bool>,
 }
 
 impl<'a, R: Rule> LifeCell<'a, R> {
@@ -116,6 +119,7 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             next: Default::default(),
             is_front: false,
             level: Cell::new(0),
+            seen: Cell::new(false),
         }
     }
 
@@ -132,7 +136,7 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
             .field("coord", &self.coord)
             .field("state", &self.state.get())
             .field("desc", &self.desc.get())
-            .field("level", &self.level.get())
+            .field("is_front", &self.is_front)
             .finish()
     }
 }
@@ -172,7 +176,7 @@ impl<'a, R: Rule> Deref for CellRef<'a, R> {
     }
 }
 
-impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for CellRef<'a, R> {
+impl<'a, R: Rule> Debug for CellRef<'a, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.debug_struct("CellRef")
             .field("coord", &self.coord)

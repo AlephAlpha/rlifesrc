@@ -320,7 +320,7 @@ impl Rule for Life {
                 ALIVE
             };
             let succ = cell.succ.unwrap();
-            return world.set_cell(succ, state, Reason::Deduce);
+            return world.set_cell(succ, state, Reason::Rule(cell));
         }
 
         if flags.intersects(ImplFlags::SELF) {
@@ -329,7 +329,7 @@ impl Rule for Life {
             } else {
                 ALIVE
             };
-            if !world.set_cell(cell, state, Reason::Deduce) {
+            if !world.set_cell(cell, state, Reason::Rule(cell)) {
                 return false;
             }
         }
@@ -344,7 +344,7 @@ impl Rule for Life {
                 for &neigh in cell.nbhd.iter() {
                     if let Some(neigh) = neigh {
                         if neigh.state.get().is_none()
-                            && !world.set_cell(neigh, state, Reason::Deduce)
+                            && !world.set_cell(neigh, state, Reason::Rule(cell))
                         {
                             return false;
                         }
@@ -495,7 +495,7 @@ impl Rule for LifeGen {
                         ALIVE
                     };
                     let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, state, Reason::Deduce);
+                    return world.set_cell(succ, state, Reason::Rule(cell));
                 }
             }
             Some(ALIVE) => {
@@ -512,7 +512,7 @@ impl Rule for LifeGen {
                         ALIVE
                     };
                     let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, state, Reason::Deduce);
+                    return world.set_cell(succ, state, Reason::Rule(cell));
                 }
             }
             Some(State(i)) => {
@@ -520,13 +520,13 @@ impl Rule for LifeGen {
                     return j == (i + 1) % gen;
                 } else {
                     let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, State((i + 1) % gen), Reason::Deduce);
+                    return world.set_cell(succ, State((i + 1) % gen), Reason::Rule(cell));
                 }
             }
             None => match desc.1 {
                 Some(DEAD) => {
                     if flags.contains(ImplFlags::SELF_ALIVE) {
-                        return world.set_cell(cell, State(gen - 1), Reason::Deduce);
+                        return world.set_cell(cell, State(gen - 1), Reason::Rule(cell));
                     } else {
                         return true;
                     }
@@ -538,13 +538,13 @@ impl Rule for LifeGen {
                         } else {
                             ALIVE
                         };
-                        if !world.set_cell(cell, state, Reason::Deduce) {
+                        if !world.set_cell(cell, state, Reason::Rule(cell)) {
                             return false;
                         }
                     }
                 }
                 Some(State(j)) => {
-                    return world.set_cell(cell, State(j - 1), Reason::Deduce);
+                    return world.set_cell(cell, State(j - 1), Reason::Rule(cell));
                 }
                 None => return true,
             },
@@ -561,7 +561,8 @@ impl Rule for LifeGen {
         if flags.intersects(ImplFlags::NBHD_ALIVE) {
             for &neigh in cell.nbhd.iter() {
                 if let Some(neigh) = neigh {
-                    if neigh.state.get().is_none() && !world.set_cell(neigh, ALIVE, Reason::Deduce)
+                    if neigh.state.get().is_none()
+                        && !world.set_cell(neigh, ALIVE, Reason::Rule(cell))
                     {
                         return false;
                     }

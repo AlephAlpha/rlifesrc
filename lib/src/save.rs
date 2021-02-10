@@ -13,6 +13,47 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+/// A representation of reasons for setting a cell which can be easily serialized.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub(crate) enum ReasonSer {
+    /// Known before the search starts,
+    Known,
+
+    /// Decides the state of a cell by choice.
+    Decide,
+
+    /// Deduced from the rule when constitifying another cell.
+    Rule(Coord),
+
+    /// Deduced from symmetry.
+    Sym(Coord),
+
+    /// Deduced from conflicts.
+    Conflict,
+
+    /// Tries another state of a cell when the original state
+    /// leads to a conflict.
+    ///
+    /// Remembers the number of remaining states to try.
+    ///
+    /// Only used in Generations rules.
+    TryAnother(usize),
+}
+
+impl<'a, R: Rule> Reason<'a, R> {
+    fn ser(&self) -> ReasonSer {
+        match self {
+            Reason::Known => ReasonSer::Known,
+            Reason::Decide => ReasonSer::Decide,
+            Reason::Rule(cell) => ReasonSer::Rule(cell.coord),
+            Reason::Sym(cell) => ReasonSer::Sym(cell.coord),
+            Reason::Conflict => ReasonSer::Conflict,
+            Reason::TryAnother(n) => ReasonSer::TryAnother(*n),
+        }
+    }
+}
+
 /// A representation of setting a cell which can be easily serialized.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -24,7 +65,7 @@ pub struct SetCellSer {
     state: State,
 
     /// The reason for setting a cell.
-    reason: Reason,
+    reason: ReasonSer,
 }
 
 impl<'a, R: Rule> SetCell<'a, R> {
@@ -32,7 +73,7 @@ impl<'a, R: Rule> SetCell<'a, R> {
         SetCellSer {
             coord: self.cell.coord,
             state: self.cell.state.get().unwrap(),
-            reason: self.reason,
+            reason: self.reason.ser(),
         }
     }
 }
@@ -82,6 +123,18 @@ impl WorldSer {
             } else if state.0 >= world.rule.gen() {
                 return Err(Error::SetCellError(coord));
             } else {
+                let reason = match reason {
+                    ReasonSer::Known => Reason::Known,
+                    ReasonSer::Decide => Reason::Decide,
+                    ReasonSer::Rule(coord) => {
+                        Reason::Rule(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
+                    }
+                    ReasonSer::Sym(coord) => {
+                        Reason::Sym(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
+                    }
+                    ReasonSer::Conflict => Reason::Conflict,
+                    ReasonSer::TryAnother(n) => Reason::TryAnother(n),
+                };
                 world.set_cell(cell, state, reason);
             }
         }
