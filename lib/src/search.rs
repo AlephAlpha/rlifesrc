@@ -321,36 +321,15 @@ impl<'a, R: Rule> World<'a, R> {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
                 Reason::Decide => {
-                    let state;
-                    let reason;
-                    if R::IS_GEN {
-                        let State(j) = cell.state.get().unwrap();
-                        state = State((j + 1) % self.rule.gen());
-                        reason = Reason::TryAnother(self.rule.gen() - 2);
-                    } else {
-                        state = !cell.state.get().unwrap();
-                        reason = Reason::Conflict;
-                    }
+                    let state = !cell.state.get().unwrap();
+                    let reason = Reason::Conflict;
 
                     self.level -= 1;
                     self.clear_cell(cell);
                     self.retreat_to(max_level);
                     return self.set_cell(cell, state, reason) || self.retreat();
                 }
-                Reason::TryAnother(n) => {
-                    let State(j) = cell.state.get().unwrap();
-                    let state = State((j + 1) % self.rule.gen());
-                    let reason = if n == 1 {
-                        Reason::Conflict
-                    } else {
-                        Reason::TryAnother(n - 1)
-                    };
-
-                    self.level -= 1;
-                    self.clear_cell(cell);
-                    self.retreat_to(max_level);
-                    return self.set_cell(cell, state, reason) || self.retreat();
-                }
+                Reason::TryAnother(_) => unreachable!(),
                 Reason::Conflict => {
                     self.clear_cell(cell);
                     return self.retreat();
@@ -361,16 +340,8 @@ impl<'a, R: Rule> World<'a, R> {
                 _ => {
                     if cell.seen.get() {
                         if counter == 1 {
-                            let state;
-                            let reason;
-                            if R::IS_GEN {
-                                let State(j) = cell.state.get().unwrap();
-                                state = State((j + 1) % self.rule.gen());
-                                reason = Reason::TryAnother(self.rule.gen() - 2);
-                            } else {
-                                state = !cell.state.get().unwrap();
-                                reason = Reason::Conflict;
-                            }
+                            let state = !cell.state.get().unwrap();
+                            let reason = Reason::Conflict;
 
                             self.clear_cell(cell);
                             self.retreat_to(max_level);
