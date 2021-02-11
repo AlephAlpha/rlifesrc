@@ -7,7 +7,6 @@ use crate::{
 };
 use derivative::Derivative;
 use rand::{thread_rng, Rng};
-use std::fmt::{Debug, Error, Formatter};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -52,22 +51,19 @@ pub(crate) enum Reason {
 
 /// Records the cells whose values are set and their reasons.
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Copy(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Copy(bound = ""),
+    Debug(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub(crate) struct SetCell<'a, R: Rule> {
     /// The set cell.
     pub(crate) cell: CellRef<'a, R>,
 
     /// The reason for setting a cell.
     pub(crate) reason: Reason,
-}
-
-impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for SetCell<'a, R> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        f.debug_struct("SetCell")
-            .field("cell", &self.cell)
-            .field("reason", &self.reason)
-            .finish()
-    }
 }
 
 impl<'a, R: Rule> SetCell<'a, R> {
@@ -104,10 +100,13 @@ impl<'a, R: Rule> World<'a, R> {
                     true
                 }
             }
-            && cell
-                .nbhd
-                .iter()
-                .all(|&neigh| self.consistify(neigh.unwrap()))
+            && cell.nbhd.iter().all(|&neigh| {
+                if let Some(neigh) = neigh {
+                    self.consistify(neigh)
+                } else {
+                    true
+                }
+            })
     }
 
     /// Deduces all the consequences by [`consistify`](Self::consistify) and symmetry.
@@ -140,53 +139,54 @@ impl<'a, R: Rule> World<'a, R> {
         true
     }
 
-    /// Backtracks to the last time when a unknown cell is decided by choice,
+    /// Retreats to the last time when a unknown cell is decided by choice,
     /// and switch that cell to the other state.
     ///
-    /// Returns `true` if it backtracks successfully,
+    /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
-    fn backup(&mut self) -> bool {
-        while let Some(set_cell) = self.set_stack.pop() {
-            let cell = set_cell.cell;
-            match set_cell.reason {
+    fn retreat(&mut self) -> bool {
+        while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
+            match reason {
                 Reason::Decide => {
-                    self.check_index = self.set_stack.len() as u32;
-                    self.next_unknown = cell.next;
+                    let state;
+                    let reason;
                     if R::IS_GEN {
                         let State(j) = cell.state.get().unwrap();
-                        let state = State((j + 1) % self.rule.gen());
-                        self.clear_cell(cell);
-                        if self.set_cell(cell, state, Reason::TryAnother(self.rule.gen() - 2)) {
-                            return true;
-                        }
+                        state = State((j + 1) % self.rule.gen());
+                        reason = Reason::TryAnother(self.rule.gen() - 2);
                     } else {
-                        let state = !cell.state.get().unwrap();
-                        self.clear_cell(cell);
-                        if self.set_cell(cell, state, Reason::Deduce) {
-                            return true;
-                        }
+                        state = !cell.state.get().unwrap();
+                        reason = Reason::Deduce;
+                    }
+
+                    self.check_index = self.set_stack.len() as u32;
+                    self.next_unknown = cell.next;
+                    self.clear_cell(cell);
+                    if self.set_cell(cell, state, reason) {
+                        return true;
                     }
                 }
                 Reason::TryAnother(n) => {
-                    self.check_index = self.set_stack.len() as u32;
-                    self.next_unknown = cell.next;
                     let State(j) = cell.state.get().unwrap();
                     let state = State((j + 1) % self.rule.gen());
-                    self.clear_cell(cell);
                     let reason = if n == 1 {
                         Reason::Deduce
                     } else {
                         Reason::TryAnother(n - 1)
                     };
+
+                    self.check_index = self.set_stack.len() as u32;
+                    self.next_unknown = cell.next;
+                    self.clear_cell(cell);
                     if self.set_cell(cell, state, reason) {
                         return true;
                     }
                 }
-                Reason::Deduce => {
-                    self.clear_cell(cell);
-                }
                 Reason::Known => {
                     break;
+                }
+                Reason::Deduce => {
+                    self.clear_cell(cell);
                 }
             }
         }
@@ -202,7 +202,7 @@ impl<'a, R: Rule> World<'a, R> {
     /// (and returns `false`).
     ///
     /// It also records the number of steps it has walked in the parameter
-    /// `step`. A step consists of a [`proceed`](Self::proceed) and a [`backup`](Self::backup).
+    /// `step`. A step consists of a [`proceed`](Self::proceed) and a [`retreat`](Self::retreat).
     fn go(&mut self, step: &mut u64) -> bool {
         loop {
             *step += 1;
@@ -210,7 +210,7 @@ impl<'a, R: Rule> World<'a, R> {
                 return true;
             } else {
                 self.conflicts += 1;
-                if !self.backup() {
+                if !self.retreat() {
                     return false;
                 }
             }
@@ -226,7 +226,7 @@ impl<'a, R: Rule> World<'a, R> {
                 return self;
             } else {
                 self.conflicts += 1;
-                if !self.backup() {
+                if !self.retreat() {
                     return self;
                 }
             }
@@ -262,12 +262,12 @@ impl<'a, R: Rule> World<'a, R> {
     /// and no results are found.
     pub fn search(&mut self, max_step: Option<u64>) -> Status {
         let mut step_count = 0;
-        if self.next_unknown.is_none() && !self.backup() {
+        if self.next_unknown.is_none() && !self.retreat() {
             return Status::None;
         }
         while self.go(&mut step_count) {
             if let Some(result) = self.decide() {
-                if !result && !self.backup() {
+                if !result && !self.retreat() {
                     return Status::None;
                 }
             } else if !self.is_boring() {
@@ -275,7 +275,7 @@ impl<'a, R: Rule> World<'a, R> {
                     self.config.max_cell_count = Some(self.cell_count() - 1);
                 }
                 return Status::Found;
-            } else if !self.backup() {
+            } else if !self.retreat() {
                 return Status::None;
             }
 
@@ -293,7 +293,7 @@ impl<'a, R: Rule> World<'a, R> {
         self.config.max_cell_count = max_cell_count;
         if let Some(max) = self.config.max_cell_count {
             while self.cell_count() > max {
-                if !self.backup() {
+                if !self.retreat() {
                     break;
                 }
             }

@@ -128,6 +128,7 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
             .field("coord", &self.coord)
             .field("state", &self.state.get())
             .field("desc", &self.desc.get())
+            .field("is_front", &self.is_front)
             .finish()
     }
 }
@@ -167,7 +168,7 @@ impl<'a, R: Rule> Deref for CellRef<'a, R> {
     }
 }
 
-impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for CellRef<'a, R> {
+impl<'a, R: Rule> Debug for CellRef<'a, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.debug_struct("CellRef")
             .field("coord", &self.coord)

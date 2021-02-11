@@ -111,6 +111,7 @@ impl<'a, R: Rule> World<'a, R> {
             next_unknown: None,
             non_empty_front: is_front.is_some(),
         }
+        .init_border()
         .init_nbhd()
         .init_pred_succ()
         .init_sym()
@@ -118,6 +119,33 @@ impl<'a, R: Rule> World<'a, R> {
         .init_known_cells(&config.known_cells)
         .init_search_order(search_order.as_ref())
         .presearch()
+    }
+
+    /// Initialize the cells at the borders.
+    fn init_border(mut self) -> Self {
+        for x in -1..=self.config.width {
+            for y in -1..=self.config.height {
+                if let Some(d) = self.config.diagonal_width {
+                    let abs = (x - y).abs();
+                    if abs >= d {
+                        if abs == d || abs == d + 1 {
+                            for t in 0..self.config.period {
+                                let cell = self.find_cell((x, y, t)).unwrap();
+                                self.set_stack.push(SetCell::new(cell, Reason::Known));
+                            }
+                        }
+                        continue;
+                    }
+                }
+                for t in 0..self.config.period {
+                    if x == -1 || x == self.config.width || y == -1 || y == self.config.height {
+                        let cell = self.find_cell((x, y, t)).unwrap();
+                        self.set_stack.push(SetCell::new(cell, Reason::Known));
+                    }
+                }
+            }
+        }
+        self
     }
 
     /// Links the cells to their neighbors.
