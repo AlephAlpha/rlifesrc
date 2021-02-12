@@ -31,7 +31,6 @@ pub enum Status {
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
-    Copy(bound = ""),
     Debug(bound = ""),
     PartialEq(bound = ""),
     Eq(bound = "")
@@ -52,8 +51,8 @@ pub(crate) enum Reason<'a, R: Rule> {
     /// Deduced from conflicts.
     Conflict,
 
-    /// Deduced from cells with level not larger than the given number.
-    Level(u32),
+    /// Deduced from a learnt clause.
+    Clause(Vec<CellRef<'a, R>>),
 
     /// Tries another state of a cell when the original state
     /// leads to a conflict.
@@ -88,6 +87,7 @@ impl<'a, R: Rule> Reason<'a, R> {
                 cells
             }
             Reason::Sym(cell) => vec![cell],
+            Reason::Clause(clause) => clause,
             _ => Vec::new(),
         }
     }
@@ -97,7 +97,6 @@ impl<'a, R: Rule> Reason<'a, R> {
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
-    Copy(bound = ""),
     Debug(bound = ""),
     PartialEq(bound = ""),
     Eq(bound = "")
@@ -221,22 +220,6 @@ impl<'a, R: Rule> World<'a, R> {
         Ok(())
     }
 
-    /// Retreats to the specified level.
-    fn retreat_to(&mut self, level: u32) {
-        while self.level > level {
-            while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
-                self.clear_cell(cell);
-                if matches!(reason, Reason::Decide | Reason::TryAnother(_)) {
-                    self.next_unknown = cell.next;
-                    self.level -= 1;
-                    break;
-                }
-            }
-        }
-
-        self.check_index = self.set_stack.len() as u32;
-    }
-
     /// Retreats to the last time when a unknown cell is decided by choice,
     /// and switch that cell to the other state.
     ///
@@ -308,16 +291,18 @@ impl<'a, R: Rule> World<'a, R> {
         }
         let mut max_level = 0;
         let mut counter = 0;
-        for cell in reason {
-            if cell.state.get().is_some() {
-                let level = cell.level.get();
+        let mut learnt = Vec::new();
+        for reason_cell in reason {
+            if reason_cell.state.get().is_some() {
+                let level = reason_cell.level.get();
                 if level == self.level {
-                    if !cell.seen.get() {
+                    if !reason_cell.seen.get() {
                         counter += 1;
-                        cell.seen.set(true);
+                        reason_cell.seen.set(true);
                     }
                 } else {
                     max_level = max_level.max(level);
+                    learnt.push(reason_cell);
                 }
             }
         }
@@ -325,11 +310,7 @@ impl<'a, R: Rule> World<'a, R> {
             match reason {
                 Reason::Decide => {
                     let state = !cell.state.get().unwrap();
-                    let reason = if max_level + 1 == self.level {
-                        Reason::Conflict
-                    } else {
-                        Reason::Level(max_level)
-                    };
+                    let reason = Reason::Clause(learnt);
 
                     self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;
@@ -349,26 +330,35 @@ impl<'a, R: Rule> World<'a, R> {
                     if cell.seen.get() {
                         self.clear_cell(cell);
                         counter -= 1;
-                        for c in reason.cells(cell) {
-                            if c.state.get().is_some() {
-                                let level = c.level.get();
+                        for reason_cell in reason.cells(cell) {
+                            if reason_cell.state.get().is_some() {
+                                let level = reason_cell.level.get();
                                 if level == self.level {
-                                    if !c.seen.get() {
+                                    if !reason_cell.seen.get() {
                                         counter += 1;
-                                        c.seen.set(true);
+                                        reason_cell.seen.set(true);
                                     }
                                 } else {
                                     max_level = max_level.max(level);
+                                    learnt.push(reason_cell);
                                 }
                             }
                         }
-                        if let Reason::Level(n) = reason {
-                            max_level = max_level.max(n);
-                        }
 
                         if counter == 0 {
-                            self.retreat_to(max_level + 1);
-                            return self.retreat();
+                            while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
+                                if matches!(reason, Reason::Decide | Reason::TryAnother(_)) {
+                                    self.clear_cell(cell);
+                                    self.next_unknown = cell.next;
+                                    self.level -= 1;
+                                    if self.level == max_level {
+                                        return self.analyze(learnt);
+                                    }
+                                } else {
+                                    self.clear_cell(cell);
+                                }
+                            }
+                            break;
                         }
                     } else {
                         self.clear_cell(cell);
