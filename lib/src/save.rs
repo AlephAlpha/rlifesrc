@@ -32,6 +32,9 @@ pub(crate) enum ReasonSer {
     /// Deduced from conflicts.
     Conflict,
 
+    /// Deduced from cells with level not larger than the given number.
+    Level(u32),
+
     /// Tries another state of a cell when the original state
     /// leads to a conflict.
     ///
@@ -49,6 +52,7 @@ impl<'a, R: Rule> Reason<'a, R> {
             Reason::Rule(cell) => ReasonSer::Rule(cell.coord),
             Reason::Sym(cell) => ReasonSer::Sym(cell.coord),
             Reason::Conflict => ReasonSer::Conflict,
+            Reason::Level(n) => ReasonSer::Level(*n),
             Reason::TryAnother(n) => ReasonSer::TryAnother(*n),
         }
     }
@@ -133,6 +137,7 @@ impl WorldSer {
                         Reason::Sym(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
                     }
                     ReasonSer::Conflict => Reason::Conflict,
+                    ReasonSer::Level(n) => Reason::Level(n),
                     ReasonSer::TryAnother(n) => Reason::TryAnother(n),
                 };
                 world.set_cell(cell, state, reason);

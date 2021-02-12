@@ -233,6 +233,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Handles a key event. Return `true` to quit the program.
+    #[allow(unreachable_patterns)]
     async fn handle(
         &mut self,
         event: Option<Event>,
@@ -242,10 +243,7 @@ impl<'a, W: Write> App<'a, W> {
         /// A macro to generate constant key events patterns.
         macro_rules! key_event {
             ($code:pat) => {
-                Some(Event::Key(KeyEvent {
-                    code: $code,
-                    ..
-                }))
+                Some(Event::Key(KeyEvent { code: $code, .. }))
             };
         }
 

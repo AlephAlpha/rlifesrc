@@ -52,6 +52,9 @@ pub(crate) enum Reason<'a, R: Rule> {
     /// Deduced from conflicts.
     Conflict,
 
+    /// Deduced from cells with level not larger than the given number.
+    Level(u32),
+
     /// Tries another state of a cell when the original state
     /// leads to a conflict.
     ///
@@ -322,11 +325,16 @@ impl<'a, R: Rule> World<'a, R> {
             match reason {
                 Reason::Decide => {
                     let state = !cell.state.get().unwrap();
-                    let reason = Reason::Conflict;
+                    let reason = if max_level + 1 == self.level {
+                        Reason::Conflict
+                    } else {
+                        Reason::Level(max_level)
+                    };
 
+                    self.check_index = self.set_stack.len() as u32;
+                    self.next_unknown = cell.next;
                     self.level -= 1;
                     self.clear_cell(cell);
-                    self.retreat_to(max_level);
                     return self.set_cell(cell, state, reason) || self.retreat();
                 }
                 Reason::TryAnother(_) => unreachable!(),
@@ -339,31 +347,28 @@ impl<'a, R: Rule> World<'a, R> {
                 }
                 _ => {
                     if cell.seen.get() {
-                        if counter == 1 {
-                            let state = !cell.state.get().unwrap();
-                            let reason = Reason::Conflict;
-
-                            self.clear_cell(cell);
-                            self.retreat_to(max_level);
-                            return self.set_cell(cell, state, reason) || self.retreat();
-                        } else {
-                            self.clear_cell(cell);
-                            for c in reason.cells(cell) {
-                                if c.state.get().is_some() {
-                                    let level = c.level.get();
-                                    if level == self.level {
-                                        if !c.seen.get() {
-                                            counter += 1;
-                                            c.seen.set(true);
-                                        }
-                                    } else {
-                                        max_level = max_level.max(level);
+                        self.clear_cell(cell);
+                        counter -= 1;
+                        for c in reason.cells(cell) {
+                            if c.state.get().is_some() {
+                                let level = c.level.get();
+                                if level == self.level {
+                                    if !c.seen.get() {
+                                        counter += 1;
+                                        c.seen.set(true);
                                     }
+                                } else {
+                                    max_level = max_level.max(level);
                                 }
                             }
-                            if cell.level.get() == self.level {
-                                counter -= 1;
-                            }
+                        }
+                        if let Reason::Level(n) = reason {
+                            max_level = max_level.max(n);
+                        }
+
+                        if counter == 0 {
+                            self.retreat_to(max_level + 1);
+                            return self.retreat();
                         }
                     } else {
                         self.clear_cell(cell);
