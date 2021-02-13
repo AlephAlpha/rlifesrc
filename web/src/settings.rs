@@ -157,6 +157,7 @@ impl Settings {
                 { self.set_reduce() }
                 { self.set_skip_subperiod() }
                 { self.set_skip_subsym() }
+                { self.set_backjump() }
             </div>
         }
     }
@@ -653,7 +654,7 @@ impl Settings {
         }
     }
 
-    fn set_skip_subsym(&self) -> Html {
+    fn set_backjump(&self) -> Html {
         html! {
             <div class="mui-checkbox">
                 <label>
