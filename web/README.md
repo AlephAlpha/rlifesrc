@@ -190,4 +190,11 @@ python3 -m http.server
 
   也就是说，跳过对称群真包含指定的对称性的对称群的图样。
   </dd>
+
+  <dt> (Experimental) Enable backjumping</dt>
+  <dd>
+  [Backjumping](https://en.wikipedia.org/wiki/Backjumping) 可以减少搜索所需的步数，但每一步所需的时间会变得更长。当前的实现对大部分搜索来说都会变得更慢，仅在搜索大静物（比如说 64x64）时有用。
+
+  当前仅支持非 Generations 的规则，Generations 规则会忽略此选项。
+  </dd>
 </dl>

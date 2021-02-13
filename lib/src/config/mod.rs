@@ -152,6 +152,16 @@ pub struct Config {
 
     /// Cells whose states are known before the search.
     pub known_cells: Vec<KnownCell>,
+
+    /// __(Experimental)__ Whether to enable [backjumping](https://en.wikipedia.org/wiki/Backjumping).
+    ///
+    /// Backjumping will reduce the number of steps, but each step will takes
+    /// a much longer time. The current implementation is slower for most search,
+    /// only useful for large (e.g., 64x64) still lifes.
+    ///
+    /// Currently it is only supported for non-generations rules. Generations rules
+    /// will ignore this option.
+    pub backjump: bool,
 }
 
 impl Config {
@@ -238,6 +248,12 @@ impl Config {
     /// Sets cells whose states are known before the search.
     pub fn set_known_cells<T: Into<Vec<KnownCell>>>(mut self, known_cells: T) -> Self {
         self.known_cells = known_cells.into();
+        self
+    }
+
+    /// Sets whether to enable backjumping.
+    pub fn set_backjump(mut self, backjump: bool) -> Self {
+        self.backjump = backjump;
         self
     }
 

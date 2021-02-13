@@ -43,6 +43,10 @@ FLAGS:
             Prints all possible results instead of only the first one
             Only useful when --no-tui is set.
 
+        --backjump       
+            (Experimental) Enable backjumping
+            The current implementation of backjumping is very slow, only useful for large (e.g., 64x64) still lifes.
+
     -n, --no-tui
             Starts searching immediately, without entering the TUI
 

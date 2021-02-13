@@ -48,8 +48,10 @@ pub(crate) enum Reason<'a, R: Rule> {
     /// Deduced from symmetry.
     Sym(CellRef<'a, R>),
 
-    /// Deduced from conflicts.
-    Conflict,
+    /// Deduced from other cells or conflicts.
+    ///
+    /// A general reason used as a fallback.
+    Deduced,
 
     /// Deduced from a learnt clause.
     Clause(Vec<CellRef<'a, R>>),
@@ -132,8 +134,10 @@ enum ConflReason<'a, R: Rule> {
     /// Deduced from symmetry.
     Sym(CellRef<'a, R>, CellRef<'a, R>),
 
-    /// Deduced from conditions about cell counts.
-    CellCount,
+    /// Deduced from other conditions.
+    ///
+    /// A general reason used as a fallback.
+    Deduced,
 }
 
 impl<'a, R: Rule> ConflReason<'a, R> {
@@ -208,7 +212,7 @@ impl<'a, R: Rule> World<'a, R> {
                         return Err(ConflReason::Sym(cell, sym));
                     }
                 } else if !self.set_cell(sym, state, Reason::Sym(cell)) {
-                    return Err(ConflReason::CellCount);
+                    return Err(ConflReason::Deduced);
                 }
             }
 
@@ -237,7 +241,7 @@ impl<'a, R: Rule> World<'a, R> {
                         reason = Reason::TryAnother(self.rule.gen() - 2);
                     } else {
                         state = !cell.state.get().unwrap();
-                        reason = Reason::Conflict;
+                        reason = Reason::Deduced;
                     }
 
                     self.check_index = self.set_stack.len() as u32;
@@ -252,7 +256,7 @@ impl<'a, R: Rule> World<'a, R> {
                     let State(j) = cell.state.get().unwrap();
                     let state = State((j + 1) % self.rule.gen());
                     let reason = if n == 1 {
-                        Reason::Conflict
+                        Reason::Deduced
                     } else {
                         Reason::TryAnother(n - 1)
                     };
@@ -319,7 +323,7 @@ impl<'a, R: Rule> World<'a, R> {
                     return self.set_cell(cell, state, reason) || self.retreat();
                 }
                 Reason::TryAnother(_) => unreachable!(),
-                Reason::Conflict => {
+                Reason::Deduced => {
                     self.clear_cell(cell);
                     return self.retreat();
                 }
@@ -386,7 +390,12 @@ impl<'a, R: Rule> World<'a, R> {
                 Ok(()) => return true,
                 Err(reason) => {
                     self.conflicts += 1;
-                    if !self.analyze(reason.cells()) {
+                    let is_fail = if self.config.backjump {
+                        !self.analyze(reason.cells())
+                    } else {
+                        !self.retreat()
+                    };
+                    if is_fail {
                         return false;
                     }
                 }

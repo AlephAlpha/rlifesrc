@@ -130,3 +130,9 @@ Skip patterns whose fundamental period are smaller than the given period.
 Skip patterns which are invariant under more transformations than  required by the given symmetry.
 
 In another word, skip patterns whose symmetry group properly contains the given symmetry group.
+
+### (Experimental) Enable backjumping
+
+[Backjumping](https://en.wikipedia.org/wiki/Backjumping) will reduce the number of steps, but each step will takes a much longer time. The current implementation is slower for most search, only useful for large (e.g., 64x64) still lifes.
+
+Currently it is only supported for non-generations rules. Generations rules will ignore this option.

@@ -30,7 +30,7 @@ pub(crate) enum ReasonSer {
     Sym(Coord),
 
     /// Deduced from conflicts.
-    Conflict,
+    Deduced,
 
     /// Deduced from a learnt clause.
     Clause(Vec<Coord>),
@@ -51,7 +51,7 @@ impl<'a, R: Rule> Reason<'a, R> {
             Reason::Decide => ReasonSer::Decide,
             Reason::Rule(cell) => ReasonSer::Rule(cell.coord),
             Reason::Sym(cell) => ReasonSer::Sym(cell.coord),
-            Reason::Conflict => ReasonSer::Conflict,
+            Reason::Deduced => ReasonSer::Deduced,
             Reason::Clause(c) => ReasonSer::Clause(c.iter().map(|cell| cell.coord).collect()),
             Reason::TryAnother(n) => ReasonSer::TryAnother(*n),
         }
@@ -136,7 +136,7 @@ impl WorldSer {
                     ReasonSer::Sym(coord) => {
                         Reason::Sym(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
                     }
-                    ReasonSer::Conflict => Reason::Conflict,
+                    ReasonSer::Deduced => Reason::Deduced,
                     ReasonSer::Clause(ref c) => {
                         let mut clause = Vec::new();
                         for &coord in c {
