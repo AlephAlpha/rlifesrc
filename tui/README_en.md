@@ -6,7 +6,7 @@ __Rust Life Search__, or __rlifesrc__, is a Game of Life pattern searcher writte
 
 The program is based on David Bell's [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) and Jason Summers's [WinLifeSearch](https://github.com/jsummers/winlifesearch/), using [an algorithm invented by Dean Hickerson](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN).
 
-Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules. Supports for Generations rules are experimental.
+Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules.
 
 This is the command-line tool and the TUI. There is also a [web app using WebAssembly](https://github.com/AlephAlpha/rlifesrc/tree/master/web).
 
@@ -43,7 +43,7 @@ FLAGS:
             Prints all possible results instead of only the first one
             Only useful when --no-tui is set.
 
-        --backjump       
+        --backjump
             (Experimental) Enable backjumping
             The current implementation of backjumping is very slow, only useful for large (e.g., 64x64) still lifes.
 
@@ -57,11 +57,11 @@ FLAGS:
         --reset-time
             Resets the time when starting a new search
 
-        --skip-subsym    
+        --skip-subsym
             Skip patterns which are invariant under more transformations than required by the given symmetry.
             In another word, skip patterns whose symmetry group properly contains the given symmetry group.
 
-        --subperiod      
+        --subperiod
             Allow patterns whose fundamental period are smaller than the given period
 
 

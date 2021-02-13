@@ -4,7 +4,7 @@ __Rust Life Search__, or __rlifesrc__, is a Game of Life pattern searcher writte
 
 The program is based on David Bell's [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) and Jason Summers's [WinLifeSearch](https://github.com/jsummers/winlifesearch/), using [an algorithm invented by Dean Hickerson](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN).
 
-Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules. Supports for Generations rules are experimental.
+Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules.
 
 See also the documentation for [`rlifesrc-lib`](https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/) and the [Changelog](https://github.com/AlephAlpha/rlifesrc/blob/master/CHANGELOG.md).
 
