@@ -3,13 +3,13 @@ use crate::{
     cells::{Coord, State, ALIVE, DEAD},
     config::Config,
     rules::Rule,
-    search::Status,
+    search::{Reason, Status},
     world::World,
 };
 use std::fmt::Write;
 
 #[cfg(feature = "serde")]
-use crate::save::WorldSer;
+use crate::{error::Error, save::WorldSer};
 
 /// A trait for [`World`].
 ///
@@ -61,6 +61,10 @@ pub trait Search {
     /// Saves the world as a [`WorldSer`],
     /// which can be easily serialized.
     fn ser(&self) -> WorldSer;
+
+    #[cfg(feature = "serde")]
+    /// Restores the world from the [`WorldSer`].
+    fn deser(&mut self, ser: &WorldSer) -> Result<(), Error>;
 
     /// Displays the whole world in some generation,
     /// in a mix of [Plaintext](https://conwaylife.com/wiki/Plaintext) and
@@ -133,9 +137,9 @@ pub trait Search {
 }
 
 /// The [`Search`] trait is implemented for every [`World`].
-impl<'a, R: Rule> Search for World<'a, R> {
+impl<'a, R: Rule, RE: Reason<'a, R>> Search for World<'a, R, RE> {
     fn search(&mut self, max_step: Option<u64>) -> Status {
-        self.search(max_step)
+        RE::search(self, max_step)
     }
 
     fn get_cell_state(&self, coord: Coord) -> Option<State> {
@@ -173,5 +177,10 @@ impl<'a, R: Rule> Search for World<'a, R> {
     #[cfg(feature = "serde")]
     fn ser(&self) -> WorldSer {
         self.ser()
+    }
+
+    #[cfg(feature = "serde")]
+    fn deser(&mut self, ser: &WorldSer) -> Result<(), Error> {
+        ser.deser(self)
     }
 }

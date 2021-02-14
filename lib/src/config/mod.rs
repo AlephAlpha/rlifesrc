@@ -152,6 +152,16 @@ pub struct Config {
 
     /// Cells whose states are known before the search.
     pub known_cells: Vec<KnownCell>,
+
+    /// __(Experimental)__ Whether to enable [backjumping](https://en.wikipedia.org/wiki/Backjumping).
+    ///
+    /// Backjumping will reduce the number of steps, but each step will takes
+    /// a much longer time. The current implementation is slower for most search,
+    /// only useful for large (e.g., 64x64) still lifes.
+    ///
+    /// Currently it is only supported for non-generations rules. Generations rules
+    /// will ignore this option.
+    pub backjump: bool,
 }
 
 impl Config {
@@ -241,6 +251,12 @@ impl Config {
         self
     }
 
+    /// Sets whether to enable backjumping.
+    pub fn set_backjump(mut self, backjump: bool) -> Self {
+        self.backjump = backjump;
+        self
+    }
+
     /// Whether the configuration requires the world to be square.
     pub fn require_square_world(&self) -> bool {
         self.symmetry.require_square_world()
@@ -256,6 +272,26 @@ impl Config {
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
+        macro_rules! new_world {
+            ($rule:expr) => {
+                if self.backjump {
+                    Ok(Box::new(World::new_backjump(&self, $rule)))
+                } else {
+                    Ok(Box::new(World::new_no_backjump(&self, $rule)))
+                }
+            };
+        }
+
+        macro_rules! new_world_gen {
+            ($rule:expr) => {
+                if $rule.gen() > 2 {
+                    Ok(Box::new(World::new_no_backjump(&self, $rule)))
+                } else {
+                    new_world!($rule.non_gen())
+                }
+            };
+        }
+
         if self.width <= 0 || self.height <= 0 || self.period <= 0 {
             return Err(Error::NonPositiveError);
         }
@@ -270,25 +306,16 @@ impl Config {
         if self.require_no_diagonal_width() && self.diagonal_width.is_some() {
             return Err(Error::DiagonalWidthError);
         }
+
         if let Ok(rule) = self.rule_string.parse::<Life>() {
-            Ok(Box::new(World::new(&self, rule)))
+            new_world!(rule)
         } else if let Ok(rule) = self.rule_string.parse::<NtLife>() {
-            Ok(Box::new(World::new(&self, rule)))
+            new_world!(rule)
         } else if let Ok(rule) = self.rule_string.parse::<LifeGen>() {
-            if rule.gen() > 2 {
-                Ok(Box::new(World::new(&self, rule)))
-            } else {
-                let rule = rule.non_gen();
-                Ok(Box::new(World::new(&self, rule)))
-            }
+            new_world_gen!(rule)
         } else {
             let rule = self.rule_string.parse::<NtLifeGen>()?;
-            if rule.gen() > 2 {
-                Ok(Box::new(World::new(&self, rule)))
-            } else {
-                let rule = rule.non_gen();
-                Ok(Box::new(World::new(&self, rule)))
-            }
+            new_world_gen!(rule)
         }
     }
 }

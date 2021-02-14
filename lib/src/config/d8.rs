@@ -243,21 +243,21 @@ impl Transform {
         matches!(
             (self, sym),
             (Transform::Id, _)
-            | (_, Symmetry::D8)
-            | (Transform::Rotate90, Symmetry::C4)
-            | (Transform::Rotate180, Symmetry::C2)
-            | (Transform::Rotate180, Symmetry::C4)
-            | (Transform::Rotate180, Symmetry::D4Ortho)
-            | (Transform::Rotate180, Symmetry::D4Diag)
-            | (Transform::Rotate270, Symmetry::C4)
-            | (Transform::FlipRow, Symmetry::D2Row)
-            | (Transform::FlipRow, Symmetry::D4Ortho)
-            | (Transform::FlipCol, Symmetry::D2Col)
-            | (Transform::FlipCol, Symmetry::D4Ortho)
-            | (Transform::FlipDiag, Symmetry::D2Diag)
-            | (Transform::FlipDiag, Symmetry::D4Diag)
-            | (Transform::FlipAntidiag, Symmetry::D2Antidiag)
-            | (Transform::FlipAntidiag, Symmetry::D4Diag),
+                | (_, Symmetry::D8)
+                | (Transform::Rotate90, Symmetry::C4)
+                | (Transform::Rotate180, Symmetry::C2)
+                | (Transform::Rotate180, Symmetry::C4)
+                | (Transform::Rotate180, Symmetry::D4Ortho)
+                | (Transform::Rotate180, Symmetry::D4Diag)
+                | (Transform::Rotate270, Symmetry::C4)
+                | (Transform::FlipRow, Symmetry::D2Row)
+                | (Transform::FlipRow, Symmetry::D4Ortho)
+                | (Transform::FlipCol, Symmetry::D2Col)
+                | (Transform::FlipCol, Symmetry::D4Ortho)
+                | (Transform::FlipDiag, Symmetry::D2Diag)
+                | (Transform::FlipDiag, Symmetry::D4Diag)
+                | (Transform::FlipAntidiag, Symmetry::D2Antidiag)
+                | (Transform::FlipAntidiag, Symmetry::D4Diag),
         )
     }
 

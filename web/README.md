@@ -6,7 +6,7 @@
 
 写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
-支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
+支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则。
 
 [点此试用。](https://alephalpha.github.io/rlifesrc/)（[国内镜像](https://alephalpha.gitee.io/rlifesrc/)）
 
@@ -189,5 +189,12 @@ python3 -m http.server
   跳过在比指定的对称性更多的变换下不变对称图样。
 
   也就是说，跳过对称群真包含指定的对称性的对称群的图样。
+  </dd>
+
+  <dt> (Experimental) Enable backjumping</dt>
+  <dd>
+  [Backjumping](https://en.wikipedia.org/wiki/Backjumping) 可以减少搜索所需的步数，但每一步所需的时间会变得更长。当前的实现对大部分搜索来说都会变得更慢，仅在搜索大静物（比如说 64x64）时有用。
+
+  当前仅支持非 Generations 的规则，Generations 规则会忽略此选项。
   </dd>
 </dl>

@@ -6,7 +6,7 @@
 
 写得非常糟糕，和 WinLifeSearch 相比缺少很多功能，而且速度要慢很多，但支持更多规则。
 
-支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则，此功能是实验性的，可能有 bug。
+支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则。
 
 这里是 rlifesrc 的命令行界面和文本界面。网页版的说明见[`web/`](../web/README.md) 目录。
 
@@ -46,6 +46,9 @@ FLAGS:
             输出所有的满足条件的图样，而非只输出第一个
             仅适用于命令行界面
 
+        --backjump
+            （试验性的）启用 backjumping
+            目前的实现特别慢，仅在搜索大静物（比如说 64x64）时有用。
 
     -n, --no-tui
             不进入文本界面，直接开始搜索
@@ -59,11 +62,11 @@ FLAGS:
             开始新的搜索时重置计时
             仅适用于文本界面
 
-        --skip-subsym    
+        --skip-subsym
             跳过在比指定的对称性更多的变换下不变对称图样。
             也就是说，跳过对称群真包含指定的对称性的对称群的图样。
 
-        --subperiod      
+        --subperiod
             不跳过基本周期小于指定周期的图样
 
     -h, --help

@@ -7,7 +7,7 @@
 //! using [an algorithm invented by Dean Hickerson](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN).
 //!
 //! Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features.
-//! But it supports non-totalistic Life-like rules.
+//! But it supports non-totalistic Life-like and Generations rules.
 //!
 //! This is the library for rlifesrc. There is also a
 //! [command-line tool with a TUI](https://github.com/AlephAlpha/rlifesrc/tree/master/tui)

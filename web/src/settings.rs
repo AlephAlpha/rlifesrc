@@ -41,6 +41,7 @@ pub enum Msg {
     SetReduce,
     SetSkipSubperiod,
     SetSkipSubsym,
+    SetBackjump,
     None,
 }
 
@@ -88,6 +89,7 @@ impl Component for Settings {
             Msg::SetReduce => self.config.reduce_max ^= true,
             Msg::SetSkipSubperiod => self.config.skip_subperiod ^= true,
             Msg::SetSkipSubsym => self.config.skip_subsymmetry ^= true,
+            Msg::SetBackjump => self.config.backjump ^= true,
             Msg::Apply => {
                 self.callback.emit(self.config.clone());
                 return false;
@@ -155,6 +157,7 @@ impl Settings {
                 { self.set_reduce() }
                 { self.set_skip_subperiod() }
                 { self.set_skip_subsym() }
+                { self.set_backjump() }
             </div>
         }
     }
@@ -645,6 +648,23 @@ impl Settings {
                     <abbr title="Skip patterns which are invariant under more transformations than \
                         required by the given symmetry.">
                         { "Skip patterns invariant under more transformations than the given symmetry." }
+                    </abbr>
+                </label>
+            </div>
+        }
+    }
+
+    fn set_backjump(&self) -> Html {
+        html! {
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_backjump"
+                        type="checkbox"
+                        checked=self.config.backjump
+                        onclick=self.link.callback(|_| Msg::SetBackjump)/>
+                    <abbr title="The current implementation of backjumping is very slow, \
+                        only useful for large (e.g., 64x64) still lifes.">
+                        { "(Experimental) Enable backjumping." }
                     </abbr>
                 </label>
             </div>

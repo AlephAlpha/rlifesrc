@@ -93,6 +93,12 @@ pub struct LifeCell<'a, R: Rule> {
     ///
     /// Here the choice of row or column depends on the search order.
     pub(crate) is_front: bool,
+
+    /// The decision level for assigning the cell state.
+    pub(crate) level: Cell<u32>,
+
+    /// Whether the cell has been seen in the analysis.
+    pub(crate) seen: Cell<bool>,
 }
 
 impl<'a, R: Rule> LifeCell<'a, R> {
@@ -112,6 +118,8 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             sym: Default::default(),
             next: Default::default(),
             is_front: false,
+            level: Cell::new(0),
+            seen: Cell::new(false),
         }
     }
 

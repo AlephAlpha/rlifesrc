@@ -239,12 +239,23 @@ impl Args {
                 Arg::with_name("SKIPSUBSYM")
                     .help("Skip patterns invariant under more transformations than the given symmetry")
                     .long_help(
-                            "Skip patterns which are invariant under more transformations than \
-                             required by the given symmetry.\n\
-                             In another word, skip patterns whose symmetry group properly contains \
-                             the given symmetry group.\n",
-                        )
+                        "Skip patterns which are invariant under more transformations than \
+                         required by the given symmetry.\n\
+                         In another word, skip patterns whose symmetry group properly contains \
+                         the given symmetry group.\n",
+                    )
                     .long("skip-subsym")
+                    .takes_value(false),
+            )
+            .arg(
+                Arg::with_name("BACKJUMP")
+                    .help("(Experimental) Enable backjumping")
+                    .long_help(
+                        "(Experimental) Enable backjumping\n\
+                        The current implementation of backjumping is very slow, only \
+                        useful for large (e.g., 64x64) still lifes.",
+                    )
+                    .long("backjump")
                     .takes_value(false),
             );
 
@@ -329,6 +340,7 @@ impl Args {
         let reduce_max = matches.is_present("REDUCE");
         let skip_subperiod = !matches.is_present("SUBPERIOD");
         let skip_subsymmetry = matches.is_present("SKIPSUBSYM");
+        let backjump = matches.is_present("BACKJUMP");
 
         let rule_string = matches.value_of("RULE").unwrap().to_string();
 
@@ -391,9 +403,17 @@ impl Args {
             .set_rule_string(rule_string)
             .set_diagonal_width(diagonal_width)
             .set_skip_subperiod(skip_subperiod)
-            .set_skip_subsymmetry(skip_subsymmetry);
+            .set_skip_subsymmetry(skip_subsymmetry)
+            .set_backjump(backjump);
 
         let search = config.world().unwrap();
+
+        if search.is_gen_rule() && backjump {
+            return Err(Error::with_description(
+                "Backjumping is not yet supported for Generations rules.",
+                ErrorKind::InvalidValue,
+            ));
+        }
 
         Ok(Args {
             search,

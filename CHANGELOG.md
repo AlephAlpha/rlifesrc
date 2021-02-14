@@ -3,6 +3,7 @@
 ## Unreleased (but already released to the web version)
 
 - Now you can choose to skip patterns with subperiod and/or subsymmetry.
+- Now you can enable [Backjumping](https://en.wikipedia.org/wiki/Backjumping) but it is not very useful.
 - When the world is square and the diagonal width is not larger than width of the world, `Automatic` search order would choose `Diagonal`.
 - Use a linked list instead of a Vec to search for unknown cells. This is the original design of `lifesrc`.
 - Now `rlifesrc-lib` supports specifying the search order by a vector of coordinates, and a list of cells known before starting to search. These are not yet supported in either the TUI or the Web version, but you can hack the save file.

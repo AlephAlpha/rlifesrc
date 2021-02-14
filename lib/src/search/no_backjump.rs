@@ -3,34 +3,17 @@ use crate::{
     cells::{CellRef, State},
     config::NewState,
     rules::Rule,
+    search::{Reason, SetCell, Status},
     world::World,
 };
-use derivative::Derivative;
 use rand::{thread_rng, Rng};
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-/// Search status.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum Status {
-    /// Initial status. Waiting to start.
-    Initial,
-    /// A result is found.
-    Found,
-    /// Such pattern does not exist.
-    None,
-    /// Still searching.
-    Searching,
-    /// Paused.
-    Paused,
-}
+use crate::{error::Error, save::ReasonSer};
 
 /// Reasons for setting a cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub(crate) enum Reason {
+pub enum ReasonNoBackjump {
     /// Known before the search starts,
     Known,
 
@@ -49,31 +32,55 @@ pub(crate) enum Reason {
     TryAnother(usize),
 }
 
-/// Records the cells whose values are set and their reasons.
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Copy(bound = ""),
-    Debug(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = "")
-)]
-pub(crate) struct SetCell<'a, R: Rule> {
-    /// The set cell.
-    pub(crate) cell: CellRef<'a, R>,
+impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
+    const KNOWN: Self = ReasonNoBackjump::Known;
+    const DECIDED: Self = ReasonNoBackjump::Decide;
 
-    /// The reason for setting a cell.
-    pub(crate) reason: Reason,
-}
+    fn from_cell(_cell: CellRef<'a, R>) -> Self {
+        ReasonNoBackjump::Deduce
+    }
 
-impl<'a, R: Rule> SetCell<'a, R> {
-    /// Get a reference to the set cell.
-    pub(crate) fn new(cell: CellRef<'a, R>, reason: Reason) -> Self {
-        SetCell { cell, reason }
+    fn is_decided(&self) -> bool {
+        matches!(
+            self,
+            ReasonNoBackjump::Decide | ReasonNoBackjump::TryAnother(_)
+        )
+    }
+
+    fn search(world: &mut World<'a, R, Self>, max_step: Option<u64>) -> Status {
+        world.search(max_step)
+    }
+
+    fn retreat(world: &mut World<'a, R, Self>) -> bool {
+        world.retreat()
+    }
+
+    fn presearch(world: World<'a, R, Self>) -> World<'a, R, Self> {
+        world.presearch()
+    }
+
+    #[cfg(feature = "serde")]
+    fn ser(&self) -> ReasonSer {
+        match self {
+            ReasonNoBackjump::Known => ReasonSer::Known,
+            ReasonNoBackjump::Decide => ReasonSer::Decide,
+            ReasonNoBackjump::Deduce => ReasonSer::Deduce,
+            ReasonNoBackjump::TryAnother(n) => ReasonSer::TryAnother(*n),
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    fn deser(ser: &ReasonSer, _world: &World<'a, R, Self>) -> Result<Self, Error> {
+        Ok(match *ser {
+            ReasonSer::Known => ReasonNoBackjump::Known,
+            ReasonSer::Decide => ReasonNoBackjump::Decide,
+            ReasonSer::TryAnother(n) => ReasonNoBackjump::TryAnother(n),
+            _ => ReasonNoBackjump::Deduce,
+        })
     }
 }
 
-impl<'a, R: Rule> World<'a, R> {
+impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
     /// Consistifies a cell.
     ///
     /// Examines the state and the neighborhood descriptor of the cell,
@@ -124,7 +131,7 @@ impl<'a, R: Rule> World<'a, R> {
                     if state != old_state {
                         return false;
                     }
-                } else if !self.set_cell(sym, state, Reason::Deduce) {
+                } else if !self.set_cell(sym, state, ReasonNoBackjump::Deduce) {
                     return false;
                 }
             }
@@ -147,16 +154,16 @@ impl<'a, R: Rule> World<'a, R> {
     fn retreat(&mut self) -> bool {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
-                Reason::Decide => {
+                ReasonNoBackjump::Decide => {
                     let state;
                     let reason;
                     if R::IS_GEN {
                         let State(j) = cell.state.get().unwrap();
                         state = State((j + 1) % self.rule.gen());
-                        reason = Reason::TryAnother(self.rule.gen() - 2);
+                        reason = ReasonNoBackjump::TryAnother(self.rule.gen() - 2);
                     } else {
                         state = !cell.state.get().unwrap();
-                        reason = Reason::Deduce;
+                        reason = ReasonNoBackjump::Deduce;
                     }
 
                     self.check_index = self.set_stack.len() as u32;
@@ -166,13 +173,13 @@ impl<'a, R: Rule> World<'a, R> {
                         return true;
                     }
                 }
-                Reason::TryAnother(n) => {
+                ReasonNoBackjump::TryAnother(n) => {
                     let State(j) = cell.state.get().unwrap();
                     let state = State((j + 1) % self.rule.gen());
                     let reason = if n == 1 {
-                        Reason::Deduce
+                        ReasonNoBackjump::Deduce
                     } else {
-                        Reason::TryAnother(n - 1)
+                        ReasonNoBackjump::TryAnother(n - 1)
                     };
 
                     self.check_index = self.set_stack.len() as u32;
@@ -182,10 +189,10 @@ impl<'a, R: Rule> World<'a, R> {
                         return true;
                     }
                 }
-                Reason::Known => {
+                ReasonNoBackjump::Known => {
                     break;
                 }
-                Reason::Deduce => {
+                ReasonNoBackjump::Deduce => {
                     self.clear_cell(cell);
                 }
             }
@@ -248,7 +255,7 @@ impl<'a, R: Rule> World<'a, R> {
                 NewState::ChooseAlive => !cell.background,
                 NewState::Random => State(thread_rng().gen_range(0..self.rule.gen())),
             };
-            Some(self.set_cell(cell, state, Reason::Decide))
+            Some(self.set_cell(cell, state, ReasonNoBackjump::Decide))
         } else {
             None
         }
@@ -286,17 +293,5 @@ impl<'a, R: Rule> World<'a, R> {
             }
         }
         Status::None
-    }
-
-    /// Set the max cell counts.
-    pub(crate) fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
-        self.config.max_cell_count = max_cell_count;
-        if let Some(max) = self.config.max_cell_count {
-            while self.cell_count() > max {
-                if !self.retreat() {
-                    break;
-                }
-            }
-        }
     }
 }

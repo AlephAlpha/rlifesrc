@@ -4,7 +4,7 @@ __Rust Life Search__, or __rlifesrc__, is a Game of Life pattern searcher writte
 
 The program is based on David Bell's [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) and Jason Summers's [WinLifeSearch](https://github.com/jsummers/winlifesearch/), using [an algorithm invented by Dean Hickerson](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN).
 
-Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules. Supports for Generations rules are experimental.
+Compared to WinLifeSearch, rlifesrc is still slower, and lacks many important features. But it supports non-totalistic Life-like and Generations rules.
 
 See also the documentation for [`rlifesrc-lib`](https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/) and the [Changelog](https://github.com/AlephAlpha/rlifesrc/blob/master/CHANGELOG.md).
 
@@ -130,3 +130,9 @@ Skip patterns whose fundamental period are smaller than the given period.
 Skip patterns which are invariant under more transformations than  required by the given symmetry.
 
 In another word, skip patterns whose symmetry group properly contains the given symmetry group.
+
+### (Experimental) Enable backjumping
+
+[Backjumping](https://en.wikipedia.org/wiki/Backjumping) will reduce the number of steps, but each step will takes a much longer time. The current implementation is slower for most search, only useful for large (e.g., 64x64) still lifes.
+
+Currently it is only supported for non-generations rules. Generations rules will ignore this option.
