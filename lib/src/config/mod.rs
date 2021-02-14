@@ -272,6 +272,26 @@ impl Config {
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
+        macro_rules! new_world {
+            ($rule:expr) => {
+                if self.backjump {
+                    Ok(Box::new(World::new_backjump(&self, $rule)))
+                } else {
+                    Ok(Box::new(World::new_no_backjump(&self, $rule)))
+                }
+            };
+        }
+
+        macro_rules! new_world_gen {
+            ($rule:expr) => {
+                if $rule.gen() > 2 {
+                    Ok(Box::new(World::new_no_backjump(&self, $rule)))
+                } else {
+                    new_world!($rule.non_gen())
+                }
+            };
+        }
+
         if self.width <= 0 || self.height <= 0 || self.period <= 0 {
             return Err(Error::NonPositiveError);
         }
@@ -286,25 +306,16 @@ impl Config {
         if self.require_no_diagonal_width() && self.diagonal_width.is_some() {
             return Err(Error::DiagonalWidthError);
         }
+
         if let Ok(rule) = self.rule_string.parse::<Life>() {
-            Ok(Box::new(World::new(&self, rule)))
+            new_world!(rule)
         } else if let Ok(rule) = self.rule_string.parse::<NtLife>() {
-            Ok(Box::new(World::new(&self, rule)))
+            new_world!(rule)
         } else if let Ok(rule) = self.rule_string.parse::<LifeGen>() {
-            if rule.gen() > 2 {
-                Ok(Box::new(World::new(&self, rule)))
-            } else {
-                let rule = rule.non_gen();
-                Ok(Box::new(World::new(&self, rule)))
-            }
+            new_world_gen!(rule)
         } else {
             let rule = self.rule_string.parse::<NtLifeGen>()?;
-            if rule.gen() > 2 {
-                Ok(Box::new(World::new(&self, rule)))
-            } else {
-                let rule = rule.non_gen();
-                Ok(Box::new(World::new(&self, rule)))
-            }
+            new_world_gen!(rule)
         }
     }
 }

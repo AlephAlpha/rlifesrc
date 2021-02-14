@@ -6,8 +6,8 @@ use crate::{
     cells::{Coord, State},
     config::Config,
     error::Error,
-    rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
-    search::{Reason, SetCell},
+    rules::Rule,
+    search::Reason,
     traits::Search,
     world::World,
 };
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// A representation of reasons for setting a cell which can be easily serialized.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub(crate) enum ReasonSer {
+pub enum ReasonSer {
     /// Known before the search starts,
     Known,
 
@@ -30,7 +30,7 @@ pub(crate) enum ReasonSer {
     Sym(Coord),
 
     /// Deduced from conflicts.
-    Deduced,
+    Deduce,
 
     /// Deduced from a learnt clause.
     Clause(Vec<Coord>),
@@ -44,42 +44,18 @@ pub(crate) enum ReasonSer {
     TryAnother(usize),
 }
 
-impl<'a, R: Rule> Reason<'a, R> {
-    fn ser(&self) -> ReasonSer {
-        match self {
-            Reason::Known => ReasonSer::Known,
-            Reason::Decide => ReasonSer::Decide,
-            Reason::Rule(cell) => ReasonSer::Rule(cell.coord),
-            Reason::Sym(cell) => ReasonSer::Sym(cell.coord),
-            Reason::Deduced => ReasonSer::Deduced,
-            Reason::Clause(c) => ReasonSer::Clause(c.iter().map(|cell| cell.coord).collect()),
-            Reason::TryAnother(n) => ReasonSer::TryAnother(*n),
-        }
-    }
-}
-
 /// A representation of setting a cell which can be easily serialized.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct SetCellSer {
     /// The coordinates of the set cell.
-    coord: Coord,
+    pub(crate) coord: Coord,
 
     /// The state.
-    state: State,
+    pub(crate) state: State,
 
     /// The reason for setting a cell.
-    reason: ReasonSer,
-}
-
-impl<'a, R: Rule> SetCell<'a, R> {
-    fn ser(&self) -> SetCellSer {
-        SetCellSer {
-            coord: self.cell.coord,
-            state: self.cell.state.get().unwrap(),
-            reason: self.reason.ser(),
-        }
-    }
+    pub(crate) reason: ReasonSer,
 }
 
 /// A representation of the world which can be easily serialized.
@@ -110,9 +86,11 @@ pub struct WorldSer {
 }
 
 impl WorldSer {
-    /// Restores the world from the [`WorldSer`], with the given rule.
-    fn world_with_rule<'a, R: Rule>(&self, rule: R) -> Result<World<'a, R>, Error> {
-        let mut world = World::new(&self.config, rule);
+    /// Restores the world from the [`WorldSer`].
+    pub fn deser<'a, R: Rule, RE: Reason<'a, R>>(
+        &self,
+        world: &mut World<'a, R, RE>,
+    ) -> Result<(), Error> {
         for &SetCellSer {
             coord,
             state,
@@ -127,25 +105,7 @@ impl WorldSer {
             } else if state.0 >= world.rule.gen() {
                 return Err(Error::SetCellError(coord));
             } else {
-                let reason = match *reason {
-                    ReasonSer::Known => Reason::Known,
-                    ReasonSer::Decide => Reason::Decide,
-                    ReasonSer::Rule(coord) => {
-                        Reason::Rule(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
-                    }
-                    ReasonSer::Sym(coord) => {
-                        Reason::Sym(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
-                    }
-                    ReasonSer::Deduced => Reason::Deduced,
-                    ReasonSer::Clause(ref c) => {
-                        let mut clause = Vec::new();
-                        for &coord in c {
-                            clause.push(world.find_cell(coord).ok_or(Error::SetCellError(coord))?);
-                        }
-                        Reason::Clause(clause)
-                    }
-                    ReasonSer::TryAnother(n) => Reason::TryAnother(n),
-                };
+                let reason = RE::deser(reason, &world)?;
                 world.set_cell(cell, state, reason);
             }
         }
@@ -153,41 +113,18 @@ impl WorldSer {
         if self.check_index < self.set_stack.len() as u32 {
             world.check_index = self.check_index;
         }
-        Ok(world)
+        Ok(())
     }
 
     /// Restores the world from the [`WorldSer`].
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
-        if let Ok(rule) = self.config.rule_string.parse::<Life>() {
-            let world = self.world_with_rule(rule)?;
-            Ok(Box::new(world))
-        } else if let Ok(rule) = self.config.rule_string.parse::<NtLife>() {
-            let world = self.world_with_rule(rule)?;
-            Ok(Box::new(world))
-        } else if let Ok(rule) = self.config.rule_string.parse::<LifeGen>() {
-            if rule.gen() > 2 {
-                let world = self.world_with_rule(rule)?;
-                Ok(Box::new(world))
-            } else {
-                let rule = rule.non_gen();
-                let world = self.world_with_rule(rule)?;
-                Ok(Box::new(world))
-            }
-        } else {
-            let rule = self.config.rule_string.parse::<NtLifeGen>()?;
-            if rule.gen() > 2 {
-                let world = self.world_with_rule(rule)?;
-                Ok(Box::new(world))
-            } else {
-                let rule = rule.non_gen();
-                let world = self.world_with_rule(rule)?;
-                Ok(Box::new(world))
-            }
-        }
+        let mut world = self.config.world()?;
+        world.deser(self)?;
+        Ok(world)
     }
 }
 
-impl<'a, R: Rule> World<'a, R> {
+impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
     /// Saves the world as a [`WorldSer`].
     pub fn ser(&self) -> WorldSer {
         WorldSer {

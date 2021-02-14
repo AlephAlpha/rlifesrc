@@ -8,6 +8,7 @@ mod ntlife;
 
 use crate::{
     cells::{CellRef, State},
+    search::Reason,
     world::World,
 };
 pub use life::{Life, LifeGen};
@@ -76,5 +77,8 @@ pub trait Rule: Sized {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     #[doc(hidden)]
-    fn consistify<'a>(world: &mut World<'a, Self>, cell: CellRef<'a, Self>) -> bool;
+    fn consistify<'a, RE: Reason<'a, Self>>(
+        world: &mut World<'a, Self, RE>,
+        cell: CellRef<'a, Self>,
+    ) -> bool;
 }

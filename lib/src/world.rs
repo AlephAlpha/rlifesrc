@@ -4,12 +4,12 @@ use crate::{
     cells::{CellRef, Coord, LifeCell, State, DEAD},
     config::{Config, KnownCell, SearchOrder},
     rules::Rule,
-    search::{Reason, SetCell},
+    search::{Reason, ReasonBackjump, ReasonNoBackjump, SetCell},
 };
-use std::{matches, mem};
+use std::mem;
 
 /// The world.
-pub struct World<'a, R: Rule> {
+pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     /// World configuration.
     pub(crate) config: Config,
 
@@ -39,7 +39,7 @@ pub struct World<'a, R: Rule> {
     /// The cells in this stack always have known states.
     ///
     /// It is used in the backtracking.
-    pub(crate) set_stack: Vec<SetCell<'a, R>>,
+    pub(crate) set_stack: Vec<SetCell<'a, R, RE>>,
 
     /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
     ///
@@ -63,9 +63,9 @@ pub struct World<'a, R: Rule> {
     pub(crate) level: u32,
 }
 
-impl<'a, R: Rule> World<'a, R> {
+impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
     /// Creates a new world from the configuration and the rule.
-    pub fn new(config: &Config, rule: R) -> Self {
+    pub fn new_with_rule<RE: Reason<'a, R>>(config: &Config, rule: R) -> World<'a, R, RE> {
         let search_order = config.auto_search_order();
 
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
@@ -102,7 +102,7 @@ impl<'a, R: Rule> World<'a, R> {
             }
         }
 
-        World {
+        let world = World {
             config: config.clone(),
             rule,
             cells,
@@ -121,10 +121,23 @@ impl<'a, R: Rule> World<'a, R> {
         .init_sym()
         .init_state()
         .init_known_cells(&config.known_cells)
-        .init_search_order(search_order.as_ref())
-        .presearch()
+        .init_search_order(search_order.as_ref());
+
+        RE::presearch(world)
     }
 
+    pub fn new_backjump(config: &Config, rule: R) -> Self {
+        World::new_with_rule(config, rule)
+    }
+}
+
+impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
+    pub fn new_no_backjump(config: &Config, rule: R) -> Self {
+        World::new_with_rule(config, rule)
+    }
+}
+
+impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
     /// Initialize the cells at the borders.
     fn init_border(mut self) -> Self {
         for x in -1..=self.config.width {
@@ -135,7 +148,7 @@ impl<'a, R: Rule> World<'a, R> {
                         if abs == d || abs == d + 1 {
                             for t in 0..self.config.period {
                                 let cell = self.find_cell((x, y, t)).unwrap();
-                                self.set_stack.push(SetCell::new(cell, Reason::Known));
+                                self.set_stack.push(SetCell::new(cell, RE::KNOWN));
                             }
                         }
                         continue;
@@ -144,7 +157,7 @@ impl<'a, R: Rule> World<'a, R> {
                 for t in 0..self.config.period {
                     if x == -1 || x == self.config.width || y == -1 || y == self.config.height {
                         let cell = self.find_cell((x, y, t)).unwrap();
-                        self.set_stack.push(SetCell::new(cell, Reason::Known));
+                        self.set_stack.push(SetCell::new(cell, RE::KNOWN));
                     }
                 }
             }
@@ -227,7 +240,7 @@ impl<'a, R: Rule> World<'a, R> {
                                 || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
-                            self.set_stack.push(SetCell::new(cell, Reason::Known));
+                            self.set_stack.push(SetCell::new(cell, RE::KNOWN));
                         }
                     }
 
@@ -286,7 +299,7 @@ impl<'a, R: Rule> World<'a, R> {
                                 || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
-                            self.set_stack.push(SetCell::new(cell, Reason::Known));
+                            self.set_stack.push(SetCell::new(cell, RE::KNOWN));
                         }
                     }
                 }
@@ -324,7 +337,7 @@ impl<'a, R: Rule> World<'a, R> {
         for &KnownCell { coord, state } in known_cells.iter() {
             if let Some(cell) = self.find_cell(coord) {
                 if cell.state.get().is_none() && state.0 < self.rule.gen() {
-                    self.set_cell(cell, state, Reason::Known);
+                    self.set_cell(cell, state, RE::KNOWN);
                 }
             }
         }
@@ -400,12 +413,7 @@ impl<'a, R: Rule> World<'a, R> {
     ///
     /// Return `false` if the number of living cells exceeds the
     /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
-    pub(crate) fn set_cell(
-        &mut self,
-        cell: CellRef<'a, R>,
-        state: State,
-        reason: Reason<'a, R>,
-    ) -> bool {
+    pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: RE) -> bool {
         cell.state.set(Some(state));
         let mut result = true;
         cell.update_desc(Some(state), true);
@@ -423,7 +431,7 @@ impl<'a, R: Rule> World<'a, R> {
                 result = false;
             }
         }
-        if matches!(reason, Reason::Decide | Reason::TryAnother(_)) {
+        if reason.is_decided() {
             self.level += 1;
         }
         cell.level.set(self.level);
@@ -528,5 +536,17 @@ impl<'a, R: Rule> World<'a, R> {
     /// For Generations rules, dying cells are not counted.
     pub(crate) fn cell_count(&self) -> u32 {
         *self.cell_count.iter().min().unwrap()
+    }
+
+    /// Set the max cell counts.
+    pub(crate) fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
+        self.config.max_cell_count = max_cell_count;
+        if let Some(max) = self.config.max_cell_count {
+            while self.cell_count() > max {
+                if !RE::retreat(self) {
+                    break;
+                }
+            }
+        }
     }
 }
