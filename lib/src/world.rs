@@ -87,7 +87,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
                         DEAD
                     };
                     let succ_state = if rule.has_b0() {
-                        State((t as usize + 1) % rule.gen())
+                        State(((t + 1) % config.period) as usize % rule.gen())
                     } else {
                         DEAD
                     };
