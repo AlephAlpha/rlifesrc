@@ -51,9 +51,6 @@ pub trait Search {
     /// Number of conflicts during the search.
     fn conflicts(&self) -> u64;
 
-    /// The global decision level for assigning the cell state.
-    fn level(&self) -> u32;
-
     /// Set the max cell counts.
     ///
     /// Currently this is the only parameter that you can change
@@ -171,10 +168,6 @@ impl<'a, R: Rule, RE: Reason<'a, R>> Search for World<'a, R, RE> {
 
     fn conflicts(&self) -> u64 {
         self.conflicts
-    }
-
-    fn level(&self) -> u32 {
-        self.level
     }
 
     fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {

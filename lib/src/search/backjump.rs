@@ -418,12 +418,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                 Ok(()) => return true,
                 Err(reason) => {
                     self.conflicts += 1;
-                    let is_fail = if self.config.backjump {
-                        !self.analyze(reason.cells())
-                    } else {
-                        !self.retreat()
-                    };
-                    if is_fail {
+                    if !self.analyze(reason.cells()) {
                         return false;
                     }
                 }

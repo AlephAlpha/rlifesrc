@@ -63,7 +63,7 @@ pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     pub(crate) level: u32,
 }
 
-impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
+impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
     /// Creates a new world from the configuration and the rule.
     pub fn new_with_rule<RE: Reason<'a, R>>(config: &Config, rule: R) -> World<'a, R, RE> {
         let search_order = config.auto_search_order();
@@ -126,13 +126,13 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
         RE::presearch(world)
     }
 
-    pub fn new_backjump(config: &Config, rule: R) -> Self {
+    pub fn new_no_backjump(config: &Config, rule: R) -> Self {
         World::new_with_rule(config, rule)
     }
 }
 
-impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
-    pub fn new_no_backjump(config: &Config, rule: R) -> Self {
+impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
+    pub fn new_backjump(config: &Config, rule: R) -> Self {
         World::new_with_rule(config, rule)
     }
 }
