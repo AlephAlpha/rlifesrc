@@ -60,6 +60,8 @@ pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     pub(crate) non_empty_front: bool,
 
     /// The global decision level for assigning the cell state.
+    ///
+    /// Only used when backjumping is enabled.
     pub(crate) level: u32,
 }
 
@@ -435,10 +437,12 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                 result = false;
             }
         }
-        if reason.is_decided() {
-            self.level += 1;
+        if RE::LEVEL {
+            if reason.is_decided() {
+                self.level += 1;
+            }
+            cell.level.set(self.level);
         }
-        cell.level.set(self.level);
         self.set_stack.push(SetCell::new(cell, reason));
         result
     }

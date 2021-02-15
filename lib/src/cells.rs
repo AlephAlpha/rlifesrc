@@ -95,9 +95,13 @@ pub struct LifeCell<'a, R: Rule> {
     pub(crate) is_front: bool,
 
     /// The decision level for assigning the cell state.
+    ///
+    /// Only used when backjumping is enabled.
     pub(crate) level: Cell<u32>,
 
     /// Whether the cell has been seen in the analysis.
+    ///
+    /// Only used when backjumping is enabled.
     pub(crate) seen: Cell<bool>,
 }
 

@@ -139,7 +139,7 @@ pub trait Search {
 /// The [`Search`] trait is implemented for every [`World`].
 impl<'a, R: Rule, RE: Reason<'a, R>> Search for World<'a, R, RE> {
     fn search(&mut self, max_step: Option<u64>) -> Status {
-        RE::search(self, max_step)
+        self.search(max_step)
     }
 
     fn get_cell_state(&self, coord: Coord) -> Option<State> {

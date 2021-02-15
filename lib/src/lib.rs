@@ -49,7 +49,7 @@ mod cells;
 mod config;
 mod error;
 pub mod rules;
-mod search;
+pub mod search;
 mod traits;
 mod world;
 

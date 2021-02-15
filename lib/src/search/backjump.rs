@@ -1,13 +1,11 @@
-//! The search process.
+//! The search process, with backjumping.
 use crate::{
     cells::{CellRef, State},
-    config::NewState,
     rules::Rule,
-    search::{Reason, SetCell, Status},
+    search::{Reason, SetCell},
     world::World,
 };
 use derivative::Derivative;
-use rand::{thread_rng, Rng};
 
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
@@ -83,6 +81,7 @@ impl<'a, R: Rule> ReasonBackjump<'a, R> {
 impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonBackjump<'a, R> {
     const KNOWN: Self = ReasonBackjump::Known;
     const DECIDED: Self = ReasonBackjump::Decide;
+    const LEVEL: bool = true;
 
     fn from_cell(cell: CellRef<'a, R>) -> Self {
         ReasonBackjump::Rule(cell)
@@ -92,8 +91,8 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonBackjump<'a, R> {
         matches!(self, ReasonBackjump::Decide | ReasonBackjump::TryAnother(_))
     }
 
-    fn search(world: &mut World<'a, R, Self>, max_step: Option<u64>) -> Status {
-        world.search(max_step)
+    fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool {
+        world.go(step)
     }
 
     fn retreat(world: &mut World<'a, R, Self>) -> bool {
@@ -410,7 +409,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
     /// (and returns `false`).
     ///
     /// It also records the number of steps it has walked in the parameter
-    /// `step`. A step consists of a [`proceed`](Self::proceed) and a [`retreat`](Self::retreat).
+    /// `step`. A step consists of a [`proceed`](Self::proceed) and a [`analyze`](Self::analyze).
     fn go(&mut self, step: &mut u64) -> bool {
         loop {
             *step += 1;
@@ -440,60 +439,5 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                 }
             }
         }
-    }
-
-    /// Makes a decision.
-    ///
-    /// Chooses an unknown cell, assigns a state for it,
-    /// and push a reference to it to the [`set_stack`](#structfield.set_stack).
-    ///
-    /// Returns `None` is there is no unknown cell,
-    /// `Some(false)` if the new state leads to an immediate conflict.
-    fn decide(&mut self) -> Option<bool> {
-        if let Some(cell) = self.get_unknown() {
-            self.next_unknown = cell.next;
-            let state = match self.config.new_state {
-                NewState::ChooseDead => cell.background,
-                NewState::ChooseAlive => !cell.background,
-                NewState::Random => State(thread_rng().gen_range(0..self.rule.gen())),
-            };
-            Some(self.set_cell(cell, state, ReasonBackjump::Decide))
-        } else {
-            None
-        }
-    }
-
-    /// The search function.
-    ///
-    /// Returns [`Status::Found`] if a result is found,
-    /// [`Status::None`] if such pattern does not exist,
-    /// [`Status::Searching`] if the number of steps exceeds `max_step`
-    /// and no results are found.
-    pub fn search(&mut self, max_step: Option<u64>) -> Status {
-        let mut step_count = 0;
-        if self.next_unknown.is_none() && !self.retreat() {
-            return Status::None;
-        }
-        while self.go(&mut step_count) {
-            if let Some(result) = self.decide() {
-                if !result && !self.retreat() {
-                    return Status::None;
-                }
-            } else if !self.is_boring() {
-                if self.config.reduce_max {
-                    self.config.max_cell_count = Some(self.cell_count() - 1);
-                }
-                return Status::Found;
-            } else if !self.retreat() {
-                return Status::None;
-            }
-
-            if let Some(max) = max_step {
-                if step_count > max {
-                    return Status::Searching;
-                }
-            }
-        }
-        Status::None
     }
 }
