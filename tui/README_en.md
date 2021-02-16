@@ -50,20 +50,19 @@ FLAGS:
     -n, --no-tui
             Starts searching immediately, without entering the TUI
 
-        --reduce
+    -R, --reduce
             Reduce the max cell count when a result is found
             The new max cell count will be set to the cell count of the current result minus one.
 
         --reset-time
             Resets the time when starting a new search
 
-        --skip-subsym
+    -S, --skip-subsym
             Skip patterns which are invariant under more transformations than required by the given symmetry.
             In another word, skip patterns whose symmetry group properly contains the given symmetry group.
 
-        --subperiod
+    -p, --subperiod
             Allow patterns whose fundamental period are smaller than the given period
-
 
     -h, --help
             Prints help information
@@ -77,10 +76,14 @@ OPTIONS:
             How to choose a state for unknown cells
              [default: alive]  [possible values: dead, alive, random, d, a, r]
 
-        --diag <DIAG>
+    -C, --config <CONFIG>
+            Read config from a file
+            Supported formats: JSON, YAML, TOML.
+            When a config file is provided, all the other flags and options, except --all (-a), --reset-time, --no-tui (-n), are ignored.
+
+    -d, --diag <DIAG>
             Diagonal width
-            If the diagonal width is n > 0, the cells at position (x, y) where
-            abs(x - y) >= n are assumed to be  dead.
+            If the diagonal width is n > 0, the cells at position (x, y) where abs(x - y) >= n are assumed to be dead.
             If this value is set to 0, it would be ignored.
              [default: 0]
 
@@ -91,20 +94,19 @@ OPTIONS:
 
     -o, --order <ORDER>
             Search order
-            Row first or column first, or diagonal.
+            Row first or column first.
              [default: automatic]  [possible values: row, column, automatic, diagonal, r, c, a, d]
 
     -r, --rule <RULE>
             Rule of the cellular automaton
-            Supports Life-like, isotropic non-totalistic, hexagonal, MAP rules, and their
-            corresponding Generations rules.
+            Supports Life-like, isotropic non-totalistic, hexagonal, MAP rules, and their corresponding Generations rules.
              [default: B3/S23]
 
     -s, --symmetry <SYMMETRY>
             Symmetry of the pattern
             You may need to add quotation marks for some of the symmetries.
             The usages of these symmetries are the same as Oscar Cunningham's Logic Life Search.
-            See [https://conwaylife.com/wiki/Symmetry]
+            See [https://conwaylife.com/wiki/Symmetry] 
              [default: C1]  [possible values: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
     -t, --transform <TRANSFORM>
@@ -138,6 +140,26 @@ For example, this will find [25P3H1V0.1](https://conwaylife.com/wiki/25P3H1V0.1)
 ```bash
 rlifesrc 16 5 3 0 1
 ```
+
+You can also read the config from a file:
+
+```bash
+rlifesrc -C config.json
+```
+
+Where the content of `config.json` is:
+
+```json
+{
+    "width": 16,
+    "height": 5,
+    "period": 3,
+    "dx": 0,
+    "dy": 1,
+}
+```
+
+The config file is just a serialization of the `Config` struct of [`rlifesrc-lib`](../lib/). Currently, the `known_cells` field, and the `FromVec` variant of `SearchOrder`, can only be specified through the config file. Please see the documentation for [`Config`](https://docs.rs/rlifesrc-lib/*/rlifesrc_lib/struct.Config.html) for details.
 
 10 different symmetries correspond to the 10 subgroups of the dihedral group _D_<sub>8</sub>. The notations are stolen from Oscar Cunningham's [Logic Life Search](https://github.com/OscarCunningham/logic-life-search). Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
 

@@ -73,7 +73,6 @@ pub struct KnownCell {
 #[derive(Clone, Debug, Derivative, PartialEq, Eq, Hash)]
 #[derivative(Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(default))]
 pub struct Config {
     /// Width.
     #[derivative(Default(value = "16"))]
@@ -85,12 +84,15 @@ pub struct Config {
 
     /// Period.
     #[derivative(Default(value = "1"))]
+    #[cfg_attr(feature = "serde", serde(default = "default_period"))]
     pub period: i32,
 
     /// Horizontal translation.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub dx: i32,
 
     /// Vertical translation.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub dy: i32,
 
     /// Transformations (rotations and reflections) after the last generation
@@ -99,9 +101,11 @@ pub struct Config {
     /// After the last generation in a period, the pattern will return to
     /// the first generation, applying this transformation first,
     /// and then the translation defined by `dx` and `dy`.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub transform: Transform,
 
     /// Symmetries of the pattern.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub symmetry: Symmetry,
 
     /// The order to find a new unknown cell.
@@ -111,15 +115,18 @@ pub struct Config {
     ///
     /// `None` means that it will automatically choose a search order
     /// according to the width and height of the world.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub search_order: Option<SearchOrder>,
 
     /// How to choose a state for an unknown cell.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub new_state: NewState,
 
     /// The number of minimum living cells in all generations must not
     /// exceed this number.
     ///
     /// `None` means that there is no limit for the cell count.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub max_cell_count: Option<u32>,
 
     /// Whether to automatically reduce the [`max_cell_count`](#structfield.max_cell_count)
@@ -127,20 +134,24 @@ pub struct Config {
     ///
     /// The [`max_cell_count`](#structfield.max_cell_count) will be set to the cell count of
     /// the current result minus one.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub reduce_max: bool,
 
     /// The rule string of the cellular automaton.
-    #[derivative(Default(value = "String::from(\"B3/S23\")"))]
+    #[derivative(Default(value = "default_rule_string()"))]
+    #[cfg_attr(feature = "serde", serde(default = "default_rule_string"))]
     pub rule_string: String,
 
     /// Diagonal width.
     ///
     /// If the diagonal width is `n`, the cells at position `(x, y)`
     /// where `abs(x - y) >= n` are assumed to be dead.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub diagonal_width: Option<i32>,
 
     /// Whether to skip patterns whose fundamental period are smaller than the given period.
     #[derivative(Default(value = "true"))]
+    #[cfg_attr(feature = "serde", serde(default = "default_skip_subperiod"))]
     pub skip_subperiod: bool,
 
     /// Whether to skip patterns which are invariant under more transformations than
@@ -148,9 +159,11 @@ pub struct Config {
     ///
     /// In another word, whether to skip patterns whose symmetry group properly contains
     /// the given symmetry group.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub skip_subsymmetry: bool,
 
     /// Cells whose states are known before the search.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub known_cells: Vec<KnownCell>,
 
     /// __(Experimental)__ Whether to enable [backjumping](https://en.wikipedia.org/wiki/Backjumping).
@@ -161,7 +174,23 @@ pub struct Config {
     ///
     /// Currently it is only supported for non-generations rules. Generations rules
     /// will ignore this option.
+    #[cfg_attr(feature = "serde", serde(default))]
     pub backjump: bool,
+}
+
+#[cfg(feature = "serde")]
+fn default_period() -> i32 {
+    1
+}
+
+#[cfg(feature = "serde")]
+fn default_rule_string() -> String {
+    String::from("B3/S23")
+}
+
+#[cfg(feature = "serde")]
+fn default_skip_subperiod() -> bool {
+    true
 }
 
 impl Config {

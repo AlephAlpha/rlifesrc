@@ -1,7 +1,16 @@
 //! Parsing command-line arguments.
 
-use clap::{App, AppSettings, Arg, Error, ErrorKind, Result as ClapResult};
+use clap::{
+    App,
+    AppSettings::{AllowNegativeNumbers, ColoredHelp},
+    Arg, Error, ErrorKind, Result as ClapResult,
+};
 use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, Search, SearchOrder, Symmetry, Transform};
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+    path::Path,
+};
 
 fn is_positive(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
@@ -30,25 +39,28 @@ impl Args {
                  The program is based on David Bell's lifesrc and Jason Summers's \n\
                  WinLifeSearch, using an algorithm invented by Dean Hickerson.\n\
                  \n\
-                 The search result is displayed in a mix of Plaintext and \n\
-                 RLE format.\n\
-                 * Dead cells are represented by `.`;\n\
-                 * Living cells are represented by `o` for rules with 2 states, \
-                 `A` for rules with more states;\n\
-                 * Dying cells are represented by uppercase letters starting from `B`;\n\
-                 * Unknown cells are represented by `?`;\n\
-                 * Each line is ended with `$`;\n\
-                 * The whole pattern is ended with `!`\n\
-                 \n\
-                 For a more detailed help, please visit:\n\
+                 For a detailed help, please visit:\n\
                  https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README.md (In Chinese)\n\
                  https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README_en.md (In English)\n",
             )
-            .settings(&[AppSettings::AllowNegativeNumbers, AppSettings::ColoredHelp])
+            .settings(&[AllowNegativeNumbers, ColoredHelp])
+            .arg(
+                Arg::with_name("CONFIG")
+                    .help("Read config from a file")
+                    .long_help(
+                        "Read config from a file\n\
+                         Supported formats: JSON, YAML, TOML.\n\
+                         When a config file is provided, all the other flags and options, \
+                         except --all (-a), --reset-time, --no-tui (-n), are ignored.\n",
+                    )
+                    .short("C")
+                    .long("config")
+                    .takes_value(true),
+            )
             .arg(
                 Arg::with_name("X")
                     .help("Width of the pattern")
-                    .required(true)
+                    .required_unless("CONFIG")
                     .index(1)
                     .validator(|x| {
                         if is_positive(&x) {
@@ -61,7 +73,7 @@ impl Args {
             .arg(
                 Arg::with_name("Y")
                     .help("Height of the pattern")
-                    .required(true)
+                    .required_unless("CONFIG")
                     .index(2)
                     .validator(|y| {
                         if is_positive(&y) {
@@ -103,10 +115,11 @@ impl Args {
                     .help("Diagonal width")
                     .long_help(
                         "Diagonal width\n\
-                        If the diagonal width is n > 0, the cells at position (x, y)\
-                        where abs(x - y) >= n are assumed to be dead.\n\
-                        If this value is set to 0, it would be ignored.\n",
+                         If the diagonal width is n > 0, the cells at position (x, y) \
+                         where abs(x - y) >= n are assumed to be dead.\n\
+                         If this value is set to 0, it would be ignored.\n",
                     )
+                    .short("d")
                     .long("diag")
                     .takes_value(true)
                     .default_value("0")
@@ -225,6 +238,7 @@ impl Args {
                          The new max cell count will be set to the cell count of \
                          the current result minus one.\n",
                     )
+                    .short("R")
                     .long("reduce")
                     .takes_value(false),
             )
@@ -232,6 +246,7 @@ impl Args {
                 Arg::with_name("SUBPERIOD")
                     .help("Allow patterns with subperiod")
                     .long_help("Allow patterns whose fundamental period are smaller than the given period")
+                    .short("p")
                     .long("subperiod")
                     .takes_value(false),
             )
@@ -244,6 +259,7 @@ impl Args {
                          In another word, skip patterns whose symmetry group properly contains \
                          the given symmetry group.\n",
                     )
+                    .short("S")
                     .long("skip-subsym")
                     .takes_value(false),
             )
@@ -300,115 +316,115 @@ impl Args {
 
         let matches = app.get_matches_safe()?;
 
-        let width = matches.value_of("X").unwrap().parse().unwrap();
-        let height = matches.value_of("Y").unwrap().parse().unwrap();
-        let period = matches.value_of("P").unwrap().parse().unwrap();
+        let config;
 
-        let dx = matches.value_of("DX").unwrap().parse().unwrap();
-        let dy = matches.value_of("DY").unwrap().parse().unwrap();
+        if let Some(config_file) = matches.value_of("CONFIG") {
+            let path = Path::new(config_file);
+            let file = File::open(path)
+                .map_err(|e| Error::with_description(&e.to_string(), ErrorKind::Io))?;
+            let mut reader = BufReader::new(file);
+            match path.extension().and_then(|s| s.to_str()) {
+                Some("json") => {
+                    config = serde_json::from_reader(reader).map_err(|e| {
+                        Error::with_description(
+                            &format! {"Invalid config file: {}",e},
+                            ErrorKind::Io,
+                        )
+                    })?;
+                }
+                Some("yaml") | Some("yml") => {
+                    config = serde_yaml::from_reader(reader).map_err(|e| {
+                        Error::with_description(
+                            &format! {"Invalid config file: {}",e},
+                            ErrorKind::Io,
+                        )
+                    })?;
+                }
+                Some("toml") => {
+                    let mut buf = Vec::new();
+                    reader
+                        .read_to_end(&mut buf)
+                        .map_err(|e| Error::with_description(&e.to_string(), ErrorKind::Io))?;
+                    config = toml::from_slice(&buf).map_err(|e| {
+                        Error::with_description(
+                            &format! {"Invalid config file: {}",e},
+                            ErrorKind::Io,
+                        )
+                    })?;
+                }
+                _ => {
+                    return Err(Error::with_description(
+                        "Unsupported config file format",
+                        ErrorKind::InvalidValue,
+                    ))
+                }
+            }
+        } else {
+            let width = matches.value_of("X").unwrap().parse().unwrap();
+            let height = matches.value_of("Y").unwrap().parse().unwrap();
+            let period = matches.value_of("P").unwrap().parse().unwrap();
 
-        let transform: Transform = matches.value_of("TRANSFORM").unwrap().parse().unwrap();
-        let symmetry: Symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
+            let dx = matches.value_of("DX").unwrap().parse().unwrap();
+            let dy = matches.value_of("DY").unwrap().parse().unwrap();
+
+            let transform: Transform = matches.value_of("TRANSFORM").unwrap().parse().unwrap();
+            let symmetry: Symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
+
+            let search_order = match matches.value_of("ORDER").unwrap() {
+                "row" | "r" => Some(SearchOrder::RowFirst),
+                "column" | "c" => Some(SearchOrder::ColumnFirst),
+                "diagonal" | "d" => Some(SearchOrder::Diagonal),
+                _ => None,
+            };
+            let new_state = match matches.value_of("CHOOSE").unwrap() {
+                "dead" | "d" => NewState::ChooseDead,
+                "alive" | "a" => NewState::ChooseAlive,
+                "random" | "r" => NewState::Random,
+                _ => NewState::ChooseAlive,
+            };
+            let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
+            let max_cell_count = match max_cell_count {
+                0 => None,
+                i => Some(i),
+            };
+            let diagonal_width = matches.value_of("DIAG").unwrap().parse().unwrap();
+            let diagonal_width = match diagonal_width {
+                0 => None,
+                i => Some(i),
+            };
+            let reduce_max = matches.is_present("REDUCE");
+            let skip_subperiod = !matches.is_present("SUBPERIOD");
+            let skip_subsymmetry = matches.is_present("SKIPSUBSYM");
+            let backjump = matches.is_present("BACKJUMP");
+
+            let rule_string = matches.value_of("RULE").unwrap().to_string();
+
+            config = Config::new(width, height, period)
+                .set_translate(dx, dy)
+                .set_transform(transform)
+                .set_symmetry(symmetry)
+                .set_search_order(search_order)
+                .set_new_state(new_state)
+                .set_max_cell_count(max_cell_count)
+                .set_reduce_max(reduce_max)
+                .set_rule_string(rule_string)
+                .set_diagonal_width(diagonal_width)
+                .set_skip_subperiod(skip_subperiod)
+                .set_skip_subsymmetry(skip_subsymmetry)
+                .set_backjump(backjump);
+        }
 
         let all = matches.is_present("ALL");
         #[cfg(feature = "tui")]
         let reset = matches.is_present("RESET");
         #[cfg(feature = "tui")]
         let no_tui = matches.is_present("NOTUI");
-        let search_order = match matches.value_of("ORDER").unwrap() {
-            "row" | "r" => Some(SearchOrder::RowFirst),
-            "column" | "c" => Some(SearchOrder::ColumnFirst),
-            "diagonal" | "d" => Some(SearchOrder::Diagonal),
-            _ => None,
-        };
-        let new_state = match matches.value_of("CHOOSE").unwrap() {
-            "dead" | "d" => NewState::ChooseDead,
-            "alive" | "a" => NewState::ChooseAlive,
-            "random" | "r" => NewState::Random,
-            _ => NewState::ChooseAlive,
-        };
-        let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
-        let max_cell_count = match max_cell_count {
-            0 => None,
-            i => Some(i),
-        };
-        let diagonal_width = matches.value_of("DIAG").unwrap().parse().unwrap();
-        let diagonal_width = match diagonal_width {
-            0 => None,
-            i => Some(i),
-        };
-        let reduce_max = matches.is_present("REDUCE");
-        let skip_subperiod = !matches.is_present("SUBPERIOD");
-        let skip_subsymmetry = matches.is_present("SKIPSUBSYM");
-        let backjump = matches.is_present("BACKJUMP");
 
-        let rule_string = matches.value_of("RULE").unwrap().to_string();
+        let search = config.world().map_err(|e| {
+            Error::with_description(&format! {"Invalid config: {}",e}, ErrorKind::InvalidValue)
+        })?;
 
-        if width != height {
-            if transform.require_square_world() {
-                return Err(Error::with_description(
-                    &format!(
-                        "The transformation '{}' is only valid for square worlds",
-                        transform
-                    ),
-                    ErrorKind::InvalidValue,
-                ));
-            }
-            if symmetry.require_square_world() {
-                return Err(Error::with_description(
-                    &format!(
-                        "The symmetry '{}' is only valid for square worlds",
-                        symmetry
-                    ),
-                    ErrorKind::InvalidValue,
-                ));
-            }
-            if search_order == Some(SearchOrder::Diagonal) {
-                return Err(Error::with_description(
-                    "Diagonal search order is only valid for square worlds",
-                    ErrorKind::InvalidValue,
-                ));
-            }
-        }
-
-        if diagonal_width.is_some() {
-            if transform.require_no_diagonal_width() {
-                return Err(Error::with_description(
-                    &format!(
-                        "The transformation '{}' is only valid for worlds without diagonal width",
-                        transform
-                    ),
-                    ErrorKind::InvalidValue,
-                ));
-            }
-            if symmetry.require_no_diagonal_width() {
-                return Err(Error::with_description(
-                    &format!(
-                        "The symmetry '{}' is only valid for worlds without diagonal width",
-                        symmetry
-                    ),
-                    ErrorKind::InvalidValue,
-                ));
-            }
-        }
-
-        let config = Config::new(width, height, period)
-            .set_translate(dx, dy)
-            .set_transform(transform)
-            .set_symmetry(symmetry)
-            .set_search_order(search_order)
-            .set_new_state(new_state)
-            .set_max_cell_count(max_cell_count)
-            .set_reduce_max(reduce_max)
-            .set_rule_string(rule_string)
-            .set_diagonal_width(diagonal_width)
-            .set_skip_subperiod(skip_subperiod)
-            .set_skip_subsymmetry(skip_subsymmetry)
-            .set_backjump(backjump);
-
-        let search = config.world().unwrap();
-
-        if search.is_gen_rule() && backjump {
+        if search.is_gen_rule() && config.backjump {
             return Err(Error::with_description(
                 "Backjumping is not yet supported for Generations rules.",
                 ErrorKind::InvalidValue,

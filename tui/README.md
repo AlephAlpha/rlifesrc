@@ -54,7 +54,7 @@ FLAGS:
             不进入文本界面，直接开始搜索
             此即命令行界面
 
-        --reduce
+    -R, --reduce
             搜到结果时自动缩小活细胞个数的上界
             新的上界会被设置为当前的活细胞个数减一（只考虑活细胞最少的一代）。
 
@@ -62,11 +62,11 @@ FLAGS:
             开始新的搜索时重置计时
             仅适用于文本界面
 
-        --skip-subsym
+    -S, --skip-subsym
             跳过在比指定的对称性更多的变换下不变对称图样。
             也就是说，跳过对称群真包含指定的对称性的对称群的图样。
 
-        --subperiod
+    -p, --subperiod
             不跳过基本周期小于指定周期的图样
 
     -h, --help
@@ -81,7 +81,12 @@ OPTIONS:
             如何为未知的细胞选取状态
              [默认: dead]  [可能的值: dead, alive, random, d, a, r]
 
-        --diag <DIAG>
+    -C, --config <CONFIG>
+            从文件中读取配置
+            支持的格式：JSON，YAML，TOML。
+            如果已经提供了配置文件，将会忽略除了 --all (-a)、--reset-time、--no-tui (-n) 之外的其它的命令行选项。
+
+    -d, --diag <DIAG>
             对角宽度
             如果对角宽度为 n > 0，对于坐标为 (x, y) 的细胞，若 abs(x - y) >= n，
             则设细胞为死。
@@ -93,7 +98,6 @@ OPTIONS:
             如果这个值设为 0，则不限制活细胞的个数。
              [默认: 0]
 
-
     -o, --order <ORDER>
             搜索顺序
             先搜行还是先搜列，或者对角方向搜索。
@@ -104,13 +108,6 @@ OPTIONS:
             支持 Life-like 和 Isotropic non-totalistic 的规则，
             以及相应的 Generations 规则
              [默认: B3/S23]
-
-        --skip <SKIP>              
-            跳过哪些“无聊”的图样
-            subposci 表示子周期振荡子；
-            subpship 表示子周期飞船；
-            sym 表示在当前变换下不变的对称图样。
-             [default: subpship]  [possible values: trivial, stable, subposci, subpship, sym]
 
     -s, --symmetry <SYMMETRY>
             图样的对称性
@@ -127,7 +124,6 @@ OPTIONS:
             "R" (Rotate) 表示逆时针旋转。
             "F" (Flip) 表示沿某轴线翻转。
              [默认: Id]  [可能的值: Id, R90, R180, R270, F|, F-, F\, F/]
-
 
 ARGS:
     <X>
@@ -151,6 +147,26 @@ ARGS:
 ```bash
 rlifesrc 16 5 3 0 1
 ```
+
+也可以从文件中读取配置：
+
+```bash
+rlifesrc -C config.json
+```
+
+其中 `config.json` 的内容为：
+
+```json
+{
+    "width": 16,
+    "height": 5,
+    "period": 3,
+    "dx": 0,
+    "dy": 1,
+}
+```
+
+配置文件只是 [`rlifesrc-lib`](../lib/) 中的 `Config` 结构体序列化的结果。当前，`Config` 的 `known_cells` 字段和 `SearchOrder` 的 `FromVec` 成员只能通过配置文件来设置。详见 [`Config`](https://docs.rs/rlifesrc-lib/*/rlifesrc_lib/struct.Config.html) 的文档。
 
 10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)，详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
 

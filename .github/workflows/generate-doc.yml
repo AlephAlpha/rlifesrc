@@ -36,3 +36,4 @@ jobs:
           destination-repository-name: rlifesrc-doc
           target-branch: main
           user-email: alephalpha911@gmail.com
+          commit-message: ":rocket: Update from ORIGIN_COMMIT"

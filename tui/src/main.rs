@@ -11,7 +11,7 @@ use std::process::exit;
 ///
 /// If `all` is true, it will print all possible results
 /// instead of only the first one.
-fn run_search(mut search: Box<dyn Search>, all: bool) {
+fn run_search(search: &mut (impl Search + ?Sized), all: bool) {
     if all {
         let mut found = false;
         loop {
@@ -39,9 +39,9 @@ fn run_search(mut search: Box<dyn Search>, all: bool) {
 #[cfg(feature = "tui")]
 fn main() {
     let args = Args::parse().unwrap_or_else(|e| e.exit());
-    let search = args.search;
+    let mut search = args.search;
     if args.no_tui {
-        run_search(search, args.all);
+        run_search(search.as_mut(), args.all);
     } else {
         tui::tui(search, args.reset).unwrap();
     }
@@ -49,6 +49,6 @@ fn main() {
 
 #[cfg(not(feature = "tui"))]
 fn main() {
-    let args = Args::parse().unwrap_or_else(|e| e.exit());
-    run_search(args.search, args.all);
+    let mut args = Args::parse().unwrap_or_else(|e| e.exit());
+    run_search(args.search.as_mut(), args.all);
 }

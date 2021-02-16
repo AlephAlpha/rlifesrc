@@ -20,7 +20,7 @@ serde = { version = "1.0.123", features = ["derive"], optional = true }
 thiserror = "1.0.23"
 
 [features]
-default = []
+default = ["serde"]
 js = ["serde", "getrandom/js"]
 
 [package.metadata.docs.rs]

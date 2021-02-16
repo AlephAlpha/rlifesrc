@@ -90,8 +90,7 @@ jobs:
 
       - name: Deploy to GitHub Pages
         if: success()
-        uses: JamesIves/github-pages-deploy-action@3.7.1
+        uses: JamesIves/github-pages-deploy-action@4.0.0
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: ${{ env.DEPLOY_PATH }}
+          branch: gh-pages
+          folder: ${{ env.DEPLOY_PATH }}
