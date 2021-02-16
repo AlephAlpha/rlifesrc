@@ -1,6 +1,6 @@
 [package]
 name = "rlifesrc-web"
-version = "0.3.5"
+version = "0.4.0"
 authors = ["AlephAlpha <alephalpha911@gmail.com>"]
 edition = "2018"
 description = "A Game of Life pattern searcher."
@@ -15,7 +15,7 @@ build_timestamp = "0.1.0"
 js-sys = "0.3.47"
 lazy_static = "1.4.0"
 pulldown-cmark = "0.8.0"
-rlifesrc-lib = { path = "../lib/", version = "0.3.5", features = ["js"] }
+rlifesrc-lib = { path = "../lib/", version = "0.4.0", features = ["js"] }
 serde = { version = "1.0.123", features = ["derive"] }
 wasm-bindgen = "^0.2.70"
 web-sys = { version = "0.3.47", features = ["Blob", "HtmlAnchorElement", "Selection", "Url", "Window"] }
