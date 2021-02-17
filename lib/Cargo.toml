@@ -25,4 +25,3 @@ js = ["serde", "getrandom/js"]
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]

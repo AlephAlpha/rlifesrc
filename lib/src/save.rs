@@ -1,5 +1,4 @@
 #![cfg(feature = "serde")]
-#![cfg_attr(docsrs, feature(doc_cfg))]
 //! Saves the world.
 
 use crate::{
@@ -46,7 +45,6 @@ pub enum ReasonSer {
 
 /// A representation of setting a cell which can be easily serialized.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct SetCellSer {
     /// The coordinates of the set cell.
     pub(crate) coord: Coord,
@@ -60,7 +58,6 @@ pub struct SetCellSer {
 
 /// A representation of the world which can be easily serialized.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct WorldSer {
     /// World configuration.
     #[serde(default)]

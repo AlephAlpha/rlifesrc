@@ -2,6 +2,10 @@
 
 ## Unreleased (but already released to the web version)
 
+- Fix some bugs.
+
+## 0.4.0 - 2021/02/16
+
 - TUI version now supports reading configs from a file.
 - Now you can choose to skip patterns with subperiod and/or subsymmetry.
 - Now you can enable [Backjumping](https://en.wikipedia.org/wiki/Backjumping) but it is not very useful.
