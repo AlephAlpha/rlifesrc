@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased (but already released to the web version)
+## 0.4.0 - 2021/02/17
 
-- Fix some bugs.
+- Fix a bug related to doc generation.
 
 ## 0.4.0 - 2021/02/16
 
