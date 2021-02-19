@@ -17,7 +17,7 @@ derivative = "2.2.0"
 rand = "0.8.3"
 getrandom = "0.2.2"
 serde = { version = "1.0.123", features = ["derive"], optional = true }
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 
 [features]
 default = ["serde"]
