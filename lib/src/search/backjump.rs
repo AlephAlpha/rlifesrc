@@ -313,14 +313,14 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
     ///
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
-    fn analyze(&mut self, reason: Vec<CellRef<'a, R>>) -> bool {
+    fn analyze(&mut self, reason: &[CellRef<'a, R>]) -> bool {
         if reason.is_empty() || R::IS_GEN {
             return self.retreat();
         }
         let mut max_level = 0;
         let mut counter = 0;
-        let mut learnt = Vec::new();
-        for reason_cell in reason {
+        let mut learnt = Vec::with_capacity(reason.len());
+        for &reason_cell in reason {
             if reason_cell.state.get().is_some() {
                 let level = reason_cell.level.get();
                 if level == self.level {
@@ -383,7 +383,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                                     self.next_unknown = cell.next;
                                     self.level -= 1;
                                     if self.level == max_level {
-                                        return self.analyze(learnt);
+                                        return self.analyze(&learnt);
                                     }
                                 } else {
                                     self.clear_cell(cell);
@@ -417,7 +417,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                 Ok(()) => return true,
                 Err(reason) => {
                     self.conflicts += 1;
-                    if !self.analyze(reason.cells()) {
+                    if !self.analyze(&reason.cells()) {
                         return false;
                     }
                 }

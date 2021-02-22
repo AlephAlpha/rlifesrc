@@ -6,7 +6,7 @@ use crate::{
     rules::Rule,
     search::{Reason, ReasonBackjump, ReasonNoBackjump, SetCell},
 };
-use std::mem;
+use std::{mem, ptr};
 
 /// The world.
 pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
@@ -21,7 +21,7 @@ pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     /// This vector will not be moved after its creation.
     /// All the cells will live throughout the lifetime of the world.
     // So the unsafe codes below are actually safe.
-    cells: Vec<LifeCell<'a, R>>,
+    cells: Box<[LifeCell<'a, R>]>,
 
     /// Number of known living cells in each generation.
     ///
@@ -111,7 +111,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
         let world = World {
             config: config.clone(),
             rule,
-            cells,
+            cells: cells.into_boxed_slice(),
             cell_count: vec![0; config.period as usize],
             front_cell_count: 0,
             conflicts: 0,
@@ -194,7 +194,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                     }
                 }
                 for t in 0..self.config.period {
-                    let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
+                    let cell_ptr = self.find_cell_mut((x, y, t));
                     for (i, (nx, ny)) in NBHD.iter().enumerate() {
                         unsafe {
                             let cell = cell_ptr.as_mut().unwrap();
@@ -223,7 +223,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                     }
                 }
                 for t in 0..self.config.period {
-                    let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
+                    let cell_ptr = self.find_cell_mut((x, y, t));
                     let cell = self.find_cell((x, y, t)).unwrap();
 
                     if t != 0 {
@@ -280,7 +280,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                     }
                 }
                 for t in 0..self.config.period {
-                    let cell_ptr = self.find_cell_mut((x, y, t)).unwrap();
+                    let cell_ptr = self.find_cell_mut((x, y, t));
                     let cell = self.find_cell((x, y, t)).unwrap();
 
                     for transform in self.config.symmetry.members() {
@@ -357,7 +357,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         if let Some(cell) = self.find_cell(coord) {
             if cell.state.get().is_none() && cell.next.is_none() {
                 let next = mem::replace(&mut self.next_unknown, Some(cell));
-                let cell_ptr = self.find_cell_mut(coord).unwrap();
+                let cell_ptr = self.find_cell_mut(coord);
                 unsafe {
                     let cell = cell_ptr.as_mut().unwrap();
                     cell.next = next;
@@ -393,7 +393,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
     }
 
     /// Finds a cell by its coordinates. Returns a mutable pointer.
-    fn find_cell_mut(&mut self, coord: Coord) -> Option<*mut LifeCell<'a, R>> {
+    fn find_cell_mut(&mut self, coord: Coord) -> *mut LifeCell<'a, R> {
         let (x, y, t) = coord;
         if x >= -1
             && x <= self.config.width
@@ -405,9 +405,9 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                 || (x - y).abs() <= self.config.diagonal_width.unwrap() + 1)
         {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
-            Some(&mut self.cells[index as usize])
+            &mut self.cells[index as usize]
         } else {
-            None
+            ptr::null_mut()
         }
     }
 
