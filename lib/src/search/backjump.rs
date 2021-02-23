@@ -50,30 +50,24 @@ pub enum ReasonBackjump<'a, R: Rule> {
 
 impl<'a, R: Rule> ReasonBackjump<'a, R> {
     /// Cells involved in the reason.
-    fn cells(self, set_cell: CellRef<'a, R>) -> Vec<CellRef<'a, R>> {
+    fn cells(self) -> Vec<CellRef<'a, R>> {
         match self {
             ReasonBackjump::Rule(cell) => {
                 let mut cells = Vec::with_capacity(10);
-                if set_cell != cell {
-                    cells.push(cell);
-                }
+                cells.push(cell);
                 if let Some(succ) = cell.succ {
-                    if set_cell != succ {
-                        cells.push(succ);
-                    }
+                    cells.push(succ);
                 }
                 for i in 0..8 {
                     if let Some(neigh) = cell.nbhd[i] {
-                        if set_cell != neigh {
-                            cells.push(neigh);
-                        }
+                        cells.push(neigh);
                     }
                 }
                 cells
             }
             ReasonBackjump::Sym(cell) => vec![cell],
             ReasonBackjump::Clause(clause) => clause,
-            _ => Vec::new(),
+            _ => unreachable!(),
         }
     }
 }
@@ -182,8 +176,13 @@ impl<'a, R: Rule> ConflReason<'a, R> {
                 cells
             }
             ConflReason::Sym(cell, sym) => vec![cell, sym],
-            _ => Vec::new(),
+            _ => unreachable!(),
         }
+    }
+
+    /// Whether this reason should be analyzed before retreating.
+    fn should_analyze(&self) -> bool {
+        !matches!(self, ConflReason::Deduce)
     }
 }
 
@@ -314,12 +313,12 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
     fn analyze(&mut self, reason: &[CellRef<'a, R>]) -> bool {
-        if reason.is_empty() || R::IS_GEN {
+        if reason.is_empty() {
             return self.retreat();
         }
         let mut max_level = 0;
         let mut counter = 0;
-        let mut learnt = Vec::with_capacity(reason.len());
+        let mut learnt = Vec::with_capacity(2 * reason.len());
         for &reason_cell in reason {
             if reason_cell.state.get().is_some() {
                 let level = reason_cell.level.get();
@@ -328,7 +327,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                         counter += 1;
                         reason_cell.seen.set(true);
                     }
-                } else {
+                } else if level > 0 {
                     max_level = max_level.max(level);
                     learnt.push(reason_cell);
                 }
@@ -358,7 +357,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                     if cell.seen.get() {
                         self.clear_cell(cell);
                         counter -= 1;
-                        for reason_cell in reason.cells(cell) {
+                        for reason_cell in reason.cells() {
                             if reason_cell.state.get().is_some() {
                                 let level = reason_cell.level.get();
                                 if level == self.level {
@@ -366,7 +365,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                                         counter += 1;
                                         reason_cell.seen.set(true);
                                     }
-                                } else {
+                                } else if level > 0 {
                                     max_level = max_level.max(level);
                                     learnt.push(reason_cell);
                                 }
@@ -374,6 +373,9 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                         }
 
                         if counter == 0 {
+                            if max_level == 0 {
+                                break;
+                            }
                             while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
                                 if matches!(
                                     reason,
@@ -417,7 +419,12 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                 Ok(()) => return true,
                 Err(reason) => {
                     self.conflicts += 1;
-                    if !self.analyze(&reason.cells()) {
+                    let failed = if reason.should_analyze() {
+                        !self.analyze(&reason.cells())
+                    } else {
+                        !self.retreat()
+                    };
+                    if failed {
                         return false;
                     }
                 }

@@ -11,6 +11,7 @@ readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
+auto_enums = "0.7.12"
 bitflags = "1.2.1"
 ca-rules = "0.3.2"
 derivative = "2.2.0"

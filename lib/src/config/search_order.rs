@@ -1,4 +1,5 @@
 use super::{Config, Coord, Symmetry};
+use auto_enums::auto_enum;
 use std::{borrow::Cow, cmp::Ordering};
 
 #[cfg(feature = "serde")]
@@ -79,10 +80,11 @@ impl Config {
     }
 
     /// Generates an iterator over cells coordinates from the search order.
+    #[auto_enum(Iterator)]
     pub(crate) fn search_order_iter(
         &self,
         search_order: &SearchOrder,
-    ) -> Box<dyn Iterator<Item = Coord>> {
+    ) -> impl Iterator<Item = Coord> {
         let width = self.width;
         let height = self.height;
         let period = self.period;
@@ -97,50 +99,47 @@ impl Config {
             0
         };
         match search_order {
-            SearchOrder::ColumnFirst => Box::new((0..width).rev().flat_map(move |x| {
+            SearchOrder::ColumnFirst => (0..width).rev().flat_map(move |x| {
                 (y_start..height)
                     .rev()
                     .flat_map(move |y| (0..period).rev().map(move |t| (x, y, t)))
-            })),
-            SearchOrder::RowFirst => Box::new((0..height).rev().flat_map(move |y| {
+            }),
+            SearchOrder::RowFirst => (0..height).rev().flat_map(move |y| {
                 (x_start..width)
                     .rev()
                     .flat_map(move |x| (0..period).rev().map(move |t| (x, y, t)))
-            })),
+            }),
+            #[nested]
             SearchOrder::Diagonal => {
                 if self.symmetry >= Symmetry::D2Diag {
-                    Box::new(
-                        (0..width)
-                            .rev()
-                            .flat_map(move |d| {
-                                ((width + d + 1) / 2..width).rev().flat_map(move |x| {
-                                    (0..period).rev().map(move |t| (x, width + d - x, t))
-                                })
+                    (0..width)
+                        .rev()
+                        .flat_map(move |d| {
+                            ((width + d + 1) / 2..width).rev().flat_map(move |x| {
+                                (0..period).rev().map(move |t| (x, width + d - x, t))
                             })
-                            .chain((0..width).rev().flat_map(move |d| {
-                                ((d + 1) / 2..=d).rev().flat_map(move |x| {
-                                    (0..period).rev().map(move |t| (x, d - x, t))
-                                })
-                            })),
-                    )
+                        })
+                        .chain((0..width).rev().flat_map(move |d| {
+                            ((d + 1) / 2..=d)
+                                .rev()
+                                .flat_map(move |x| (0..period).rev().map(move |t| (x, d - x, t)))
+                        }))
                 } else {
-                    Box::new(
-                        (0..width)
-                            .rev()
-                            .flat_map(move |d| {
-                                (d + 1..width).rev().flat_map(move |x| {
-                                    (0..period).rev().map(move |t| (x, width + d - x, t))
-                                })
+                    (0..width)
+                        .rev()
+                        .flat_map(move |d| {
+                            (d + 1..width).rev().flat_map(move |x| {
+                                (0..period).rev().map(move |t| (x, width + d - x, t))
                             })
-                            .chain((0..width).rev().flat_map(move |d| {
-                                (0..=d).rev().flat_map(move |x| {
-                                    (0..period).rev().map(move |t| (x, d - x, t))
-                                })
-                            })),
-                    )
+                        })
+                        .chain((0..width).rev().flat_map(move |d| {
+                            (0..=d)
+                                .rev()
+                                .flat_map(move |x| (0..period).rev().map(move |t| (x, d - x, t)))
+                        }))
                 }
             }
-            SearchOrder::FromVec(vec) => Box::new(vec.clone().into_iter().rev()),
+            SearchOrder::FromVec(vec) => vec.clone().into_iter().rev(),
         }
     }
 
