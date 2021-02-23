@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 - 2021/02/17
+## 0.4.1 - 2021/02/17
 
 - Fix a bug related to doc generation.
 
