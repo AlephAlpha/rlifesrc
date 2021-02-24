@@ -303,7 +303,7 @@ impl Config {
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
         macro_rules! new_world {
             ($rule:expr) => {
-                if self.backjump {
+                if self.backjump && self.max_cell_count.is_none() {
                     Ok(Box::new(World::new_backjump(&self, $rule)))
                 } else {
                     Ok(Box::new(World::new_no_backjump(&self, $rule)))

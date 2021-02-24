@@ -73,7 +73,10 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
         let mut cells = Vec::with_capacity(size);
 
-        let is_front = config.is_front_fn(rule.has_b0(), &search_order);
+        let is_front = config
+            .backjump
+            .then(|| config.is_front_fn(rule.has_b0(), &search_order))
+            .flatten();
 
         // Fills the vector with dead cells,
         // and checks whether it is on the first row or column.
