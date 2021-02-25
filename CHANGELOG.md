@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Disabled backjumping when `max_cell_count` is specified.
+
 ## 0.4.1 - 2021/02/17
 
 - Fix a bug related to doc generation.

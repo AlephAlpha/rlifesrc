@@ -10,7 +10,7 @@ use derivative::Derivative;
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
 
-/// Reasons for setting a cell.
+/// Reasons for setting a cell, with informations for backjumping.
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
