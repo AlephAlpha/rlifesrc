@@ -17,6 +17,6 @@ lazy_static = "1.4.0"
 pulldown-cmark = "0.8.0"
 rlifesrc-lib = { path = "../lib/", version = "0.4.1", features = ["js"] }
 serde = { version = "1.0.123", features = ["derive"] }
-wasm-bindgen = "^0.2.70"
+wasm-bindgen = "^0.2.71"
 web-sys = { version = "0.3.47", features = ["Blob", "HtmlAnchorElement", "Selection", "Url", "Window"] }
 yew = "0.17.4"
