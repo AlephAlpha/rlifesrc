@@ -60,6 +60,11 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
     fn confl_from_sym(_cell: CellRef<'a, R>, _sym: CellRef<'a, R>) -> Self::ConflReason {}
 
     #[inline]
+    fn init_front(world: World<'a, R, Self>) -> World<'a, R, Self> {
+        world
+    }
+
+    #[inline]
     fn set_cell(
         self,
         world: &mut World<'a, R, Self>,

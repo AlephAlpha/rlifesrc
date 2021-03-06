@@ -74,6 +74,10 @@ pub trait Reason<'a, R: Rule>: Sized {
     #[doc(hidden)]
     fn confl_from_sym(cell: CellRef<'a, R>, sym: CellRef<'a, R>) -> Self::ConflReason;
 
+    /// Conflict when constitifying a cell.
+    #[doc(hidden)]
+    fn init_front(world: World<'a, R, Self>) -> World<'a, R, Self>;
+
     /// Sets the [`state`](LifeCell#structfield.state) of a cell,
     /// push it to the [`set_stack`](World#structfield.set_stack),
     /// and update the neighborhood descriptor of its neighbors.
@@ -142,23 +146,6 @@ impl<'a, R: Rule, RE: Reason<'a, R>> SetCell<'a, R, RE> {
 }
 
 impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
-    /// Sets the [`state`](LifeCell#structfield.state) of a cell,
-    /// push it to the [`set_stack`](#structfield.set_stack),
-    /// and update the neighborhood descriptor of its neighbors.
-    ///
-    /// The original state of the cell must be unknown.
-    ///
-    /// Return `false` if the number of living cells exceeds the
-    /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
-    pub(crate) fn set_cell(
-        &mut self,
-        cell: CellRef<'a, R>,
-        state: State,
-        reason: RE,
-    ) -> Result<(), RE::ConflReason> {
-        reason.set_cell(self, cell, state)
-    }
-
     /// Consistifies a cell.
     ///
     /// Examines the state and the neighborhood descriptor of the cell,

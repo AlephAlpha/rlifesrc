@@ -5,10 +5,9 @@ use crate::{
     search::{Reason, SetCell},
     world::World,
 };
-use derivative::Derivative;
-
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
+use derivative::Derivative;
 
 /// Reasons for setting a cell, with informations for backjumping.
 #[derive(Derivative)]
@@ -103,6 +102,28 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonBackjump<'a, R> {
     }
 
     #[inline]
+    fn init_front(mut world: World<'a, R, Self>) -> World<'a, R, Self> {
+        for x in -1..=world.config.width {
+            for y in -1..=world.config.height {
+                if let Some(d) = world.config.diagonal_width {
+                    if (x - y).abs() > d + 1 {
+                        continue;
+                    }
+                }
+                for t in 0..world.config.period {
+                    if let Some(cell) = world.find_cell((x, y, t)) {
+                        if cell.is_front {
+                            world.front.push(cell);
+                        }
+                    }
+                }
+            }
+        }
+        world.front.shrink_to_fit();
+        world
+    }
+
+    #[inline]
     fn set_cell(
         self,
         world: &mut World<'a, R, Self>,
@@ -188,7 +209,7 @@ pub enum ConflReason<'a, R: Rule> {
 
 impl<'a, R: Rule> ConflReason<'a, R> {
     /// Cells involved in the reason.
-    fn cells(self) -> Vec<CellRef<'a, R>> {
+    fn cells(self, world: &World<'a, R, ReasonBackjump<'a, R>>) -> Vec<CellRef<'a, R>> {
         match self {
             ConflReason::Rule(cell) => {
                 let mut cells = Vec::with_capacity(10);
@@ -204,13 +225,14 @@ impl<'a, R: Rule> ConflReason<'a, R> {
                 cells
             }
             ConflReason::Sym(cell, sym) => vec![cell, sym],
+            ConflReason::Front => world.front.clone(),
             _ => unreachable!(),
         }
     }
 
     /// Whether this reason should be analyzed before retreating.
     fn should_analyze(&self) -> bool {
-        !matches!(self, ConflReason::Deduce | ConflReason::Front)
+        !matches!(self, ConflReason::Deduce)
     }
 }
 
@@ -427,7 +449,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                 Err(reason) => {
                     self.conflicts += 1;
                     let failed = if reason.should_analyze() {
-                        !self.analyze(&reason.cells())
+                        !self.analyze(&reason.cells(self))
                     } else {
                         !self.retreat_impl()
                     };

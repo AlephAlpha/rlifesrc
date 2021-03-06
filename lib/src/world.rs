@@ -63,6 +63,11 @@ pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     ///
     /// Only used when backjumping is enabled.
     pub(crate) level: u32,
+
+    /// All cells in the front.
+    ///
+    /// Only used when backjumping is enabled.
+    pub(crate) front: Vec<CellRef<'a, R>>,
 }
 
 impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
@@ -72,6 +77,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
 
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
         let mut cells = Vec::with_capacity(size);
+        let front = Vec::with_capacity((config.width + config.height) as usize);
 
         let is_front = config.is_front_fn(rule.has_b0(), &search_order);
 
@@ -120,7 +126,9 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
             next_unknown: None,
             non_empty_front: is_front.is_some(),
             level: 0,
+            front,
         }
+        .init_front()
         .init_border()
         .init_nbhd()
         .init_pred_succ()
@@ -143,6 +151,11 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
 }
 
 impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
+    /// Initialize the list of cells in the front.
+    fn init_front(self) -> Self {
+        RE::init_front(self)
+    }
+
     /// Initialize the cells at the borders.
     fn init_border(mut self) -> Self {
         for x in -1..=self.config.width {
@@ -408,6 +421,19 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         } else {
             ptr::null_mut()
         }
+    }
+    /// Sets the [`state`](LifeCell#structfield.state) of a cell,
+    /// push it to the [`set_stack`](#structfield.set_stack),
+    /// and update the neighborhood descriptor of its neighbors.
+    ///
+    /// The original state of the cell must be unknown.
+    pub(crate) fn set_cell(
+        &mut self,
+        cell: CellRef<'a, R>,
+        state: State,
+        reason: RE,
+    ) -> Result<(), RE::ConflReason> {
+        reason.set_cell(self, cell, state)
     }
 
     /// Clears the [`state`](LifeCell#structfield.state) of a cell,
