@@ -73,9 +73,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
         let mut cells = Vec::with_capacity(size);
 
-        let is_front = (!config.backjump)
-            .then(|| config.is_front_fn(rule.has_b0(), &search_order))
-            .flatten();
+        let is_front = config.is_front_fn(rule.has_b0(), &search_order);
 
         // Fills the vector with dead cells,
         // and checks whether it is on the first row or column.
@@ -110,7 +108,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
             }
         }
 
-        let world = World {
+        World {
             config: config.clone(),
             rule,
             cells: cells.into_boxed_slice(),
@@ -129,9 +127,8 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
         .init_sym()
         .init_state()
         .init_known_cells(&config.known_cells)
-        .init_search_order(search_order.as_ref());
-
-        RE::presearch(world)
+        .init_search_order(search_order.as_ref())
+        .presearch()
     }
 
     pub fn new_no_backjump(config: &Config, rule: R) -> Self {
@@ -345,7 +342,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         for &KnownCell { coord, state } in known_cells.iter() {
             if let Some(cell) = self.find_cell(coord) {
                 if cell.state.get().is_none() && state.0 < self.rule.gen() {
-                    self.set_cell(cell, state, RE::KNOWN);
+                    let _ = self.set_cell(cell, state, RE::KNOWN);
                 }
             }
         }
@@ -411,42 +408,6 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         } else {
             ptr::null_mut()
         }
-    }
-
-    /// Sets the [`state`](LifeCell#structfield.state) of a cell,
-    /// push it to the [`set_stack`](#structfield.set_stack),
-    /// and update the neighborhood descriptor of its neighbors.
-    ///
-    /// The original state of the cell must be unknown.
-    ///
-    /// Return `false` if the number of living cells exceeds the
-    /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
-    pub(crate) fn set_cell(&mut self, cell: CellRef<'a, R>, state: State, reason: RE) -> bool {
-        cell.state.set(Some(state));
-        let mut result = true;
-        cell.update_desc(Some(state), true);
-        if state == !cell.background {
-            self.cell_count[cell.coord.2 as usize] += 1;
-            if let Some(max) = self.config.max_cell_count {
-                if self.cell_count() > max {
-                    result = false;
-                }
-            }
-        }
-        if cell.is_front && state == cell.background {
-            self.front_cell_count -= 1;
-            if self.non_empty_front && self.front_cell_count == 0 {
-                result = false;
-            }
-        }
-        if RE::LEVEL {
-            if reason.is_decided() {
-                self.level += 1;
-            }
-            cell.level.set(self.level);
-        }
-        self.set_stack.push(SetCell::new(cell, reason));
-        result
     }
 
     /// Clears the [`state`](LifeCell#structfield.state) of a cell,
@@ -553,7 +514,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         self.config.max_cell_count = max_cell_count;
         if let Some(max) = self.config.max_cell_count {
             while self.cell_count() > max {
-                if !RE::retreat(self) {
+                if !self.retreat() {
                     break;
                 }
             }

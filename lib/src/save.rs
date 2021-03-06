@@ -103,7 +103,7 @@ impl WorldSer {
                 return Err(Error::SetCellError(coord));
             } else {
                 let reason = RE::deser(reason, &world)?;
-                world.set_cell(cell, state, reason);
+                let _ = world.set_cell(cell, state, reason);
             }
         }
         world.conflicts = self.conflicts;

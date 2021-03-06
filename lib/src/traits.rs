@@ -138,48 +138,59 @@ pub trait Search {
 
 /// The [`Search`] trait is implemented for every [`World`].
 impl<'a, R: Rule, RE: Reason<'a, R>> Search for World<'a, R, RE> {
+    #[inline]
     fn search(&mut self, max_step: Option<u64>) -> Status {
         self.search(max_step)
     }
 
+    #[inline]
     fn get_cell_state(&self, coord: Coord) -> Option<State> {
         self.get_cell_state(coord)
     }
 
+    #[inline]
     fn config(&self) -> &Config {
         &self.config
     }
 
+    #[inline]
     fn is_gen_rule(&self) -> bool {
         R::IS_GEN
     }
 
+    #[inline]
     fn is_b0_rule(&self) -> bool {
         self.rule.has_b0()
     }
 
+    #[inline]
     fn cell_count_gen(&self, t: i32) -> u32 {
         self.cell_count[t as usize]
     }
 
+    #[inline]
     fn cell_count(&self) -> u32 {
         self.cell_count()
     }
 
+    #[inline]
     fn conflicts(&self) -> u64 {
         self.conflicts
     }
 
+    #[inline]
     fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
         self.set_max_cell_count(max_cell_count)
     }
 
     #[cfg(feature = "serde")]
+    #[inline]
     fn ser(&self) -> WorldSer {
         self.ser()
     }
 
     #[cfg(feature = "serde")]
+    #[inline]
     fn deser(&mut self, ser: &WorldSer) -> Result<(), Error> {
         ser.deser(self)
     }

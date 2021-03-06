@@ -31,14 +31,21 @@ pub enum ReasonNoBackjump {
 }
 
 impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
+    type ConflReason = ();
     const KNOWN: Self = ReasonNoBackjump::Known;
     const DECIDED: Self = ReasonNoBackjump::Decide;
-    const LEVEL: bool = false;
 
+    #[inline]
     fn from_cell(_cell: CellRef<'a, R>) -> Self {
         ReasonNoBackjump::Deduce
     }
 
+    #[inline]
+    fn from_sym(_cell: CellRef<'a, R>) -> Self {
+        ReasonNoBackjump::Deduce
+    }
+
+    #[inline]
     fn is_decided(&self) -> bool {
         matches!(
             self,
@@ -46,16 +53,30 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
         )
     }
 
+    #[inline]
+    fn confl_from_cell(_cell: CellRef<'a, R>) -> Self::ConflReason {}
+
+    #[inline]
+    fn confl_from_sym(_cell: CellRef<'a, R>, _sym: CellRef<'a, R>) -> Self::ConflReason {}
+
+    #[inline]
+    fn set_cell(
+        self,
+        world: &mut World<'a, R, Self>,
+        cell: CellRef<'a, R>,
+        state: State,
+    ) -> Result<(), Self::ConflReason> {
+        world.set_cell_impl(cell, state, self)
+    }
+
+    #[inline]
     fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool {
         world.go(step)
     }
 
+    #[inline]
     fn retreat(world: &mut World<'a, R, Self>) -> bool {
-        world.retreat()
-    }
-
-    fn presearch(world: World<'a, R, Self>) -> World<'a, R, Self> {
-        world.presearch()
+        world.retreat_impl()
     }
 
     #[cfg(feature = "serde")]
@@ -80,69 +101,39 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
 }
 
 impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
-    /// Consistifies a cell.
+    /// Sets the [`state`](LifeCell#structfield.state) of a cell,
+    /// push it to the [`set_stack`](#structfield.set_stack),
+    /// and update the neighborhood descriptor of its neighbors.
     ///
-    /// Examines the state and the neighborhood descriptor of the cell,
-    /// and makes sure that it can validly produce the cell in the next
-    /// generation. If possible, determines the states of some of the
-    /// cells involved.
+    /// The original state of the cell must be unknown.
     ///
-    /// Returns `false` if there is a conflict,
-    /// `true` if the cells are consistent.
-    fn consistify(&mut self, cell: CellRef<'a, R>) -> bool {
-        Rule::consistify(self, cell)
-    }
-
-    /// Consistifies a cell, its neighbors, and its predecessor.
-    ///
-    /// Returns `false` if there is a conflict,
-    /// `true` if the cells are consistent.
-    fn consistify10(&mut self, cell: CellRef<'a, R>) -> bool {
-        self.consistify(cell)
-            && {
-                if let Some(pred) = cell.pred {
-                    self.consistify(pred)
-                } else {
-                    true
+    /// Return `false` if the number of living cells exceeds the
+    /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
+    pub(crate) fn set_cell_impl(
+        &mut self,
+        cell: CellRef<'a, R>,
+        state: State,
+        reason: ReasonNoBackjump,
+    ) -> Result<(), ()> {
+        cell.state.set(Some(state));
+        let mut result = Ok(());
+        cell.update_desc(Some(state), true);
+        if state == !cell.background {
+            self.cell_count[cell.coord.2 as usize] += 1;
+            if let Some(max) = self.config.max_cell_count {
+                if self.cell_count() > max {
+                    result = Err(());
                 }
             }
-            && cell.nbhd.iter().all(|&neigh| {
-                if let Some(neigh) = neigh {
-                    self.consistify(neigh)
-                } else {
-                    true
-                }
-            })
-    }
-
-    /// Deduces all the consequences by [`consistify`](Self::consistify) and symmetry.
-    ///
-    /// Returns `false` if there is a conflict,
-    /// `true` if the cells are consistent.
-    fn proceed(&mut self) -> bool {
-        while self.check_index < self.set_stack.len() as u32 {
-            let cell = self.set_stack[self.check_index as usize].cell;
-            let state = cell.state.get().unwrap();
-
-            // Determines some cells by symmetry.
-            for &sym in cell.sym.iter() {
-                if let Some(old_state) = sym.state.get() {
-                    if state != old_state {
-                        return false;
-                    }
-                } else if !self.set_cell(sym, state, ReasonNoBackjump::Deduce) {
-                    return false;
-                }
-            }
-
-            // Determines some cells by `consistify`.
-            if !self.consistify10(cell) {
-                return false;
-            }
-
-            self.check_index += 1;
         }
-        true
+        if cell.is_front && state == cell.background {
+            self.front_cell_count -= 1;
+            if self.non_empty_front && self.front_cell_count == 0 {
+                result = Err(());
+            }
+        }
+        self.set_stack.push(SetCell::new(cell, reason));
+        result
     }
 
     /// Retreats to the last time when a unknown cell is decided by choice,
@@ -150,7 +141,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
     ///
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
-    fn retreat(&mut self) -> bool {
+    fn retreat_impl(&mut self) -> bool {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
                 ReasonNoBackjump::Decide => {
@@ -168,7 +159,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
                     self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;
                     self.clear_cell(cell);
-                    if self.set_cell(cell, state, reason) {
+                    if self.set_cell_impl(cell, state, reason).is_ok() {
                         return true;
                     }
                 }
@@ -184,7 +175,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
                     self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;
                     self.clear_cell(cell);
-                    if self.set_cell(cell, state, reason) {
+                    if self.set_cell_impl(cell, state, reason).is_ok() {
                         return true;
                     }
                 }
@@ -212,28 +203,12 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
     fn go(&mut self, step: &mut u64) -> bool {
         loop {
             *step += 1;
-            if self.proceed() {
+            if self.proceed().is_ok() {
                 return true;
             } else {
                 self.conflicts += 1;
-                if !self.retreat() {
+                if !self.retreat_impl() {
                     return false;
-                }
-            }
-        }
-    }
-
-    /// Deduces all cells that could be deduced before the first decision.
-    pub(crate) fn presearch(mut self) -> Self {
-        loop {
-            if self.proceed() {
-                self.set_stack.clear();
-                self.check_index = 0;
-                return self;
-            } else {
-                self.conflicts += 1;
-                if !self.retreat() {
-                    return self;
                 }
             }
         }

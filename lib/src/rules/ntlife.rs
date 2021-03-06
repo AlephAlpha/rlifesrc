@@ -245,18 +245,22 @@ impl Rule for NtLife {
     type Desc = NbhdDesc;
     const IS_GEN: bool = false;
 
+    #[inline]
     fn has_b0(&self) -> bool {
         self.b0
     }
 
+    #[inline]
     fn has_b0_s8(&self) -> bool {
         self.b0 && self.s8
     }
 
+    #[inline]
     fn gen(&self) -> usize {
         2
     }
 
+    #[inline]
     fn new_desc(state: State, succ_state: State) -> Self::Desc {
         let nbhd_state = match state {
             ALIVE => 0x00ff,
@@ -304,15 +308,15 @@ impl Rule for NtLife {
     fn consistify<'a, RE: Reason<'a, Self>>(
         world: &mut World<'a, Self, RE>,
         cell: CellRef<'a, Self>,
-    ) -> bool {
+    ) -> Result<(), RE::ConflReason> {
         let flags = world.rule.impl_table[cell.desc.get().0 as usize];
 
         if flags.is_empty() {
-            return true;
+            return Ok(());
         }
 
         if flags.contains(ImplFlags::CONFLICT) {
-            return false;
+            return Err(RE::confl_from_cell(cell));
         }
 
         if flags.intersects(ImplFlags::SUCC) {
@@ -331,9 +335,7 @@ impl Rule for NtLife {
             } else {
                 ALIVE
             };
-            if !world.set_cell(cell, state, RE::from_cell(cell)) {
-                return false;
-            }
+            world.set_cell(cell, state, RE::from_cell(cell))?;
         }
 
         if flags.intersects(ImplFlags::NBHD) {
@@ -348,16 +350,14 @@ impl Rule for NtLife {
                             } else {
                                 ALIVE
                             };
-                            if !world.set_cell(neigh, state, RE::from_cell(cell)) {
-                                return false;
-                            }
+                            world.set_cell(neigh, state, RE::from_cell(cell))?;
                         }
                     }
                 }
             }
         }
 
-        true
+        Ok(())
     }
 }
 
@@ -480,7 +480,7 @@ impl Rule for NtLifeGen {
     fn consistify<'a, RE: Reason<'a, Self>>(
         world: &mut World<'a, Self, RE>,
         cell: CellRef<'a, Self>,
-    ) -> bool {
+    ) -> Result<(), RE::ConflReason> {
         let desc = cell.desc.get();
         let flags = world.rule.impl_table[desc.0 as usize];
         let gen = world.rule.gen;
@@ -489,7 +489,7 @@ impl Rule for NtLifeGen {
             Some(DEAD) => {
                 if let Some(State(j)) = desc.1 {
                     if j >= 2 {
-                        return false;
+                        return Err(RE::confl_from_cell(cell));
                     }
                 }
 
@@ -506,7 +506,7 @@ impl Rule for NtLifeGen {
             Some(ALIVE) => {
                 if let Some(State(j)) = desc.1 {
                     if j == 0 || j > 2 {
-                        return false;
+                        return Err(RE::confl_from_cell(cell));
                     }
                 }
                 if flags.intersects(ImplFlags::SUCC) {
@@ -521,7 +521,11 @@ impl Rule for NtLifeGen {
             }
             Some(State(i)) => {
                 if let Some(State(j)) = desc.1 {
-                    return j == (i + 1) % gen;
+                    if j == (i + 1) % gen {
+                        return Ok(());
+                    } else {
+                        return Err(RE::confl_from_cell(cell));
+                    }
                 } else {
                     let succ = cell.succ.unwrap();
                     return world.set_cell(succ, State((i + 1) % gen), RE::from_cell(cell));
@@ -532,7 +536,7 @@ impl Rule for NtLifeGen {
                     if flags.contains(ImplFlags::SELF_ALIVE) {
                         return world.set_cell(cell, State(gen - 1), RE::from_cell(cell));
                     } else {
-                        return true;
+                        return Ok(());
                     }
                 }
                 Some(ALIVE) => {
@@ -542,38 +546,34 @@ impl Rule for NtLifeGen {
                         } else {
                             ALIVE
                         };
-                        if !world.set_cell(cell, state, RE::from_cell(cell)) {
-                            return false;
-                        }
+                        world.set_cell(cell, state, RE::from_cell(cell))?;
                     }
                 }
                 Some(State(j)) => {
                     return world.set_cell(cell, State(j - 1), RE::from_cell(cell));
                 }
-                None => return true,
+                None => return Ok(()),
             },
         }
 
         if flags.is_empty() {
-            return true;
+            return Ok(());
         }
 
         if flags.contains(ImplFlags::CONFLICT) {
-            return false;
+            return Err(RE::confl_from_cell(cell));
         }
 
         if flags.intersects(ImplFlags::NBHD) {
             for (i, &neigh) in cell.nbhd.iter().enumerate() {
                 if flags.intersects(ImplFlags::from_bits(1 << (2 * i + 6)).unwrap()) {
                     if let Some(neigh) = neigh {
-                        if !world.set_cell(neigh, ALIVE, RE::from_cell(cell)) {
-                            return false;
-                        }
+                        world.set_cell(neigh, ALIVE, RE::from_cell(cell))?;
                     }
                 }
             }
         }
 
-        true
+        Ok(())
     }
 }

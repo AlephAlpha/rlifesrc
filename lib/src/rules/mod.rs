@@ -80,5 +80,5 @@ pub trait Rule: Sized {
     fn consistify<'a, RE: Reason<'a, Self>>(
         world: &mut World<'a, Self, RE>,
         cell: CellRef<'a, Self>,
-    ) -> bool;
+    ) -> Result<(), RE::ConflReason>;
 }
