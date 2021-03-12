@@ -5,7 +5,9 @@ use derivative::Derivative;
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
+    hash::{Hash, Hasher},
     ops::{Deref, Not},
+    ptr,
 };
 
 #[cfg(feature = "serde")]
@@ -166,7 +168,7 @@ impl<'a, R: Rule> CellRef<'a, R> {
 
 impl<'a, R: Rule> PartialEq for CellRef<'a, R> {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.cell, other.cell)
+        ptr::eq(self.cell, other.cell)
     }
 }
 
@@ -185,5 +187,11 @@ impl<'a, R: Rule> Debug for CellRef<'a, R> {
         f.debug_struct("CellRef")
             .field("coord", &self.coord)
             .finish()
+    }
+}
+
+impl<'a, R: Rule> Hash for CellRef<'a, R> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        ptr::hash(self.cell, state)
     }
 }

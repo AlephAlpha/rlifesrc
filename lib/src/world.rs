@@ -68,6 +68,11 @@ pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     ///
     /// Only used when backjumping is enabled.
     pub(crate) front: Vec<CellRef<'a, R>>,
+
+    /// A learnt clause.
+    ///
+    /// Only used when backjumping is enabled.
+    pub(crate) learnt: Vec<CellRef<'a, R>>,
 }
 
 impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
@@ -127,6 +132,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
             non_empty_front: is_front.is_some(),
             level: 0,
             front,
+            learnt: Vec::new(),
         }
         .init_front()
         .init_border()

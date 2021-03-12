@@ -341,14 +341,14 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
     ///
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
-    fn analyze(&mut self, reason: &[CellRef<'a, R>]) -> bool {
+    fn analyze(&mut self, reason: Vec<CellRef<'a, R>>) -> bool {
         if reason.is_empty() {
             return self.retreat_impl();
         }
         let mut max_level = 0;
         let mut counter = 0;
-        let mut learnt = Vec::with_capacity(2 * reason.len());
-        for &reason_cell in reason {
+        self.learnt.clear();
+        for reason_cell in reason {
             if reason_cell.state.get().is_some() {
                 let level = reason_cell.level.get();
                 if level == self.level {
@@ -358,7 +358,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                     }
                 } else if level > 0 {
                     max_level = max_level.max(level);
-                    learnt.push(reason_cell);
+                    self.learnt.push(reason_cell);
                 }
             }
         }
@@ -366,6 +366,8 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
             match reason {
                 ReasonBackjump::Decide => {
                     let state = !cell.state.get().unwrap();
+                    let mut learnt = self.learnt.clone();
+                    learnt.shrink_to_fit();
                     let reason = ReasonBackjump::Clause(learnt);
 
                     self.check_index = self.set_stack.len() as u32;
@@ -396,7 +398,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                                     }
                                 } else if level > 0 {
                                     max_level = max_level.max(level);
-                                    learnt.push(reason_cell);
+                                    self.learnt.push(reason_cell);
                                 }
                             }
                         }
@@ -414,7 +416,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                                     self.next_unknown = cell.next;
                                     self.level -= 1;
                                     if self.level == max_level {
-                                        return self.analyze(&learnt);
+                                        return self.analyze(self.learnt.clone());
                                     }
                                 } else {
                                     self.clear_cell(cell);
@@ -449,7 +451,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                 Err(reason) => {
                     self.conflicts += 1;
                     let failed = if reason.should_analyze() {
-                        !self.analyze(&reason.cells(self))
+                        !self.analyze(reason.cells(self))
                     } else {
                         !self.retreat_impl()
                     };
