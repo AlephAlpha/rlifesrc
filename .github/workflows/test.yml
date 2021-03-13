@@ -51,7 +51,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: 16 5 3 0 1 --no-tui
+          args: --release 26 8 4 0 1 --no-tui
+
+      - name: Run command line test with backjumping
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --release 26 8 4 0 1 --backjump --no-tui
 
   lints:
     name: Lints

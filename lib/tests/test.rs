@@ -66,6 +66,25 @@ fn p3_spaceship() -> Result<(), Error> {
 }
 
 #[test]
+fn backjump() -> Result<(), Error> {
+    let config = Config::new(16, 5, 3).set_translate(0, 1).set_backjump(true);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+    assert_eq!(
+        search.rle_gen(0),
+        String::from(
+            "x = 16, y = 5, rule = B3/S23\n\
+             ........o.......$\n\
+             .oo.ooo.ooo.....$\n\
+             .oo....o..oo.oo.$\n\
+             o..o.oo...o..oo.$\n\
+             ............o..o!\n"
+        )
+    );
+    Ok(())
+}
+
+#[test]
 fn lwss() -> Result<(), Error> {
     let config = Config::new(6, 6, 4).set_translate(0, 2);
     let mut search = config.world()?;

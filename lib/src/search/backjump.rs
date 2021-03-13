@@ -208,28 +208,6 @@ pub enum ConflReason<'a, R: Rule> {
 }
 
 impl<'a, R: Rule> ConflReason<'a, R> {
-    /// Cells involved in the reason.
-    fn cells(self, world: &World<'a, R, ReasonBackjump<'a, R>>) -> Vec<CellRef<'a, R>> {
-        match self {
-            ConflReason::Rule(cell) => {
-                let mut cells = Vec::with_capacity(10);
-                cells.push(cell);
-                if let Some(succ) = cell.succ {
-                    cells.push(succ);
-                }
-                for i in 0..8 {
-                    if let Some(neigh) = cell.nbhd[i] {
-                        cells.push(neigh);
-                    }
-                }
-                cells
-            }
-            ConflReason::Sym(cell, sym) => vec![cell, sym],
-            ConflReason::Front => world.front.clone(),
-            _ => unreachable!(),
-        }
-    }
-
     /// Whether this reason should be analyzed before retreating.
     fn should_analyze(&self) -> bool {
         !matches!(self, ConflReason::Deduce)
@@ -237,6 +215,30 @@ impl<'a, R: Rule> ConflReason<'a, R> {
 }
 
 impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
+    /// Store the cells involved in the conflict reason into  [`self.learnt`](Self::learnt).
+    fn learn_from_confl(&mut self, reason: ConflReason<'a, R>) {
+        self.learnt.clear();
+        match reason {
+            ConflReason::Rule(cell) => {
+                self.learnt.push(cell);
+                if let Some(succ) = cell.succ {
+                    self.learnt.push(succ);
+                }
+                for i in 0..8 {
+                    if let Some(neigh) = cell.nbhd[i] {
+                        self.learnt.push(neigh);
+                    }
+                }
+            }
+            ConflReason::Sym(cell, sym) => {
+                self.learnt.push(cell);
+                self.learnt.push(sym);
+            }
+            ConflReason::Front => self.learnt.extend_from_slice(&self.front),
+            _ => unreachable!(),
+        }
+    }
+
     /// Sets the [`state`](LifeCell#structfield.state) of a cell,
     /// push it to the [`set_stack`](#structfield.set_stack),
     /// and update the neighborhood descriptor of its neighbors.
@@ -339,16 +341,20 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
     /// analyzes the conflict during the backtracking, and
     /// backjumps if possible.
     ///
+    /// The reason of conflict must be stored in `self.learnt`
+    /// before calling this method.
+    ///
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
-    fn analyze(&mut self, reason: Vec<CellRef<'a, R>>) -> bool {
-        if reason.is_empty() {
+    fn analyze(&mut self) -> bool {
+        if self.learnt.is_empty() {
             return self.retreat_impl();
         }
         let mut max_level = 0;
         let mut counter = 0;
-        self.learnt.clear();
-        for reason_cell in reason {
+        let mut i = 0;
+        while i < self.learnt.len() {
+            let reason_cell = self.learnt[i];
             if reason_cell.state.get().is_some() {
                 let level = reason_cell.level.get();
                 if level == self.level {
@@ -358,9 +364,11 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                     }
                 } else if level > 0 {
                     max_level = max_level.max(level);
-                    self.learnt.push(reason_cell);
+                    i += 1;
+                    continue;
                 }
             }
+            self.learnt.swap_remove(i);
         }
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
@@ -416,7 +424,7 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                                     self.next_unknown = cell.next;
                                     self.level -= 1;
                                     if self.level == max_level {
-                                        return self.analyze(self.learnt.clone());
+                                        return self.analyze();
                                     }
                                 } else {
                                     self.clear_cell(cell);
@@ -451,7 +459,8 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
                 Err(reason) => {
                     self.conflicts += 1;
                     let failed = if reason.should_analyze() {
-                        !self.analyze(reason.cells(self))
+                        self.learn_from_confl(reason);
+                        !self.analyze()
                     } else {
                         !self.retreat_impl()
                     };
