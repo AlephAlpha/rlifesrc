@@ -5,9 +5,13 @@ use crate::{
     search::{Reason, SetCell},
     world::World,
 };
+use derivative::Derivative;
+
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
-use derivative::Derivative;
+
+#[cfg(doc)]
+use crate::cells::LifeCell;
 
 /// Reasons for setting a cell, with informations for backjumping.
 #[derive(Derivative)]
