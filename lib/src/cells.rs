@@ -1,11 +1,10 @@
 //! Cells in the cellular automaton.
 
 use crate::rules::Rule;
-use derivative::Derivative;
+use educe::Educe;
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
-    hash::{Hash, Hasher},
     ops::{Deref, Not},
     ptr,
 };
@@ -149,9 +148,10 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
 
 /// A reference to a [`LifeCell`] which has the same lifetime as the cell
 /// it refers to.
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""), Copy(bound = ""))]
+#[derive(Educe)]
+#[educe(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CellRef<'a, R: Rule> {
+    #[educe(PartialEq(method = "ptr::eq"), Hash(method = "ptr::hash"))]
     cell: &'a LifeCell<'a, R>,
 }
 
@@ -166,14 +166,6 @@ impl<'a, R: Rule> CellRef<'a, R> {
     }
 }
 
-impl<'a, R: Rule> PartialEq for CellRef<'a, R> {
-    fn eq(&self, other: &Self) -> bool {
-        ptr::eq(self.cell, other.cell)
-    }
-}
-
-impl<'a, R: Rule> Eq for CellRef<'a, R> {}
-
 impl<'a, R: Rule> Deref for CellRef<'a, R> {
     type Target = LifeCell<'a, R>;
 
@@ -187,11 +179,5 @@ impl<'a, R: Rule> Debug for CellRef<'a, R> {
         f.debug_struct("CellRef")
             .field("coord", &self.coord)
             .finish()
-    }
-}
-
-impl<'a, R: Rule> Hash for CellRef<'a, R> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        ptr::hash(self.cell, state)
     }
 }

@@ -5,7 +5,7 @@ use crate::{
     search::{Reason, SetCell},
     world::World,
 };
-use derivative::Derivative;
+use educe::Educe;
 
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
@@ -14,13 +14,8 @@ use crate::{error::Error, save::ReasonSer};
 use crate::cells::LifeCell;
 
 /// Reasons for setting a cell, with informations for backjumping.
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Debug(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = "")
-)]
+#[derive(Educe)]
+#[educe(Clone, Debug, PartialEq, Eq)]
 pub enum ReasonBackjump<'a, R: Rule> {
     /// Known before the search starts,
     Known,
@@ -187,14 +182,8 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonBackjump<'a, R> {
 }
 
 /// Reasons for a conflict.
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Copy(bound = ""),
-    Debug(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = "")
-)]
+#[derive(Educe)]
+#[educe(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ConflReason<'a, R: Rule> {
     /// Conflict from the rule when constitifying another cell.
     Rule(CellRef<'a, R>),

@@ -9,6 +9,9 @@ use crate::{
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
 
+#[cfg(doc)]
+use crate::cells::LifeCell;
+
 /// Reasons for setting a cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ReasonNoBackjump {
