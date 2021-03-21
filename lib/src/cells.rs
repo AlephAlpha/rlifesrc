@@ -5,6 +5,7 @@ use educe::Educe;
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
+    hash::{Hash, Hasher},
     ops::{Deref, Not},
     ptr,
 };
@@ -149,9 +150,8 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
 /// A reference to a [`LifeCell`] which has the same lifetime as the cell
 /// it refers to.
 #[derive(Educe)]
-#[educe(Clone, Copy, PartialEq, Eq, Hash)]
+#[educe(Clone, Copy, Eq)]
 pub struct CellRef<'a, R: Rule> {
-    #[educe(PartialEq(method = "ptr::eq"), Hash(method = "ptr::hash"))]
     cell: &'a LifeCell<'a, R>,
 }
 
@@ -163,6 +163,12 @@ impl<'a, R: Rule> CellRef<'a, R> {
     /// the old state when `new` is false.
     pub(crate) fn update_desc(self, state: Option<State>, new: bool) {
         R::update_desc(self, state, new);
+    }
+}
+
+impl<'a, R: Rule> PartialEq for CellRef<'a, R> {
+    fn eq(&self, other: &Self) -> bool {
+        ptr::eq(self.cell, other.cell)
     }
 }
 
@@ -179,5 +185,11 @@ impl<'a, R: Rule> Debug for CellRef<'a, R> {
         f.debug_struct("CellRef")
             .field("coord", &self.coord)
             .finish()
+    }
+}
+
+impl<'a, R: Rule> Hash for CellRef<'a, R> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        ptr::hash(self.cell, state)
     }
 }
