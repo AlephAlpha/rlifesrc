@@ -160,6 +160,25 @@ fn snowflakes() -> Result<(), Error> {
 }
 
 #[test]
+fn transform_subperiod() -> Result<(), Error> {
+    let config = Config::new(13, 13, 6)
+        .set_translate(0, 6)
+        .set_rule_string("B2/S")
+        .set_transform(Transform::FlipCol)
+        .set_skip_subperiod(false);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+
+    let config = Config::new(13, 13, 6)
+        .set_translate(0, 6)
+        .set_rule_string("B2/S")
+        .set_transform(Transform::FlipCol);
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::None);
+    Ok(())
+}
+
+#[test]
 fn known_cells() -> Result<(), Error> {
     let config = Config::new(3, 3, 1).set_known_cells(vec![
         KnownCell {
