@@ -227,6 +227,15 @@ impl Transform {
         !self.is_in(Symmetry::D4Diag)
     }
 
+    /// The order of this transformation in the symmetry group.
+    pub fn order(self) -> u8 {
+        match self {
+            Transform::Id => 1,
+            Transform::Rotate90 | Transform::Rotate270 => 4,
+            _ => 2,
+        }
+    }
+
     /// The inverse of this transformation.
     pub fn inverse(self) -> Self {
         match self {

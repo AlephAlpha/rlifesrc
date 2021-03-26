@@ -503,7 +503,11 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                     .iter()
                     .step_by(self.config.period as usize)
                     .all(|c| {
-                        let (x, y, _) = c.coord;
+                        let (x, y, _) = self.config.transform.act_on(
+                            c.coord,
+                            self.config.width,
+                            self.config.height,
+                        );
                         c.state.get() == self.get_cell_state((x - dx, y - dy, t))
                     })
             }
