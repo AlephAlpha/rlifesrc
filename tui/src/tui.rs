@@ -38,6 +38,7 @@ struct App<'a, W: Write> {
     output: &'a mut W,
     term_size: (u16, u16),
     world_size: (i32, i32),
+    paused: bool,
     mode: Mode,
 }
 
@@ -48,13 +49,14 @@ impl<'a, W: Write> App<'a, W> {
             gen: 0,
             period,
             search,
-            status: Status::Paused,
+            status: Status::Initial,
             start_time: None,
             timing: Duration::default(),
             reset,
             output,
             term_size: (80, 24),
             world_size: (80, 24),
+            paused: true,
             mode: Mode::Main,
         };
         app.init()?;
@@ -97,7 +99,7 @@ impl<'a, W: Write> App<'a, W> {
                     self.gen,
                     self.search.cell_count_gen(self.gen),
                     self.search.conflicts(),
-                    if self.status == Status::Searching {
+                    if !self.paused {
                         String::new()
                     } else {
                         format!("  Time: {:.2?}", self.timing)
@@ -168,8 +170,13 @@ impl<'a, W: Write> App<'a, W> {
                     Status::Initial => INITIAL,
                     Status::Found => FOUND,
                     Status::None => NONE,
-                    Status::Searching => SEARCHING,
-                    Status::Paused => PAUSED,
+                    Status::Searching =>
+                        if self.paused {
+                            PAUSED
+                        } else {
+                            SEARCHING
+                        },
+                    Status::Paused => unreachable!(),
                 },
                 self.term_size.0 as usize
             )))?;
@@ -187,7 +194,7 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Pauses.
     fn pause(&mut self) {
-        self.status = Status::Paused;
+        self.paused = true;
         if let Some(instant) = self.start_time.take() {
             self.timing += instant.elapsed();
         }
@@ -195,7 +202,7 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Starts or resumes.
     fn start(&mut self) {
-        self.status = Status::Searching;
+        self.paused = false;
         self.start_time = Some(Instant::now());
     }
 
@@ -205,6 +212,7 @@ impl<'a, W: Write> App<'a, W> {
             Status::Searching => (),
             s => {
                 self.status = s;
+                self.paused = true;
                 if let Some(instant) = self.start_time.take() {
                     self.timing += instant.elapsed();
                 }
@@ -233,12 +241,7 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Handles a key event. Return `true` to quit the program.
     #[allow(unreachable_patterns)]
-    async fn handle(
-        &mut self,
-        event: Option<Event>,
-        // reader: &mut EventStream,
-        is_searching: bool,
-    ) -> CrosstermResult<bool> {
+    async fn handle(&mut self, event: Option<Event>) -> CrosstermResult<bool> {
         /// A macro to generate constant key events patterns.
         macro_rules! key_event {
             ($code:pat) => {
@@ -251,11 +254,11 @@ impl<'a, W: Write> App<'a, W> {
                 key_event!(KeyCode::Char('q'))
                 | key_event!(KeyCode::Char('Q'))
                 | key_event!(KeyCode::Esc) => {
-                    if is_searching {
+                    if !self.paused {
                         self.pause();
                     }
                     self.update()?;
-                    if let Status::Paused = self.status {
+                    if self.status == Status::Searching {
                         self.ask_quit()?;
                     } else {
                         return Ok(true);
@@ -270,7 +273,7 @@ impl<'a, W: Write> App<'a, W> {
                     self.update()?;
                 }
                 key_event!(KeyCode::Char(' ')) | key_event!(KeyCode::Enter) => {
-                    if is_searching {
+                    if !self.paused {
                         self.pause();
                     } else {
                         self.start();
@@ -289,7 +292,7 @@ impl<'a, W: Write> App<'a, W> {
                 }
                 Some(_) => (),
                 None => {
-                    if is_searching {
+                    if !self.paused {
                         self.pause();
                     }
                     return Ok(true);
@@ -325,10 +328,10 @@ impl<'a, W: Write> App<'a, W> {
     /// The main loop.
     async fn main_loop(&mut self, reader: &mut EventStream) -> CrosstermResult<()> {
         loop {
-            if let Status::Searching = self.status {
+            if !self.paused {
                 select! {
                     event = reader.try_next().fuse() => {
-                        if self.handle(event?, true).await? {
+                        if self.handle(event?).await? {
                             break;
                         }
                     },
@@ -336,7 +339,7 @@ impl<'a, W: Write> App<'a, W> {
                         self.update()?;
                     },
                 };
-            } else if self.handle(reader.try_next().await?, false).await? {
+            } else if self.handle(reader.try_next().await?).await? {
                 break;
             }
         }
