@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Disabled backjumping when `max_cell_count` is specified.
+- Fix some bugs.
+- Update dependencies.
 
 ## 0.4.1 - 2021/02/17
 
