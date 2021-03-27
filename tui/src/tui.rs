@@ -32,13 +32,13 @@ struct App<'a, W: Write> {
     period: i32,
     search: Box<dyn Search>,
     status: Status,
+    paused: bool,
     start_time: Option<Instant>,
     timing: Duration,
     reset: bool,
     output: &'a mut W,
     term_size: (u16, u16),
     world_size: (i32, i32),
-    paused: bool,
     mode: Mode,
 }
 
@@ -50,13 +50,13 @@ impl<'a, W: Write> App<'a, W> {
             period,
             search,
             status: Status::Initial,
+            paused: true,
             start_time: None,
             timing: Duration::default(),
             reset,
             output,
             term_size: (80, 24),
             world_size: (80, 24),
-            paused: true,
             mode: Mode::Main,
         };
         app.init()?;
@@ -176,7 +176,6 @@ impl<'a, W: Write> App<'a, W> {
                         } else {
                             SEARCHING
                         },
-                    Status::Paused => unreachable!(),
                 },
                 self.term_size.0 as usize
             )))?;

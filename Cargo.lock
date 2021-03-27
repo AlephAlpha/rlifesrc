@@ -1034,6 +1034,7 @@ dependencies = [
  "build_timestamp",
  "js-sys",
  "lazy_static",
+ "log",
  "pulldown-cmark",
  "rlifesrc-lib",
  "serde",

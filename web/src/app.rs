@@ -1,11 +1,12 @@
 use crate::{
     help::Help,
     settings::Settings,
-    worker::{Request, Response, Worker},
+    worker::{Request, Response, UpdateMessage, Worker},
     world::World,
 };
 use build_timestamp::build_time;
 use js_sys::Array;
+use log::{debug, error};
 use rlifesrc_lib::{Config, Status};
 use std::time::Duration;
 use wasm_bindgen::JsValue;
@@ -23,30 +24,13 @@ use yew::{
     Bridge, Bridged, Component, ComponentLink, Html, ShouldRender,
 };
 
-const INIT_WORLD: &str = "x = 16, y = 16, rule = B3/S23\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????$\n\
-                          ????????????????!";
-
 build_time!("%Y-%m-%d %H:%M:%S UTC");
 
 pub struct App {
     link: ComponentLink<Self>,
     config: Config,
     status: Status,
+    paused: bool,
     gen: i32,
     cells: u32,
     world: String,
@@ -56,6 +40,7 @@ pub struct App {
     reader_task: Option<ReaderTask>,
 }
 
+#[derive(Debug)]
 pub enum Msg {
     Tick,
     IncGen,
@@ -93,7 +78,7 @@ impl Component for App {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let config: Config = Config::default();
         let status = Status::Initial;
-        let world = INIT_WORLD.to_owned();
+        let world = String::new();
         let callback = link.callback(Msg::DataReceived);
         let worker = Worker::bridge(callback);
 
@@ -101,6 +86,7 @@ impl Component for App {
             link,
             config,
             status,
+            paused: true,
             gen: 0,
             cells: 0,
             world,
@@ -115,9 +101,9 @@ impl Component for App {
         match msg {
             Msg::Tick => {
                 if self.max_partial {
-                    self.worker.send(Request::MaxPartial)
+                    self.worker.send(Request::MaxPartial);
                 } else {
-                    self.worker.send(Request::DisplayGen(self.gen))
+                    self.worker.send(Request::DisplayGen(self.gen));
                 }
             }
             Msg::IncGen => {
@@ -134,23 +120,30 @@ impl Component for App {
                     return true;
                 }
             }
-            Msg::Start => self.worker.send(Request::Start),
+            Msg::Start => {
+                self.worker.send(Request::Start);
+                self.start_job();
+            }
             Msg::Pause => self.worker.send(Request::Pause),
             Msg::Reset => self.worker.send(Request::SetWorld(self.config.clone())),
             Msg::Save => self.worker.send(Request::Save),
             Msg::Load(files) => {
                 let file = files.get(0).unwrap();
                 let mut reader_service = ReaderService::new();
-                let task = reader_service
-                    .read_file(file, self.link.callback(Msg::SendFile))
-                    .unwrap();
-                self.reader_task = Some(task)
+                let task = reader_service.read_file(file, self.link.callback(Msg::SendFile));
+                match task {
+                    Ok(task) => self.reader_task = Some(task),
+                    Err(e) => error!("Error opening file reader: {}", e),
+                }
             }
             Msg::SendFile(data) => {
-                if let Json(Ok(world_ser)) = Ok(data.content).into() {
-                    self.worker.send(Request::Load(world_ser));
-                } else {
-                    DialogService::alert("Broken saved file.");
+                let Json(world_ser) = Ok(data.content).into();
+                match world_ser {
+                    Ok(world_ser) => self.worker.send(Request::Load(world_ser)),
+                    Err(e) => {
+                        error!("Error parsing save file: {}", e);
+                        DialogService::alert("Broken saved file.");
+                    }
                 }
             }
             Msg::SetMaxPartial => {
@@ -170,30 +163,40 @@ impl Component for App {
             }
             Msg::DataReceived(response) => {
                 match response {
-                    Response::UpdateWorld((world, cells)) => {
-                        self.world = world;
-                        self.cells = cells;
-                    }
-                    Response::UpdateConfig(config) => {
-                        self.config = config;
-                    }
-                    Response::UpdateStatus(status) => {
-                        let old_status = self.status;
-                        if self.status != status {
-                            match (old_status, status) {
-                                (Status::Searching, _) => self.stop_job(),
-                                (_, Status::Searching) => self.start_job(),
-                                _ => (),
-                            }
-                            self.status = status;
+                    Response::Update(UpdateMessage {
+                        world,
+                        cells,
+                        status,
+                        paused,
+                        config,
+                    }) => {
+                        if let Some(world) = world {
+                            self.world = world;
                         }
+                        if let Some(cells) = cells {
+                            self.cells = cells;
+                        }
+                        if let Some(config) = config {
+                            self.config = config;
+                        }
+                        self.paused = paused;
+                        if paused {
+                            self.stop_job()
+                        }
+                        self.status = status;
                     }
                     Response::Error(error) => {
                         DialogService::alert(&error);
                     }
                     Response::Save(world_ser) => {
                         let text: Text = Json(&world_ser).into();
-                        download(&text.unwrap(), "save.json", "application/json").unwrap();
+                        match text {
+                            Ok(text) => {
+                                debug!("Generated save file: {:?}", text);
+                                download(&text, "save.json", "application/json").unwrap()
+                            }
+                            Err(e) => error!("Error generating save file: {}", e),
+                        }
                     }
                 };
                 return true;
@@ -365,8 +368,11 @@ impl App {
                             Status::Initial => "",
                             Status::Found => "Found a result.",
                             Status::None => "No more result.",
-                            Status::Searching => "Searching...",
-                            Status::Paused => "Paused.",
+                            Status::Searching => if self.paused {
+                                "Searching..."
+                            } else {
+                                "Paused."
+                            },
                         }
                     }
                 </li>
@@ -378,7 +384,7 @@ impl App {
         html! {
             <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
-                    disabled=self.status == Status::Searching
+                    disabled=!self.paused
                     onclick=self.link.callback(|_| Msg::Start)>
                     <i class="fas fa-play"></i>
                     <span class="mui--hidden-xs">
@@ -386,7 +392,7 @@ impl App {
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    disabled=self.status != Status::Searching
+                    disabled=self.paused
                     onclick=self.link.callback(|_| Msg::Pause)>
                     <i class="fas fa-pause"></i>
                     <span class="mui--hidden-xs">
@@ -394,7 +400,7 @@ impl App {
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    disabled=self.status == Status::Searching
+                    disabled=!self.paused
                     onclick=self.link.callback(|_| Msg::Reset)>
                     <i class="fas fa-redo"></i>
                     <span class="mui--hidden-xs">
@@ -405,7 +411,7 @@ impl App {
                 </button>
                 <div class="mui--visible-xs-block"></div>
                 <button class="mui-btn mui-btn--raised"
-                    disabled=self.status == Status::Searching
+                    disabled=!self.paused
                     onclick=self.link.callback(|_| Msg::Save)>
                     <i class="fas fa-save"></i>
                     <span class="mui--hidden-xs">

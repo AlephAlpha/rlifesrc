@@ -34,8 +34,6 @@ pub enum Status {
     None,
     /// Still searching.
     Searching,
-    /// Paused.
-    Paused,
 }
 
 /// Reasons for setting a cell.
