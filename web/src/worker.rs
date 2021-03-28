@@ -1,3 +1,4 @@
+use instant::Instant;
 use log::{debug, error};
 use rlifesrc_lib::{save::WorldSer, Config, Search, Status};
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ use yew::{
     services::timeout::{TimeoutService, TimeoutTask},
 };
 
-const VIEW_FREQ: u64 = 50000;
+const VIEW_FREQ: u64 = 100000;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
@@ -33,6 +34,7 @@ pub struct UpdateMessage {
     pub cells: Option<u32>,
     pub status: Status,
     pub paused: bool,
+    pub timing: Option<Duration>,
     pub config: Option<Config>,
 }
 
@@ -47,6 +49,8 @@ pub struct Worker {
     search: Box<dyn Search>,
     max_partial_count: u32,
     max_partial: String,
+    start_time: Option<Instant>,
+    timing: Duration,
     link: AgentLink<Worker>,
     timeout_task: Option<TimeoutTask>,
 }
@@ -59,10 +63,19 @@ impl Worker {
             self.link.callback(|_| WorkerMsg::Step),
         );
         self.timeout_task = Some(handle);
+        if self.start_time.is_none() {
+            self.start_time = Some(Instant::now());
+        }
+        debug!("Start timing.");
     }
 
     fn stop_job(&mut self) {
         self.timeout_task.take();
+        if let Some(instant) = self.start_time.take() {
+            self.timing += instant.elapsed();
+            self.start_time = Some(Instant::now());
+            debug!("Stop timing: {:?}.", self.timing);
+        }
         self.paused = true;
     }
 
@@ -82,12 +95,14 @@ impl Worker {
         let paused = self.paused;
         let config = (status == Status::Found && self.search.config().reduce_max)
             .then(|| self.search.config().clone());
+        let timing = self.paused.then(|| self.timing);
 
         let msg = UpdateMessage {
             world: None,
             cells: None,
             status,
             paused,
+            timing,
             config,
         };
         UpdateMessageBuilder { msg, worker: self }
@@ -111,6 +126,8 @@ impl Agent for Worker {
             search,
             max_partial_count: 0,
             max_partial: String::new(),
+            start_time: None,
+            timing: Duration::default(),
             link,
             timeout_task: None,
         };
@@ -126,7 +143,7 @@ impl Agent for Worker {
                 if self.status == Status::Searching {
                     self.start_job();
                 } else {
-                    self.paused = true;
+                    self.stop_job();
                 }
             }
         }
@@ -143,6 +160,7 @@ impl Agent for Worker {
             Request::SetWorld(config) => {
                 self.stop_job();
                 self.status = Status::Initial;
+                self.timing = Duration::default();
                 match config.world() {
                     Ok(search) => {
                         self.search = search;
@@ -173,6 +191,7 @@ impl Agent for Worker {
                         debug!("Save file loaded!");
                         self.search = search;
                         self.update_max_martial(false);
+                        self.timing = Duration::default();
                         self.update_message().with_config().with_world(0).send(id);
                     }
                     Err(error) => {

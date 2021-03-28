@@ -12,6 +12,7 @@ keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
 build_timestamp = "0.1.0"
+instant = { version = "0.1.9", features = ["wasm-bindgen"] }
 js-sys = "0.3.49"
 lazy_static = "1.4.0"
 log = "0.4.14"

@@ -35,6 +35,7 @@ pub struct App {
     cells: u32,
     world: String,
     max_partial: bool,
+    timing: Duration,
     worker: Box<dyn Bridge<Worker>>,
     interval_task: Option<IntervalTask>,
     reader_task: Option<ReaderTask>,
@@ -91,6 +92,7 @@ impl Component for App {
             cells: 0,
             world,
             max_partial: false,
+            timing: Duration::default(),
             worker,
             interval_task: None,
             reader_task: None,
@@ -168,6 +170,7 @@ impl Component for App {
                         cells,
                         status,
                         paused,
+                        timing,
                         config,
                     }) => {
                         if let Some(world) = world {
@@ -184,6 +187,9 @@ impl Component for App {
                             self.stop_job()
                         }
                         self.status = status;
+                        if let Some(timing) = timing {
+                            self.timing = timing;
+                        }
                     }
                     Response::Error(error) => {
                         DialogService::alert(&error);
@@ -361,6 +367,13 @@ impl App {
                     </abbr>
                     { ": " }
                     { self.cells }
+                </li>
+                <li class=if self.paused { "" } else { "mui--hide" }>
+                    <abbr title="Time taken by the search.">
+                        { "Time" }
+                    </abbr>
+                    { ": " }
+                    { format!("{:?}", self.timing) }
                 </li>
                 <li>
                     {
