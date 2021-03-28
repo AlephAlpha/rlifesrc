@@ -82,7 +82,7 @@ impl Component for App {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let config: Config = Config::default();
         let status = Status::Initial;
-        let world = String::new();
+        let world = "Loading...".to_owned();
         let callback = link.callback(Msg::DataReceived);
         let worker = Worker::bridge(callback);
 
