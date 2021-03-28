@@ -35,25 +35,22 @@ pub enum ReasonNoBackjump {
 
 impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
     type ConflReason = ();
-    const KNOWN: Self = ReasonNoBackjump::Known;
-    const DECIDED: Self = ReasonNoBackjump::Decide;
+    const KNOWN: Self = Self::Known;
+    const DECIDED: Self = Self::Decide;
 
     #[inline]
     fn from_cell(_cell: CellRef<'a, R>) -> Self {
-        ReasonNoBackjump::Deduce
+        Self::Deduce
     }
 
     #[inline]
     fn from_sym(_cell: CellRef<'a, R>) -> Self {
-        ReasonNoBackjump::Deduce
+        Self::Deduce
     }
 
     #[inline]
     fn is_decided(&self) -> bool {
-        matches!(
-            self,
-            ReasonNoBackjump::Decide | ReasonNoBackjump::TryAnother(_)
-        )
+        matches!(self, Self::Decide | Self::TryAnother(_))
     }
 
     #[inline]
@@ -90,20 +87,20 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
     #[cfg(feature = "serde")]
     fn ser(&self) -> ReasonSer {
         match self {
-            ReasonNoBackjump::Known => ReasonSer::Known,
-            ReasonNoBackjump::Decide => ReasonSer::Decide,
-            ReasonNoBackjump::Deduce => ReasonSer::Deduce,
-            ReasonNoBackjump::TryAnother(n) => ReasonSer::TryAnother(*n),
+            Self::Known => ReasonSer::Known,
+            Self::Decide => ReasonSer::Decide,
+            Self::Deduce => ReasonSer::Deduce,
+            Self::TryAnother(n) => ReasonSer::TryAnother(*n),
         }
     }
 
     #[cfg(feature = "serde")]
     fn deser(ser: &ReasonSer, _world: &World<'a, R, Self>) -> Result<Self, Error> {
         Ok(match *ser {
-            ReasonSer::Known => ReasonNoBackjump::Known,
-            ReasonSer::Decide => ReasonNoBackjump::Decide,
-            ReasonSer::TryAnother(n) => ReasonNoBackjump::TryAnother(n),
-            _ => ReasonNoBackjump::Deduce,
+            ReasonSer::Known => Self::Known,
+            ReasonSer::Decide => Self::Decide,
+            ReasonSer::TryAnother(n) => Self::TryAnother(n),
+            _ => Self::Deduce,
         })
     }
 }
@@ -153,16 +150,15 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
                 ReasonNoBackjump::Decide => {
-                    let state;
-                    let reason;
-                    if R::IS_GEN {
+                    let (state, reason) = if R::IS_GEN {
                         let State(j) = cell.state.get().unwrap();
-                        state = State((j + 1) % self.rule.gen());
-                        reason = ReasonNoBackjump::TryAnother(self.rule.gen() - 2);
+                        (
+                            State((j + 1) % self.rule.gen()),
+                            ReasonNoBackjump::TryAnother(self.rule.gen() - 2),
+                        )
                     } else {
-                        state = !cell.state.get().unwrap();
-                        reason = ReasonNoBackjump::Deduce;
-                    }
+                        (!cell.state.get().unwrap(), ReasonNoBackjump::Deduce)
+                    };
 
                     self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;

@@ -17,7 +17,7 @@ fn is_positive(s: &str) -> bool {
 }
 
 /// A struct to store the parse results.
-pub(crate) struct Args {
+pub struct Args {
     pub(crate) search: Box<dyn Search>,
     pub(crate) all: bool,
     #[cfg(feature = "tui")]
@@ -431,7 +431,7 @@ impl Args {
             ));
         }
 
-        Ok(Args {
+        Ok(Self {
             search,
             all,
             #[cfg(feature = "tui")]

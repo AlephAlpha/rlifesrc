@@ -102,7 +102,7 @@ impl WorldSer {
             } else if state.0 >= world.rule.gen() {
                 return Err(Error::SetCellError(coord));
             } else {
-                let reason = RE::deser(reason, &world)?;
+                let reason = RE::deser(reason, world)?;
                 let _ = world.set_cell(cell, state, reason);
             }
         }

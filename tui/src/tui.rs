@@ -355,7 +355,7 @@ impl<'a, W: Write> Drop for App<'a, W> {
 /// Runs the search with a TUI.
 ///
 /// If `reset` is true, the time will be reset when starting a new search.
-pub(crate) fn tui(search: Box<dyn Search>, reset: bool) -> CrosstermResult<()> {
+pub fn tui(search: Box<dyn Search>, reset: bool) -> CrosstermResult<()> {
     let mut stdout = stdout();
     let mut reader = EventStream::new();
     let result;

@@ -167,29 +167,29 @@ pub struct Config {
 impl Config {
     /// Sets up a new configuration with given size.
     pub fn new(width: i32, height: i32, period: i32) -> Self {
-        Config {
+        Self {
             width,
             height,
             period,
-            ..Config::default()
+            ..Self::default()
         }
     }
 
     /// Sets the translations `(dx, dy)`.
-    pub fn set_translate(mut self, dx: i32, dy: i32) -> Self {
+    pub const fn set_translate(mut self, dx: i32, dy: i32) -> Self {
         self.dx = dx;
         self.dy = dy;
         self
     }
 
     /// Sets the transformation.
-    pub fn set_transform(mut self, transform: Transform) -> Self {
+    pub const fn set_transform(mut self, transform: Transform) -> Self {
         self.transform = transform;
         self
     }
 
     /// Sets the symmetry.
-    pub fn set_symmetry(mut self, symmetry: Symmetry) -> Self {
+    pub const fn set_symmetry(mut self, symmetry: Symmetry) -> Self {
         self.symmetry = symmetry;
         self
     }
@@ -201,7 +201,7 @@ impl Config {
     }
 
     /// Sets how to choose a state for an unknown cell.
-    pub fn set_new_state(mut self, new_state: NewState) -> Self {
+    pub const fn set_new_state(mut self, new_state: NewState) -> Self {
         self.new_state = new_state;
         self
     }
@@ -214,7 +214,7 @@ impl Config {
 
     /// Sets whether to automatically reduce the `max_cell_count`
     /// when a result is found.
-    pub fn set_reduce_max(mut self, reduce_max: bool) -> Self {
+    pub const fn set_reduce_max(mut self, reduce_max: bool) -> Self {
         self.reduce_max = reduce_max;
         self
     }
@@ -233,14 +233,14 @@ impl Config {
 
     /// Sets whether to skip patterns whose fundamental period
     /// is smaller than the given period.
-    pub fn set_skip_subperiod(mut self, skip_subperiod: bool) -> Self {
+    pub const fn set_skip_subperiod(mut self, skip_subperiod: bool) -> Self {
         self.skip_subperiod = skip_subperiod;
         self
     }
 
     /// Sets whether to skip patterns which are invariant under
     /// more transformations than required by the given symmetry.
-    pub fn set_skip_subsymmetry(mut self, skip_subsymmetry: bool) -> Self {
+    pub const fn set_skip_subsymmetry(mut self, skip_subsymmetry: bool) -> Self {
         self.skip_subsymmetry = skip_subsymmetry;
         self
     }
@@ -252,7 +252,7 @@ impl Config {
     }
 
     /// Sets whether to enable backjumping.
-    pub fn set_backjump(mut self, backjump: bool) -> Self {
+    pub const fn set_backjump(mut self, backjump: bool) -> Self {
         self.backjump = backjump;
         self
     }

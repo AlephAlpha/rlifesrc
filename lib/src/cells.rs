@@ -30,7 +30,7 @@ pub const ALIVE: State = State(1);
 ///
 /// For Generations rules, the `not` of a dying state is [`ALIVE`].
 impl Not for State {
-    type Output = State;
+    type Output = Self;
 
     fn not(self) -> Self::Output {
         match self {

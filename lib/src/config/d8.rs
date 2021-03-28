@@ -109,15 +109,15 @@ impl FromStr for Transform {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Id" => Ok(Transform::Id),
-            "R90" => Ok(Transform::Rotate90),
-            "R180" => Ok(Transform::Rotate180),
-            "R270" => Ok(Transform::Rotate270),
-            "F-" => Ok(Transform::FlipRow),
-            "F|" => Ok(Transform::FlipCol),
-            "F\\" => Ok(Transform::FlipDiag),
-            "F/" => Ok(Transform::FlipAntidiag),
-            _ => Err(String::from("invalid Transform")),
+            "Id" => Ok(Self::Id),
+            "R90" => Ok(Self::Rotate90),
+            "R180" => Ok(Self::Rotate180),
+            "R270" => Ok(Self::Rotate270),
+            "F-" => Ok(Self::FlipRow),
+            "F|" => Ok(Self::FlipCol),
+            "F\\" => Ok(Self::FlipDiag),
+            "F/" => Ok(Self::FlipAntidiag),
+            _ => Err(String::from("Invalid Transform")),
         }
     }
 }
@@ -125,14 +125,14 @@ impl FromStr for Transform {
 impl Display for Transform {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         let s = match self {
-            Transform::Id => "Id",
-            Transform::Rotate90 => "R90",
-            Transform::Rotate180 => "R180",
-            Transform::Rotate270 => "R270",
-            Transform::FlipRow => "F-",
-            Transform::FlipCol => "F|",
-            Transform::FlipDiag => "F\\",
-            Transform::FlipAntidiag => "F/",
+            Self::Id => "Id",
+            Self::Rotate90 => "R90",
+            Self::Rotate180 => "R180",
+            Self::Rotate270 => "R270",
+            Self::FlipRow => "F-",
+            Self::FlipCol => "F|",
+            Self::FlipDiag => "F\\",
+            Self::FlipAntidiag => "F/",
         };
         write!(f, "{}", s)?;
         Ok(())
@@ -144,70 +144,70 @@ impl Mul for Transform {
 
     fn mul(self, rhs: Self) -> Self {
         match (self, rhs) {
-            (Transform::Id, Transform::Id)
-            | (Transform::Rotate90, Transform::Rotate270)
-            | (Transform::Rotate180, Transform::Rotate180)
-            | (Transform::Rotate270, Transform::Rotate90)
-            | (Transform::FlipRow, Transform::FlipRow)
-            | (Transform::FlipCol, Transform::FlipCol)
-            | (Transform::FlipDiag, Transform::FlipDiag)
-            | (Transform::FlipAntidiag, Transform::FlipAntidiag) => Transform::Id,
-            (Transform::Id, Transform::Rotate90)
-            | (Transform::Rotate90, Transform::Id)
-            | (Transform::Rotate180, Transform::Rotate270)
-            | (Transform::Rotate270, Transform::Rotate180)
-            | (Transform::FlipRow, Transform::FlipAntidiag)
-            | (Transform::FlipCol, Transform::FlipDiag)
-            | (Transform::FlipDiag, Transform::FlipRow)
-            | (Transform::FlipAntidiag, Transform::FlipCol) => Transform::Rotate90,
-            (Transform::Id, Transform::Rotate180)
-            | (Transform::Rotate90, Transform::Rotate90)
-            | (Transform::Rotate180, Transform::Id)
-            | (Transform::Rotate270, Transform::Rotate270)
-            | (Transform::FlipRow, Transform::FlipCol)
-            | (Transform::FlipCol, Transform::FlipRow)
-            | (Transform::FlipDiag, Transform::FlipAntidiag)
-            | (Transform::FlipAntidiag, Transform::FlipDiag) => Transform::Rotate180,
-            (Transform::Id, Transform::Rotate270)
-            | (Transform::Rotate90, Transform::Rotate180)
-            | (Transform::Rotate180, Transform::Rotate90)
-            | (Transform::Rotate270, Transform::Id)
-            | (Transform::FlipRow, Transform::FlipDiag)
-            | (Transform::FlipCol, Transform::FlipAntidiag)
-            | (Transform::FlipDiag, Transform::FlipCol)
-            | (Transform::FlipAntidiag, Transform::FlipRow) => Transform::Rotate270,
-            (Transform::Id, Transform::FlipRow)
-            | (Transform::Rotate90, Transform::FlipAntidiag)
-            | (Transform::Rotate180, Transform::FlipCol)
-            | (Transform::Rotate270, Transform::FlipDiag)
-            | (Transform::FlipRow, Transform::Id)
-            | (Transform::FlipCol, Transform::Rotate180)
-            | (Transform::FlipDiag, Transform::Rotate90)
-            | (Transform::FlipAntidiag, Transform::Rotate270) => Transform::FlipRow,
-            (Transform::Id, Transform::FlipCol)
-            | (Transform::Rotate90, Transform::FlipDiag)
-            | (Transform::Rotate180, Transform::FlipRow)
-            | (Transform::Rotate270, Transform::FlipAntidiag)
-            | (Transform::FlipRow, Transform::Rotate180)
-            | (Transform::FlipCol, Transform::Id)
-            | (Transform::FlipDiag, Transform::Rotate270)
-            | (Transform::FlipAntidiag, Transform::Rotate90) => Transform::FlipCol,
-            (Transform::Id, Transform::FlipDiag)
-            | (Transform::Rotate90, Transform::FlipRow)
-            | (Transform::Rotate180, Transform::FlipAntidiag)
-            | (Transform::Rotate270, Transform::FlipCol)
-            | (Transform::FlipRow, Transform::Rotate270)
-            | (Transform::FlipCol, Transform::Rotate90)
-            | (Transform::FlipDiag, Transform::Id)
-            | (Transform::FlipAntidiag, Transform::Rotate180) => Transform::FlipDiag,
-            (Transform::Id, Transform::FlipAntidiag)
-            | (Transform::Rotate90, Transform::FlipCol)
-            | (Transform::Rotate180, Transform::FlipDiag)
-            | (Transform::Rotate270, Transform::FlipRow)
-            | (Transform::FlipRow, Transform::Rotate90)
-            | (Transform::FlipCol, Transform::Rotate270)
-            | (Transform::FlipDiag, Transform::Rotate180)
-            | (Transform::FlipAntidiag, Transform::Id) => Transform::FlipAntidiag,
+            (Self::Id, Self::Id)
+            | (Self::Rotate90, Self::Rotate270)
+            | (Self::Rotate180, Self::Rotate180)
+            | (Self::Rotate270, Self::Rotate90)
+            | (Self::FlipRow, Self::FlipRow)
+            | (Self::FlipCol, Self::FlipCol)
+            | (Self::FlipDiag, Self::FlipDiag)
+            | (Self::FlipAntidiag, Self::FlipAntidiag) => Self::Id,
+            (Self::Id, Self::Rotate90)
+            | (Self::Rotate90, Self::Id)
+            | (Self::Rotate180, Self::Rotate270)
+            | (Self::Rotate270, Self::Rotate180)
+            | (Self::FlipRow, Self::FlipAntidiag)
+            | (Self::FlipCol, Self::FlipDiag)
+            | (Self::FlipDiag, Self::FlipRow)
+            | (Self::FlipAntidiag, Self::FlipCol) => Self::Rotate90,
+            (Self::Id, Self::Rotate180)
+            | (Self::Rotate90, Self::Rotate90)
+            | (Self::Rotate180, Self::Id)
+            | (Self::Rotate270, Self::Rotate270)
+            | (Self::FlipRow, Self::FlipCol)
+            | (Self::FlipCol, Self::FlipRow)
+            | (Self::FlipDiag, Self::FlipAntidiag)
+            | (Self::FlipAntidiag, Self::FlipDiag) => Self::Rotate180,
+            (Self::Id, Self::Rotate270)
+            | (Self::Rotate90, Self::Rotate180)
+            | (Self::Rotate180, Self::Rotate90)
+            | (Self::Rotate270, Self::Id)
+            | (Self::FlipRow, Self::FlipDiag)
+            | (Self::FlipCol, Self::FlipAntidiag)
+            | (Self::FlipDiag, Self::FlipCol)
+            | (Self::FlipAntidiag, Self::FlipRow) => Self::Rotate270,
+            (Self::Id, Self::FlipRow)
+            | (Self::Rotate90, Self::FlipAntidiag)
+            | (Self::Rotate180, Self::FlipCol)
+            | (Self::Rotate270, Self::FlipDiag)
+            | (Self::FlipRow, Self::Id)
+            | (Self::FlipCol, Self::Rotate180)
+            | (Self::FlipDiag, Self::Rotate90)
+            | (Self::FlipAntidiag, Self::Rotate270) => Self::FlipRow,
+            (Self::Id, Self::FlipCol)
+            | (Self::Rotate90, Self::FlipDiag)
+            | (Self::Rotate180, Self::FlipRow)
+            | (Self::Rotate270, Self::FlipAntidiag)
+            | (Self::FlipRow, Self::Rotate180)
+            | (Self::FlipCol, Self::Id)
+            | (Self::FlipDiag, Self::Rotate270)
+            | (Self::FlipAntidiag, Self::Rotate90) => Self::FlipCol,
+            (Self::Id, Self::FlipDiag)
+            | (Self::Rotate90, Self::FlipRow)
+            | (Self::Rotate180, Self::FlipAntidiag)
+            | (Self::Rotate270, Self::FlipCol)
+            | (Self::FlipRow, Self::Rotate270)
+            | (Self::FlipCol, Self::Rotate90)
+            | (Self::FlipDiag, Self::Id)
+            | (Self::FlipAntidiag, Self::Rotate180) => Self::FlipDiag,
+            (Self::Id, Self::FlipAntidiag)
+            | (Self::Rotate90, Self::FlipCol)
+            | (Self::Rotate180, Self::FlipDiag)
+            | (Self::Rotate270, Self::FlipRow)
+            | (Self::FlipRow, Self::Rotate90)
+            | (Self::FlipCol, Self::Rotate270)
+            | (Self::FlipDiag, Self::Rotate180)
+            | (Self::FlipAntidiag, Self::Id) => Self::FlipAntidiag,
         }
     }
 }
@@ -216,31 +216,31 @@ impl Transform {
     /// Whether this transformation requires the world to be square.
     ///
     /// Returns `true` for `R90`, `R270`, `F\` and `F/`.
-    pub fn require_square_world(self) -> bool {
+    pub const fn require_square_world(self) -> bool {
         !self.is_in(Symmetry::D4Ortho)
     }
 
     /// Whether this transformation requires the world to have no diagonal width.
     ///
     /// Returns `true` for `R90`, `R270`, `F-` and `F|`.
-    pub fn require_no_diagonal_width(self) -> bool {
+    pub const fn require_no_diagonal_width(self) -> bool {
         !self.is_in(Symmetry::D4Diag)
     }
 
     /// The order of this transformation in the symmetry group.
-    pub fn order(self) -> u8 {
+    pub const fn order(self) -> u8 {
         match self {
-            Transform::Id => 1,
-            Transform::Rotate90 | Transform::Rotate270 => 4,
+            Self::Id => 1,
+            Self::Rotate90 | Self::Rotate270 => 4,
             _ => 2,
         }
     }
 
     /// The inverse of this transformation.
-    pub fn inverse(self) -> Self {
+    pub const fn inverse(self) -> Self {
         match self {
-            Transform::Rotate90 => Transform::Rotate270,
-            Transform::Rotate270 => Transform::Rotate90,
+            Self::Rotate90 => Self::Rotate270,
+            Self::Rotate270 => Self::Rotate90,
             x => x,
         }
     }
@@ -248,40 +248,40 @@ impl Transform {
     /// Whether the transformation is a member of the symmetry group,
     /// i.e., whether patterns with this symmetry are invariant under
     /// this transformation.
-    pub fn is_in(self, sym: Symmetry) -> bool {
+    pub const fn is_in(self, sym: Symmetry) -> bool {
         matches!(
             (self, sym),
-            (Transform::Id, _)
+            (Self::Id, _)
                 | (_, Symmetry::D8)
-                | (Transform::Rotate90, Symmetry::C4)
-                | (Transform::Rotate180, Symmetry::C2)
-                | (Transform::Rotate180, Symmetry::C4)
-                | (Transform::Rotate180, Symmetry::D4Ortho)
-                | (Transform::Rotate180, Symmetry::D4Diag)
-                | (Transform::Rotate270, Symmetry::C4)
-                | (Transform::FlipRow, Symmetry::D2Row)
-                | (Transform::FlipRow, Symmetry::D4Ortho)
-                | (Transform::FlipCol, Symmetry::D2Col)
-                | (Transform::FlipCol, Symmetry::D4Ortho)
-                | (Transform::FlipDiag, Symmetry::D2Diag)
-                | (Transform::FlipDiag, Symmetry::D4Diag)
-                | (Transform::FlipAntidiag, Symmetry::D2Antidiag)
-                | (Transform::FlipAntidiag, Symmetry::D4Diag),
+                | (Self::Rotate90, Symmetry::C4)
+                | (Self::Rotate180, Symmetry::C2)
+                | (Self::Rotate180, Symmetry::C4)
+                | (Self::Rotate180, Symmetry::D4Ortho)
+                | (Self::Rotate180, Symmetry::D4Diag)
+                | (Self::Rotate270, Symmetry::C4)
+                | (Self::FlipRow, Symmetry::D2Row)
+                | (Self::FlipRow, Symmetry::D4Ortho)
+                | (Self::FlipCol, Symmetry::D2Col)
+                | (Self::FlipCol, Symmetry::D4Ortho)
+                | (Self::FlipDiag, Symmetry::D2Diag)
+                | (Self::FlipDiag, Symmetry::D4Diag)
+                | (Self::FlipAntidiag, Symmetry::D2Antidiag)
+                | (Self::FlipAntidiag, Symmetry::D4Diag),
         )
     }
 
     /// Apply the transformation on a coordinate.
-    pub fn act_on(self, coord: Coord, width: i32, height: i32) -> Coord {
+    pub const fn act_on(self, coord: Coord, width: i32, height: i32) -> Coord {
         let (x, y, t) = coord;
         match self {
-            Transform::Id => (x, y, t),
-            Transform::Rotate90 => (y, width - 1 - x, t),
-            Transform::Rotate180 => (width - 1 - x, height - 1 - y, t),
-            Transform::Rotate270 => (height - 1 - y, x, t),
-            Transform::FlipRow => (x, height - 1 - y, t),
-            Transform::FlipCol => (width - 1 - x, y, t),
-            Transform::FlipDiag => (y, x, t),
-            Transform::FlipAntidiag => (height - 1 - y, width - 1 - x, t),
+            Self::Id => (x, y, t),
+            Self::Rotate90 => (y, width - 1 - x, t),
+            Self::Rotate180 => (width - 1 - x, height - 1 - y, t),
+            Self::Rotate270 => (height - 1 - y, x, t),
+            Self::FlipRow => (x, height - 1 - y, t),
+            Self::FlipCol => (width - 1 - x, y, t),
+            Self::FlipDiag => (y, x, t),
+            Self::FlipAntidiag => (height - 1 - y, width - 1 - x, t),
         }
     }
 }
@@ -380,17 +380,17 @@ impl FromStr for Symmetry {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "C1" => Ok(Symmetry::C1),
-            "C2" => Ok(Symmetry::C2),
-            "C4" => Ok(Symmetry::C4),
-            "D2-" => Ok(Symmetry::D2Row),
-            "D2|" => Ok(Symmetry::D2Col),
-            "D2\\" => Ok(Symmetry::D2Diag),
-            "D2/" => Ok(Symmetry::D2Antidiag),
-            "D4+" => Ok(Symmetry::D4Ortho),
-            "D4X" => Ok(Symmetry::D4Diag),
-            "D8" => Ok(Symmetry::D8),
-            _ => Err(String::from("invalid symmetry")),
+            "C1" => Ok(Self::C1),
+            "C2" => Ok(Self::C2),
+            "C4" => Ok(Self::C4),
+            "D2-" => Ok(Self::D2Row),
+            "D2|" => Ok(Self::D2Col),
+            "D2\\" => Ok(Self::D2Diag),
+            "D2/" => Ok(Self::D2Antidiag),
+            "D4+" => Ok(Self::D4Ortho),
+            "D4X" => Ok(Self::D4Diag),
+            "D8" => Ok(Self::D8),
+            _ => Err(String::from("invalid Self")),
         }
     }
 }
@@ -398,16 +398,16 @@ impl FromStr for Symmetry {
 impl Display for Symmetry {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         let s = match self {
-            Symmetry::C1 => "C1",
-            Symmetry::C2 => "C2",
-            Symmetry::C4 => "C4",
-            Symmetry::D2Row => "D2-",
-            Symmetry::D2Col => "D2|",
-            Symmetry::D2Diag => "D2\\",
-            Symmetry::D2Antidiag => "D2/",
-            Symmetry::D4Ortho => "D4+",
-            Symmetry::D4Diag => "D4X",
-            Symmetry::D8 => "D8",
+            Self::C1 => "C1",
+            Self::C2 => "C2",
+            Self::C4 => "C4",
+            Self::D2Row => "D2-",
+            Self::D2Col => "D2|",
+            Self::D2Diag => "D2\\",
+            Self::D2Antidiag => "D2/",
+            Self::D4Ortho => "D4+",
+            Self::D4Diag => "D4X",
+            Self::D8 => "D8",
         };
         write!(f, "{}", s)?;
         Ok(())
@@ -425,24 +425,24 @@ impl PartialOrd for Symmetry {
             return Some(Ordering::Equal);
         }
         match (self, other) {
-            (Symmetry::C1, _)
-            | (_, Symmetry::D8)
-            | (Symmetry::C2, Symmetry::C4)
-            | (Symmetry::C2, Symmetry::D4Ortho)
-            | (Symmetry::C2, Symmetry::D4Diag)
-            | (Symmetry::D2Row, Symmetry::D4Ortho)
-            | (Symmetry::D2Col, Symmetry::D4Ortho)
-            | (Symmetry::D2Diag, Symmetry::D4Diag)
-            | (Symmetry::D2Antidiag, Symmetry::D4Diag) => Some(Ordering::Less),
-            (Symmetry::D8, _)
-            | (_, Symmetry::C1)
-            | (Symmetry::C4, Symmetry::C2)
-            | (Symmetry::D4Ortho, Symmetry::C2)
-            | (Symmetry::D4Diag, Symmetry::C2)
-            | (Symmetry::D4Ortho, Symmetry::D2Row)
-            | (Symmetry::D4Ortho, Symmetry::D2Col)
-            | (Symmetry::D4Diag, Symmetry::D2Diag)
-            | (Symmetry::D4Diag, Symmetry::D2Antidiag) => Some(Ordering::Greater),
+            (Self::C1, _)
+            | (_, Self::D8)
+            | (Self::C2, Self::C4)
+            | (Self::C2, Self::D4Ortho)
+            | (Self::C2, Self::D4Diag)
+            | (Self::D2Row, Self::D4Ortho)
+            | (Self::D2Col, Self::D4Ortho)
+            | (Self::D2Diag, Self::D4Diag)
+            | (Self::D2Antidiag, Self::D4Diag) => Some(Ordering::Less),
+            (Self::D8, _)
+            | (_, Self::C1)
+            | (Self::C4, Self::C2)
+            | (Self::D4Ortho, Self::C2)
+            | (Self::D4Diag, Self::C2)
+            | (Self::D4Ortho, Self::D2Row)
+            | (Self::D4Ortho, Self::D2Col)
+            | (Self::D4Diag, Self::D2Diag)
+            | (Self::D4Diag, Self::D2Antidiag) => Some(Ordering::Greater),
             _ => None,
         }
     }
@@ -454,7 +454,7 @@ impl Symmetry {
     /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
     pub fn require_square_world(self) -> bool {
         matches!(
-            self.partial_cmp(&Symmetry::D4Ortho),
+            self.partial_cmp(&Self::D4Ortho),
             Some(Ordering::Greater) | None
         )
     }
@@ -464,7 +464,7 @@ impl Symmetry {
     /// Returns `true` for `C4`, `D2-`, `D2|`, `D4+` and `D8`.
     pub fn require_no_diagonal_width(self) -> bool {
         matches!(
-            self.partial_cmp(&Symmetry::D4Diag),
+            self.partial_cmp(&Self::D4Diag),
             Some(Ordering::Greater) | None
         )
     }
@@ -472,31 +472,31 @@ impl Symmetry {
     /// Transformations contained in the symmetry group.
     pub fn members(self) -> Vec<Transform> {
         match self {
-            Symmetry::C1 => vec![Transform::Id],
-            Symmetry::C2 => vec![Transform::Id, Transform::Rotate180],
-            Symmetry::C4 => vec![
+            Self::C1 => vec![Transform::Id],
+            Self::C2 => vec![Transform::Id, Transform::Rotate180],
+            Self::C4 => vec![
                 Transform::Id,
                 Transform::Rotate90,
                 Transform::Rotate180,
                 Transform::Rotate270,
             ],
-            Symmetry::D2Row => vec![Transform::Id, Transform::FlipRow],
-            Symmetry::D2Col => vec![Transform::Id, Transform::FlipCol],
-            Symmetry::D2Diag => vec![Transform::Id, Transform::FlipDiag],
-            Symmetry::D2Antidiag => vec![Transform::Id, Transform::FlipAntidiag],
-            Symmetry::D4Ortho => vec![
+            Self::D2Row => vec![Transform::Id, Transform::FlipRow],
+            Self::D2Col => vec![Transform::Id, Transform::FlipCol],
+            Self::D2Diag => vec![Transform::Id, Transform::FlipDiag],
+            Self::D2Antidiag => vec![Transform::Id, Transform::FlipAntidiag],
+            Self::D4Ortho => vec![
                 Transform::Id,
                 Transform::FlipRow,
                 Transform::FlipCol,
                 Transform::Rotate180,
             ],
-            Symmetry::D4Diag => vec![
+            Self::D4Diag => vec![
                 Transform::Id,
                 Transform::FlipDiag,
                 Transform::FlipAntidiag,
                 Transform::Rotate180,
             ],
-            Symmetry::D8 => vec![
+            Self::D8 => vec![
                 Transform::Id,
                 Transform::Rotate90,
                 Transform::Rotate180,
@@ -515,7 +515,7 @@ impl Symmetry {
     /// The first element in the result is always [`Transform::Id`].
     pub fn cosets(self) -> Vec<Transform> {
         match self {
-            Symmetry::C1 => vec![
+            Self::C1 => vec![
                 Transform::Id,
                 Transform::Rotate90,
                 Transform::Rotate180,
@@ -525,47 +525,47 @@ impl Symmetry {
                 Transform::FlipDiag,
                 Transform::FlipAntidiag,
             ],
-            Symmetry::C2 => vec![
+            Self::C2 => vec![
                 Transform::Id,
                 Transform::Rotate90,
                 Transform::FlipRow,
                 Transform::FlipDiag,
             ],
-            Symmetry::C4 => vec![Transform::Id, Transform::FlipRow],
-            Symmetry::D2Row => vec![
+            Self::C4 => vec![Transform::Id, Transform::FlipRow],
+            Self::D2Row => vec![
                 Transform::Id,
                 Transform::FlipCol,
                 Transform::FlipDiag,
                 Transform::FlipAntidiag,
             ],
-            Symmetry::D2Col => vec![
+            Self::D2Col => vec![
                 Transform::Id,
                 Transform::FlipRow,
                 Transform::FlipDiag,
                 Transform::FlipAntidiag,
             ],
-            Symmetry::D2Diag => vec![
+            Self::D2Diag => vec![
                 Transform::Id,
                 Transform::FlipRow,
                 Transform::FlipCol,
                 Transform::FlipAntidiag,
             ],
-            Symmetry::D2Antidiag => vec![
+            Self::D2Antidiag => vec![
                 Transform::Id,
                 Transform::FlipRow,
                 Transform::FlipCol,
                 Transform::FlipDiag,
             ],
-            Symmetry::D4Ortho => vec![Transform::Id, Transform::FlipDiag],
-            Symmetry::D4Diag => vec![Transform::Id, Transform::FlipRow],
-            Symmetry::D8 => vec![Transform::Id],
+            Self::D4Ortho => vec![Transform::Id, Transform::FlipDiag],
+            Self::D4Diag => vec![Transform::Id, Transform::FlipRow],
+            Self::D8 => vec![Transform::Id],
         }
     }
 }
 
 impl Config {
     /// Applies the transformation and translation to a coord.
-    pub(crate) fn translate(&self, coord: Coord) -> Coord {
+    pub(crate) const fn translate(&self, coord: Coord) -> Coord {
         let mut coord = coord;
         while coord.2 < 0 {
             coord = self

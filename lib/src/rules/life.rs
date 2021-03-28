@@ -82,7 +82,7 @@ impl Life {
 
         let impl_table = [ImplFlags::empty(); 1 << 12];
 
-        Life { b0, s8, impl_table }
+        Self { b0, s8, impl_table }
             .init_trans(b, s)
             .init_conflict()
             .init_impl()
@@ -229,7 +229,7 @@ impl ParseLife for Life {
 impl FromStr for Life {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let rule: Life = ParseLife::parse_rule(input).map_err(Error::ParseRuleError)?;
+        let rule: Self = ParseLife::parse_rule(input).map_err(Error::ParseRuleError)?;
         if rule.has_b0_s8() {
             Err(Error::B0S8Error)
         } else {
@@ -390,7 +390,7 @@ impl LifeGen {
     }
 
     /// Converts to the corresponding non-Generations rule.
-    pub fn non_gen(self) -> Life {
+    pub const fn non_gen(self) -> Life {
         Life {
             b0: self.b0,
             s8: self.s8,
@@ -409,7 +409,7 @@ impl ParseLifeGen for LifeGen {
 impl FromStr for LifeGen {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let rule: LifeGen = ParseLifeGen::parse_rule(input).map_err(Error::ParseRuleError)?;
+        let rule: Self = ParseLifeGen::parse_rule(input).map_err(Error::ParseRuleError)?;
         if rule.has_b0_s8() {
             Err(Error::B0S8Error)
         } else {

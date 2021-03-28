@@ -78,7 +78,7 @@ impl NtLife {
 
         let impl_table = vec![ImplFlags::empty(); 1 << 20];
 
-        NtLife { b0, s8, impl_table }
+        Self { b0, s8, impl_table }
             .init_trans(b, s)
             .init_conflict()
             .init_impl()
@@ -232,7 +232,7 @@ impl ParseNtLife for NtLife {
 impl FromStr for NtLife {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let rule: NtLife = ParseNtLife::parse_rule(input).map_err(Error::ParseRuleError)?;
+        let rule: Self = ParseNtLife::parse_rule(input).map_err(Error::ParseRuleError)?;
         if rule.has_b0_s8() {
             Err(Error::B0S8Error)
         } else {
@@ -417,7 +417,7 @@ impl ParseNtLifeGen for NtLifeGen {
 impl FromStr for NtLifeGen {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let rule: NtLifeGen = ParseNtLifeGen::parse_rule(input).map_err(Error::ParseRuleError)?;
+        let rule: Self = ParseNtLifeGen::parse_rule(input).map_err(Error::ParseRuleError)?;
         if rule.has_b0_s8() {
             Err(Error::B0S8Error)
         } else {

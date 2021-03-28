@@ -72,22 +72,22 @@ impl<'a, R: Rule> ReasonBackjump<'a, R> {
 
 impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonBackjump<'a, R> {
     type ConflReason = ConflReason<'a, R>;
-    const KNOWN: Self = ReasonBackjump::Known;
-    const DECIDED: Self = ReasonBackjump::Decide;
+    const KNOWN: Self = Self::Known;
+    const DECIDED: Self = Self::Decide;
 
     #[inline]
     fn from_cell(cell: CellRef<'a, R>) -> Self {
-        ReasonBackjump::Rule(cell)
+        Self::Rule(cell)
     }
 
     #[inline]
     fn from_sym(cell: CellRef<'a, R>) -> Self {
-        ReasonBackjump::Sym(cell)
+        Self::Sym(cell)
     }
 
     #[inline]
     fn is_decided(&self) -> bool {
-        matches!(self, ReasonBackjump::Decide | ReasonBackjump::TryAnother(_))
+        matches!(self, Self::Decide | Self::TryAnother(_))
     }
 
     #[inline]
@@ -145,38 +145,36 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonBackjump<'a, R> {
     #[cfg(feature = "serde")]
     fn ser(&self) -> ReasonSer {
         match self {
-            ReasonBackjump::Known => ReasonSer::Known,
-            ReasonBackjump::Decide => ReasonSer::Decide,
-            ReasonBackjump::Rule(cell) => ReasonSer::Rule(cell.coord),
-            ReasonBackjump::Sym(cell) => ReasonSer::Sym(cell.coord),
-            ReasonBackjump::Deduce => ReasonSer::Deduce,
-            ReasonBackjump::Clause(c) => {
-                ReasonSer::Clause(c.iter().map(|cell| cell.coord).collect())
-            }
-            ReasonBackjump::TryAnother(n) => ReasonSer::TryAnother(*n),
+            Self::Known => ReasonSer::Known,
+            Self::Decide => ReasonSer::Decide,
+            Self::Rule(cell) => ReasonSer::Rule(cell.coord),
+            Self::Sym(cell) => ReasonSer::Sym(cell.coord),
+            Self::Deduce => ReasonSer::Deduce,
+            Self::Clause(c) => ReasonSer::Clause(c.iter().map(|cell| cell.coord).collect()),
+            Self::TryAnother(n) => ReasonSer::TryAnother(*n),
         }
     }
 
     #[cfg(feature = "serde")]
     fn deser(ser: &ReasonSer, world: &World<'a, R, Self>) -> Result<Self, Error> {
         Ok(match *ser {
-            ReasonSer::Known => ReasonBackjump::Known,
-            ReasonSer::Decide => ReasonBackjump::Decide,
+            ReasonSer::Known => Self::Known,
+            ReasonSer::Decide => Self::Decide,
             ReasonSer::Rule(coord) => {
-                ReasonBackjump::Rule(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
+                Self::Rule(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
             }
             ReasonSer::Sym(coord) => {
-                ReasonBackjump::Sym(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
+                Self::Sym(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
             }
-            ReasonSer::Deduce => ReasonBackjump::Deduce,
+            ReasonSer::Deduce => Self::Deduce,
             ReasonSer::Clause(ref c) => {
                 let mut clause = Vec::new();
                 for &coord in c {
                     clause.push(world.find_cell(coord).ok_or(Error::SetCellError(coord))?);
                 }
-                ReasonBackjump::Clause(clause)
+                Self::Clause(clause)
             }
-            ReasonSer::TryAnother(n) => ReasonBackjump::TryAnother(n),
+            ReasonSer::TryAnother(n) => Self::TryAnother(n),
         })
     }
 }
@@ -203,7 +201,7 @@ pub enum ConflReason<'a, R: Rule> {
 impl<'a, R: Rule> ConflReason<'a, R> {
     /// Whether this reason should be analyzed before retreating.
     fn should_analyze(&self) -> bool {
-        !matches!(self, ConflReason::Deduce)
+        !matches!(self, Self::Deduce)
     }
 }
 
@@ -280,16 +278,15 @@ impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
                 ReasonBackjump::Decide => {
-                    let state;
-                    let reason;
-                    if R::IS_GEN {
+                    let (state, reason) = if R::IS_GEN {
                         let State(j) = cell.state.get().unwrap();
-                        state = State((j + 1) % self.rule.gen());
-                        reason = ReasonBackjump::TryAnother(self.rule.gen() - 2);
+                        (
+                            State((j + 1) % self.rule.gen()),
+                            ReasonBackjump::TryAnother(self.rule.gen() - 2),
+                        )
                     } else {
-                        state = !cell.state.get().unwrap();
-                        reason = ReasonBackjump::Deduce;
-                    }
+                        (!cell.state.get().unwrap(), ReasonBackjump::Deduce)
+                    };
 
                     self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;
