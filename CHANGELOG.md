@@ -4,7 +4,8 @@
 
 - Disabled backjumping when `max_cell_count` is specified.
 - Remove `Status::Paused`. Now pausing is handled by `tui` and `web` instead of the `lib`.
-- Add timing for web version.
+- Timing for Web version.
+- Find all results without pause in Web version.
 - Fix some bugs.
 - Update dependencies.
 

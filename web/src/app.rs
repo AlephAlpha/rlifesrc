@@ -35,6 +35,8 @@ pub struct App {
     cells: u32,
     world: String,
     max_partial: bool,
+    find_all: bool,
+    found_count: u32,
     timing: Duration,
     worker: Box<dyn Bridge<Worker>>,
     interval_task: Option<IntervalTask>,
@@ -53,6 +55,7 @@ pub enum Msg {
     Load(FileList),
     SendFile(FileData),
     SetMaxPartial,
+    SetFindAll,
     Apply(Config),
     DataReceived(Response),
     None,
@@ -92,6 +95,8 @@ impl Component for App {
             cells: 0,
             world,
             max_partial: false,
+            find_all: false,
+            found_count: 0,
             timing: Duration::default(),
             worker,
             interval_task: None,
@@ -151,9 +156,19 @@ impl Component for App {
             Msg::SetMaxPartial => {
                 self.max_partial ^= true;
                 if self.max_partial {
-                    self.worker.send(Request::MaxPartial)
+                    self.worker.send(Request::MaxPartial);
                 } else {
-                    self.worker.send(Request::DisplayGen(self.gen))
+                    self.worker.send(Request::DisplayGen(self.gen));
+                }
+                return true;
+            }
+            Msg::SetFindAll => {
+                self.find_all ^= true;
+                self.worker.send(Request::SetFindAll(self.find_all));
+                if self.max_partial {
+                    self.worker.send(Request::MaxPartial);
+                } else {
+                    self.worker.send(Request::DisplayGen(self.gen));
                 }
                 return true;
             }
@@ -170,6 +185,7 @@ impl Component for App {
                         cells,
                         status,
                         paused,
+                        found_count,
                         timing,
                         config,
                     }) => {
@@ -187,6 +203,7 @@ impl Component for App {
                             self.stop_job()
                         }
                         self.status = status;
+                        self.found_count = found_count;
                         if let Some(timing) = timing {
                             self.timing = timing;
                         }
@@ -305,12 +322,24 @@ impl App {
                                 { self.data() }
                                 <div class="mui-checkbox">
                                     <label>
-                                        <input id="partial-max"
+                                        <input id="max-partial"
                                             type="checkbox"
                                             checked=self.max_partial
                                             onclick=self.link.callback(|_| Msg::SetMaxPartial)/>
                                         <abbr title="Show maximal partial result.">
-                                            { "Max Partial" }
+                                            { "Show max partial." }
+                                        </abbr>
+                                    </label>
+                                </div>
+                                <div class="mui-checkbox">
+                                    <label>
+                                        <input id="find-all"
+                                            type="checkbox"
+                                            checked=self.find_all
+                                            onclick=self.link.callback(|_| Msg::SetFindAll)/>
+                                        <abbr title="Find all results. Will not stop until all results \
+                                                     are found.">
+                                            { "Find all results. Won't stop when found one." }
                                         </abbr>
                                     </label>
                                 </div>
@@ -367,6 +396,13 @@ impl App {
                     </abbr>
                     { ": " }
                     { self.cells }
+                </li>
+                <li class=if self.find_all { "" } else { "mui--hide" }>
+                    <abbr title="Number of found results.">
+                        { "Found" }
+                    </abbr>
+                    { ": " }
+                    { self.found_count }
                 </li>
                 <li class=if self.paused { "" } else { "mui--hide" }>
                     <abbr title="Time taken by the search.">

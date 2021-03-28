@@ -15,6 +15,7 @@ pub enum Request {
     Start,
     Pause,
     SetWorld(Config),
+    SetFindAll(bool),
     DisplayGen(i32),
     MaxPartial,
     Save,
@@ -34,6 +35,7 @@ pub struct UpdateMessage {
     pub cells: Option<u32>,
     pub status: Status,
     pub paused: bool,
+    pub found_count: u32,
     pub timing: Option<Duration>,
     pub config: Option<Config>,
 }
@@ -49,6 +51,9 @@ pub struct Worker {
     search: Box<dyn Search>,
     max_partial_count: u32,
     max_partial: String,
+    find_all: bool,
+    found_count: u32,
+    all_found: Vec<String>,
     start_time: Option<Instant>,
     timing: Duration,
     link: AgentLink<Worker>,
@@ -66,7 +71,6 @@ impl Worker {
         if self.start_time.is_none() {
             self.start_time = Some(Instant::now());
         }
-        debug!("Start timing.");
     }
 
     fn stop_job(&mut self) {
@@ -74,9 +78,17 @@ impl Worker {
         if let Some(instant) = self.start_time.take() {
             self.timing += instant.elapsed();
             self.start_time = Some(Instant::now());
-            debug!("Stop timing: {:?}.", self.timing);
         }
         self.paused = true;
+    }
+
+    fn reset_world(&mut self, search: Box<dyn Search>) {
+        self.search = search;
+        self.status = Status::Initial;
+        self.update_max_martial(false);
+        self.timing = Duration::default();
+        self.found_count = 0;
+        self.all_found = vec![String::new(); self.search.config().period as usize];
     }
 
     fn update_max_martial(&mut self, check_max: bool) {
@@ -96,12 +108,14 @@ impl Worker {
         let config = (status == Status::Found && self.search.config().reduce_max)
             .then(|| self.search.config().clone());
         let timing = self.paused.then(|| self.timing);
+        let found_count = self.found_count;
 
         let msg = UpdateMessage {
             world: None,
             cells: None,
             status,
             paused,
+            found_count,
             timing,
             config,
         };
@@ -119,6 +133,7 @@ impl Agent for Worker {
         debug!("Worker path: {}", Self::name_of_resource());
         let config: Config = Config::default();
         let search = config.world().unwrap();
+        let all_found = vec![String::new(); config.period as usize];
 
         let mut worker = Worker {
             status: Status::Initial,
@@ -126,6 +141,9 @@ impl Agent for Worker {
             search,
             max_partial_count: 0,
             max_partial: String::new(),
+            find_all: false,
+            found_count: 0,
+            all_found,
             start_time: None,
             timing: Duration::default(),
             link,
@@ -140,10 +158,20 @@ impl Agent for Worker {
             WorkerMsg::Step => {
                 self.status = self.search.search(Some(VIEW_FREQ));
                 self.update_max_martial(true);
-                if self.status == Status::Searching {
-                    self.start_job();
-                } else {
-                    self.stop_job();
+                match self.status {
+                    Status::Searching => self.start_job(),
+                    Status::Found => {
+                        self.found_count += 1;
+                        for gen in 0..self.search.config().period {
+                            self.all_found[gen as usize].push_str(&self.search.rle_gen(gen));
+                        }
+                        if self.find_all {
+                            self.start_job();
+                        } else {
+                            self.stop_job();
+                        }
+                    }
+                    _ => self.stop_job(),
                 }
             }
         }
@@ -159,12 +187,9 @@ impl Agent for Worker {
             }
             Request::SetWorld(config) => {
                 self.stop_job();
-                self.status = Status::Initial;
-                self.timing = Duration::default();
                 match config.world() {
                     Ok(search) => {
-                        self.search = search;
-                        self.update_max_martial(false);
+                        self.reset_world(search);
                         self.update_message().with_config().with_world(0).send(id);
                     }
                     Err(error) => {
@@ -173,6 +198,9 @@ impl Agent for Worker {
                         self.link.respond(id, Response::Error(message));
                     }
                 }
+            }
+            Request::SetFindAll(find_all) => {
+                self.find_all = find_all;
             }
             Request::DisplayGen(gen) => {
                 self.update_message().with_world(gen).send(id);
@@ -189,9 +217,7 @@ impl Agent for Worker {
                 match world_ser.world() {
                     Ok(search) => {
                         debug!("Save file loaded!");
-                        self.search = search;
-                        self.update_max_martial(false);
-                        self.timing = Duration::default();
+                        self.reset_world(search);
                         self.update_message().with_config().with_world(0).send(id);
                     }
                     Err(error) => {
@@ -227,7 +253,12 @@ impl<'a> UpdateMessageBuilder<'a> {
     }
 
     fn with_world(mut self, gen: i32) -> Self {
-        self.msg.world = Some(self.worker.search.rle_gen(gen));
+        self.msg.world =
+            if self.worker.find_all && self.worker.paused && self.worker.found_count > 0 {
+                Some(self.worker.all_found[gen as usize].clone())
+            } else {
+                Some(self.worker.search.rle_gen(gen))
+            };
         self.msg.cells = Some(self.worker.search.cell_count_gen(gen));
         self
     }
