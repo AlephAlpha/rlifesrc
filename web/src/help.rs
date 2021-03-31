@@ -40,7 +40,6 @@ impl Component for Help {
             .create_element("div")
             .unwrap();
         html.set_inner_html(&HELP_HTML);
-        html.set_attribute("class", "mui-container").unwrap();
         VNode::VRef(Node::from(html))
     }
 }

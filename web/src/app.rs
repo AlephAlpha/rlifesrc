@@ -26,6 +26,13 @@ use yew::{
 
 build_time!("%Y-%m-%d %H:%M:%S UTC");
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum Tab {
+    World,
+    Settings,
+    Help,
+}
+
 pub struct App {
     link: ComponentLink<Self>,
     config: Config,
@@ -41,6 +48,7 @@ pub struct App {
     worker: Box<dyn Bridge<Worker>>,
     interval_task: Option<IntervalTask>,
     reader_task: Option<ReaderTask>,
+    tab: Tab,
 }
 
 #[derive(Debug)]
@@ -59,6 +67,7 @@ pub enum Msg {
     Apply(Config),
     DataReceived(Response),
     None,
+    ChangeTab(Tab),
 }
 
 impl App {
@@ -101,6 +110,7 @@ impl Component for App {
             worker,
             interval_task: None,
             reader_task: None,
+            tab: Tab::World,
         }
     }
 
@@ -173,6 +183,7 @@ impl Component for App {
                 return true;
             }
             Msg::Apply(config) => {
+                self.tab = Tab::World;
                 self.config = config;
                 self.gen = 0;
                 self.worker.send(Request::SetWorld(self.config.clone()));
@@ -224,6 +235,10 @@ impl Component for App {
                 };
                 return true;
             }
+            Msg::ChangeTab(tab) => {
+                self.tab = tab;
+                return true;
+            }
             Msg::None => (),
         }
         false
@@ -235,10 +250,9 @@ impl Component for App {
 
     fn view(&self) -> Html {
         html! {
-            <div id="rlifesrc">
+            <div id="rlifesrc" class="window">
                 { self.header() }
                 { self.main() }
-                { self.footer() }
             </div>
         }
     }
@@ -247,115 +261,76 @@ impl Component for App {
 impl App {
     fn header(&self) -> Html {
         html! {
-            <header id="appbar" class="mui-appbar mui--z1">
-                <table class="mui-container-fluid">
-                    <tr class="mui--appbar-height">
-                        <td>
-                            <span id="title" class="mui--text-headline">
-                                { "Rust Life Search" }
-                            </span>
-                            <span class="mui--text-subhead mui--hidden-xs">
-                                { "A Game of Life pattern searcher written in Rust." }
-                            </span>
-                        </td>
-                        <td class="mui--text-right">
-                            <a href="https://github.com/AlephAlpha/rlifesrc/"
-                                class="mui--text-headline">
-                                <i class="fab fa-github"></i>
-                            </a>
-                        </td>
-                    </tr>
-                </table>
+            <header id="appbar" class="title-bar">
+                <div class="title-bar-text">
+                    { "Rust Life Search" }
+                </div>
+                <div class="title-bar-controls">
+                    <button aria-label="Help"
+                        onclick=self.link.callback(|_| Msg::ChangeTab(Tab::Help)) />
+                    <button aria-label="Close" />
+                </div>
             </header>
-        }
-    }
-
-    fn footer(&self) -> Html {
-        html! {
-            <footer id="footer" class="mui-container-fluid">
-                <div class="mui--text-caption mui--text-center">
-                    { "Powered by " }
-                    <a href="https://yew.rs">
-                        { "Yew" }
-                    </a>
-                    { " & " }
-                    <a href="https://www.muicss.com">
-                        { "MUI CSS" }
-                    </a>
-                </div>
-                <div class="mui--text-caption mui--text-center">
-                    <a href="https://github.com/AlephAlpha/rlifesrc/blob/master/CHANGELOG.md">
-                        { format!("Last updated at {}", BUILD_TIME) }
-                    </a>
-                </div>
-            </footer>
         }
     }
 
     fn main(&self) -> Html {
         html! {
-            <main class="mui-container-fluid">
-                <div class="mui-row">
-                    <div class="mui-col-sm-10 mui-col-sm-offset-1 mui-col-lg-8 mui-col-lg-offset-2">
-                        <div class="mui-panel">
-                            <ul class="mui-tabs__bar">
-                                <li class="mui--is-active">
-                                    <a data-mui-toggle="tab" data-mui-controls="pane-world">
-                                        <i class="fas fa-globe"></i>
-                                        <span class="mui--hidden-xs"> { "World" } </span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a data-mui-toggle="tab" data-mui-controls="pane-settings">
-                                        <i class="fas fa-cog"></i>
-                                        <span class="mui--hidden-xs"> { "Settings" } </span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a data-mui-toggle="tab" data-mui-controls="pane-help">
-                                        <i class="fas fa-question-circle"></i>
-                                        <span class="mui--hidden-xs"> { "Help" } </span>
-                                    </a>
-                                </li>
-                            </ul>
-                            <div class="mui-tabs__pane mui--is-active" id="pane-world">
-                                { self.data() }
-                                <div class="mui-checkbox">
-                                    <label>
-                                        <input id="max-partial"
-                                            type="checkbox"
-                                            checked=self.max_partial
-                                            onclick=self.link.callback(|_| Msg::SetMaxPartial)/>
-                                        <abbr title="Show maximal partial result.">
-                                            { "Show max partial." }
-                                        </abbr>
-                                    </label>
-                                </div>
-                                <div class="mui-checkbox">
-                                    <label>
-                                        <input id="find-all"
-                                            type="checkbox"
-                                            checked=self.find_all
-                                            onclick=self.link.callback(|_| Msg::SetFindAll)/>
-                                        <abbr title="Find all results. Will not stop until all results \
-                                                     are found.">
-                                            { "Find all results. Won't stop when found one." }
-                                        </abbr>
-                                    </label>
-                                </div>
-                                <World world=&self.world/>
-                                { self.buttons() }
-                            </div>
-                            <div class="mui-tabs__pane" id="pane-settings">
-                                <Settings config=&self.config
-                                    callback=self.link.callback(Msg::Apply)/>
-                            </div>
-                            <div class="mui-tabs__pane" id="pane-help">
-                                <Help/>
-                            </div>
+            <main class="window-body">
+                <menu role="tablist">
+                    <button aria-selected=self.tab==Tab::World
+                        aria-controls="pane-world"
+                        onclick=self.link.callback(|_| Msg::ChangeTab(Tab::World))>
+                        { "World" }
+                    </button>
+                    <button aria-selected=self.tab==Tab::Settings
+                        aria-controls="pane-settings"
+                        onclick=self.link.callback(|_| Msg::ChangeTab(Tab::Settings))>
+                        { "Settings" }
+                    </button>
+                    <button aria-selected=self.tab==Tab::Help
+                        aria-controls="pane-help"
+                        onclick=self.link.callback(|_| Msg::ChangeTab(Tab::Help))>
+                        { "Help" }
+                    </button>
+                </menu>
+                <article hidden=self.tab!=Tab::World role="tabpanel" id="pane-world">
+                    { self.data() }
+                    <fieldset>
+                        <div class="field-row">
+                            <input id="max-partial"
+                                type="checkbox"
+                                checked=self.max_partial
+                                onclick=self.link.callback(|_| Msg::SetMaxPartial)/>
+                            <label for="max-partial">
+                                <abbr title="Show maximal partial result.">
+                                    { "Show max partial." }
+                                </abbr>
+                            </label>
                         </div>
-                    </div>
-                </div>
+                        <div class="field-row">
+                            <input id="find-all"
+                                type="checkbox"
+                                checked=self.find_all
+                                onclick=self.link.callback(|_| Msg::SetFindAll)/>
+                            <label for="find-all">
+                                <abbr title="Find all results. Will not stop until all results \
+                                             are found.">
+                                    { "Find all results. Won't stop when found one." }
+                                </abbr>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <World world=&self.world/>
+                    { self.buttons() }
+                </article>
+                <article hidden=self.tab!=Tab::Settings role="tabpanel" id="pane-settings">
+                    <Settings config=&self.config
+                        callback=self.link.callback(Msg::Apply)/>
+                </article>
+                <article hidden=self.tab!=Tab::Help role="tabpanel" id="pane-help">
+                    <Help/>
+                </article>
             </main>
         }
     }
@@ -370,48 +345,47 @@ impl App {
             }
         });
         html! {
-            <ul id="data" class="mui-list--inline mui--text-body2">
-                <li onwheel=onwheel
-                    class=if self.max_partial { "mui--hide" } else { "" }>
+            <div class="status-bar" id="data">
+                <div onwheel=onwheel class="status-bar-field" hidden=self.max_partial>
                     <abbr title="The displayed generation.">
                         { "Generation" }
                     </abbr>
                     { ": " }
                     { self.gen }
-                    <button class="mui-btn mui-btn--small btn-tiny"
+                    <button class="set-gen"
                         disabled=self.gen == 0
                         onclick=self.link.callback(|_| Msg::DecGen)>
-                        <i class="fas fa-minus"></i>
+                        { "-" }
                     </button>
-                    <button class="mui-btn mui-btn--small btn-tiny"
+                    <button class="set-gen"
                         disabled=self.gen == self.config.period - 1
                         onclick=self.link.callback(|_| Msg::IncGen)>
-                        <i class="fas fa-plus"></i>
+                        { "+" }
                     </button>
-                </li>
-                <li>
+                </div>
+                <div class="status-bar-field">
                     <abbr title="Number of known living cells in the current generation. \
                         For Generations rules, dying cells are not counted.">
                         { "Cell count" }
                     </abbr>
                     { ": " }
                     { self.cells }
-                </li>
-                <li class=if self.find_all { "" } else { "mui--hide" }>
+                </div>
+                <div class="status-bar-field" hidden=!self.find_all>
                     <abbr title="Number of found results.">
                         { "Found" }
                     </abbr>
                     { ": " }
                     { self.found_count }
-                </li>
-                <li class=if self.paused { "" } else { "mui--hide" }>
+                </div>
+                <div class="status-bar-field" hidden=!self.paused>
                     <abbr title="Time taken by the search.">
                         { "Time" }
                     </abbr>
                     { ": " }
                     { format!("{:?}", self.timing) }
-                </li>
-                <li>
+                </div>
+                <div class="status-bar-field">
                     {
                         match self.status {
                             Status::Initial => "",
@@ -424,62 +398,41 @@ impl App {
                             },
                         }
                     }
-                </li>
-            </ul>
+                </div>
+            </div>
         }
     }
 
     fn buttons(&self) -> Html {
         html! {
             <div class="buttons">
-                <button class="mui-btn mui-btn--raised"
-                    disabled=!self.paused
+                <button disabled=!self.paused
                     onclick=self.link.callback(|_| Msg::Start)>
-                    <i class="fas fa-play"></i>
-                    <span class="mui--hidden-xs">
-                        { "Start" }
-                    </span>
+                    { "Start" }
                 </button>
-                <button class="mui-btn mui-btn--raised"
-                    disabled=self.paused
+                <button disabled=self.paused
                     onclick=self.link.callback(|_| Msg::Pause)>
-                    <i class="fas fa-pause"></i>
-                    <span class="mui--hidden-xs">
-                        { "Pause" }
-                    </span>
+                    { "Pause" }
                 </button>
-                <button class="mui-btn mui-btn--raised"
-                    disabled=!self.paused
+                <button disabled=!self.paused
                     onclick=self.link.callback(|_| Msg::Reset)>
-                    <i class="fas fa-redo"></i>
-                    <span class="mui--hidden-xs">
-                        <abbr title="Reset the world.">
-                            { "Reset" }
-                        </abbr>
-                    </span>
+                    <abbr title="Reset the world.">
+                        { "Reset" }
+                    </abbr>
                 </button>
-                <div class="mui--visible-xs-block"></div>
-                <button class="mui-btn mui-btn--raised"
-                    disabled=!self.paused
+                <button disabled=!self.paused
                     onclick=self.link.callback(|_| Msg::Save)>
-                    <i class="fas fa-save"></i>
-                    <span class="mui--hidden-xs">
-                        <abbr title="Save the search status in a json file.">
-                            { "Save" }
-                        </abbr>
-                    </span>
+                    <abbr title="Save the search status in a json file.">
+                        { "Save" }
+                    </abbr>
                 </button>
-                <button class="mui-btn mui-btn--raised"
-                    onclick=self.link.callback(|_| {
+                <button onclick=self.link.callback(|_| {
                         click_button("load").unwrap();
                         Msg::None
                     })>
-                    <i class="fas fa-file-import"></i>
-                    <span class="mui--hidden-xs">
-                        <abbr title="Load the search status from a json file.">
-                            { "Load" }
-                        </abbr>
-                    </span>
+                    <abbr title="Load the search status from a json file.">
+                        { "Load" }
+                    </abbr>
                 </button>
                 <input id="load"
                     type="file"
