@@ -391,7 +391,7 @@ impl App {
                             Status::Initial => "",
                             Status::Found => "Found a result.",
                             Status::None => "No more result.",
-                            Status::Searching => if self.paused {
+                            Status::Searching => if !self.paused {
                                 "Searching..."
                             } else {
                                 "Paused."
