@@ -263,7 +263,7 @@ impl App {
         html! {
             <header id="appbar" class="title-bar">
                 <div class="title-bar-text">
-                    { "Rust Life Search" }
+                    { "rlifesrc.exe" }
                 </div>
                 <div class="title-bar-controls">
                     <button aria-label="Help"
