@@ -9,58 +9,86 @@
   <title>
     Rust Life Search - A Game of Life pattern searcher written in Rust.
   </title>
-  <link rel="stylesheet" href="https://unpkg.com/xp.css@0.2.4/dist/98.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/muicss@0.10.2/dist/css/mui.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/muicss@0.10.2/dist/js/mui.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.14.0/css/all.min.css" />
   <style>
-    #rlifesrc {
-      max-width: 800px;
-      margin: auto;
+    body {
+      background-color: #eee;
     }
 
-    #data {
-      margin-bottom: 5px;
+    #appbar {
+      background-color: #222;
     }
 
-    .set-gen {
+    #appbar table {
+      width: 100%;
+    }
+
+    #title {
+      margin-right: 10px;
+    }
+
+    #appbar .fab {
+      color: #fff;
+    }
+
+    main {
+      margin-top: 20px;
+    }
+
+    .mui-panel {
+      padding-top: 10px;
+    }
+
+    .mui-tabs__pane {
+      margin-top: 10px;
+    }
+
+    .fas+span {
+      margin-left: 5px;
+    }
+
+    .btn-tiny {
       margin-left: 4px;
-      min-width: auto;
-      min-height: auto;
+      padding: 0 4px;
     }
 
-    .set-gen+.set-gen {
+    .btn-tiny+.btn-tiny {
       margin-left: 0;
     }
 
     #world {
+      background-color: #eee;
+      font-family: "Liberation Mono", Consolas, monospace;
+      font-size: 1rem;
+      line-height: 1rem;
       letter-spacing: 2px;
       max-height: 400px;
       overflow: auto;
-      margin-top: 5px;
-      margin-bottom: 5px;
+      padding: 5px;
+    }
+
+    .buttons .mui-btn {
+      margin-right: 8px;
+    }
+
+    .buttons .mui-btn+.mui-btn {
+      margin-left: 0px;
     }
 
     #settings {
-      margin-top: 5px;
+      margin-top: 10px;
     }
 
-    input[type=number] {
-      padding: 3px 4px;
-      border: none;
-      background-color: #fff;
-      box-sizing: border-box;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      border-radius: 0;
-      height: 21px;
-      line-height: 2
+    code {
+      background-color: #eee;
+      font-family: "Liberation Mono", Consolas, monospace;
+      padding: 2px;
     }
 
-    input[type=number]:focus {
-      outline: none
-    }
-
-    input[type=number] {
-      box-shadow: inset -1px -1px #fff, inset 1px 1px grey, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a
+    footer {
+      margin-bottom: 20px;
     }
   </style>
 </head>

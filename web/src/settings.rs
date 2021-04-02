@@ -1,8 +1,15 @@
 use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
 use std::matches;
+use wasm_bindgen::prelude::wasm_bindgen;
 use yew::{
     html, html::ChangeData, Callback, Component, ComponentLink, Html, Properties, ShouldRender,
 };
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["mui", "tabs"])]
+    fn activate(tab: &str);
+}
 
 pub struct Settings {
     link: ComponentLink<Self>,
@@ -102,7 +109,7 @@ impl Component for Settings {
 
     fn view(&self) -> Html {
         html! {
-            <div>
+            <div class="mui-form">
                 { self.apply_button() }
                 { self.settings() }
             </div>
@@ -112,14 +119,21 @@ impl Component for Settings {
 
 impl Settings {
     fn apply_button(&self) -> Html {
-        let onclick = self.link.callback(|_| Msg::Apply);
+        let onclick = self.link.callback(|_| {
+            activate("pane-world");
+            Msg::Apply
+        });
         html! {
             <div class="buttons">
-                <button type="submit"
+                <button class="mui-btn mui-btn--raised"
+                    type="submit"
                     onclick=onclick>
-                    <abbr title="Apply the settings and restart the search.">
-                        { "Apply Settings" }
-                    </abbr>
+                    <i class="fas fa-check"></i>
+                    <span>
+                        <abbr title="Apply the settings and restart the search.">
+                            { "Apply Settings" }
+                        </abbr>
+                    </span>
                 </button>
             </div>
         }
@@ -127,8 +141,7 @@ impl Settings {
 
     fn settings(&self) -> Html {
         html! {
-            <fieldset id="settings">
-                <legend> { "Settings" } </legend>
+            <div id="settings">
                 { self.set_rule() }
                 { self.set_width() }
                 { self.set_height() }
@@ -145,7 +158,7 @@ impl Settings {
                 { self.set_skip_subperiod() }
                 { self.set_skip_subsym() }
                 { self.set_backjump() }
-            </fieldset>
+            </div>
         }
     }
 
@@ -158,7 +171,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_rule">
                     <abbr title="Rule of the cellular automaton. \
                         Supports Life-like, isotropic non-totalistic, hexagonal, \
@@ -169,6 +182,7 @@ impl Settings {
                 </label>
                 <input id="set_rule"
                     type="text"
+                    class=if self.rule_is_valid { "" } else { "mui--is-invalid" }
                     value=self.config.rule_string.clone()
                     onchange=onchange/>
             </div>
@@ -184,7 +198,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_width">
                     <abbr title="Width of the pattern.">
                         { "Width" }
@@ -209,7 +223,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_height">
                     <abbr title="Height of the pattern.">
                         { "Height" }
@@ -234,7 +248,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_period">
                     <abbr title="Period of the pattern.">
                         { "Period" }
@@ -259,7 +273,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_dx">
                     <abbr title="Horizontal translation.">
                         { "dx" }
@@ -283,7 +297,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_dy">
                     <abbr title="Vertical translation.">
                         { "dy" }
@@ -313,7 +327,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_diag">
                     <abbr title="If the diagonal width is n > 0, the cells at position (x, y)\
                         where abs(x - y) >= n are assumed to be dead.\n\
@@ -348,7 +362,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-textfield">
                 <label for="set_max">
                     <abbr title="Upper bound of numbers of minimum living cells in all generations.\n\
                         If this value is set to 0, it means there is no limitation.">
@@ -384,7 +398,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-select">
                 <label for="set_trans">
                     <abbr title="Transformations after the last generation in a period.\n\
                         After the last generation in a period, the pattern will return to \
@@ -451,7 +465,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-select">
                 <label for="set_sym">
                     <abbr title="Symmetry of the pattern.">
                         { "Symmetry" }
@@ -517,7 +531,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-select">
                 <label for="set_order">
                     <abbr title="The order to find a new unknown cell.\n\
                         It will always search all generations of one cell \
@@ -567,7 +581,7 @@ impl Settings {
             }
         });
         html! {
-            <div class="field-row-stacked">
+            <div class="mui-select">
                 <label for="set_choose">
                     <abbr title="How to choose a state for unknown cells.">
                         { "Choice of state for unknown cells" }
@@ -591,12 +605,12 @@ impl Settings {
 
     fn set_reduce(&self) -> Html {
         html! {
-            <div class="field-row">
-                <input id="set_reduce"
-                    type="checkbox"
-                    checked=self.config.reduce_max
-                    onclick=self.link.callback(|_| Msg::SetReduce)/>
-                <label for="set_reduce">
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_reduce"
+                        type="checkbox"
+                        checked=self.config.reduce_max
+                        onclick=self.link.callback(|_| Msg::SetReduce)/>
                     <abbr title="The new max cell count will be set to the cell count of \
                         the current result minus one.">
                         { "Reduce the max cell count when a result is found" }
@@ -608,12 +622,12 @@ impl Settings {
 
     fn set_skip_subperiod(&self) -> Html {
         html! {
-            <div class="field-row">
-                <input id="set_skip_subperiod"
-                    type="checkbox"
-                    checked=self.config.skip_subperiod
-                    onclick=self.link.callback(|_| Msg::SetSkipSubperiod)/>
-                <label for="set_skip_subperiod">
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_skip_subperiod"
+                        type="checkbox"
+                        checked=self.config.skip_subperiod
+                        onclick=self.link.callback(|_| Msg::SetSkipSubperiod)/>
                     <abbr title="Skip patterns whose fundamental period are smaller than \
                         the given period.">
                         { "Skip patterns with subperiod." }
@@ -625,12 +639,12 @@ impl Settings {
 
     fn set_skip_subsym(&self) -> Html {
         html! {
-            <div class="field-row">
-                <input id="set_skip_subsym"
-                    type="checkbox"
-                    checked=self.config.skip_subsymmetry
-                    onclick=self.link.callback(|_| Msg::SetSkipSubsym)/>
-                <label for="set_skip_subsym">
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_skip_subsym"
+                        type="checkbox"
+                        checked=self.config.skip_subsymmetry
+                        onclick=self.link.callback(|_| Msg::SetSkipSubsym)/>
                     <abbr title="Skip patterns which are invariant under more transformations than \
                         required by the given symmetry.">
                         { "Skip patterns invariant under more transformations than the given symmetry." }
@@ -642,12 +656,12 @@ impl Settings {
 
     fn set_backjump(&self) -> Html {
         html! {
-            <div class="field-row">
-                <input id="set_backjump"
-                    type="checkbox"
-                    checked=self.config.backjump
-                    onclick=self.link.callback(|_| Msg::SetBackjump)/>
-                <label for="set_backjump">
+            <div class="mui-checkbox">
+                <label>
+                    <input id="set_backjump"
+                        type="checkbox"
+                        checked=self.config.backjump
+                        onclick=self.link.callback(|_| Msg::SetBackjump)/>
                     <abbr title="The current implementation of backjumping is very slow, \
                         only useful for large (e.g., 64x64) still lifes.">
                         { "(Experimental) Enable backjumping." }
