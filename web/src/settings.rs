@@ -1,21 +1,19 @@
 use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
 use std::matches;
-use wasm_bindgen::prelude::wasm_bindgen;
 use yew::{
-    html, html::ChangeData, Callback, Component, ComponentLink, Html, Properties, ShouldRender,
+    format::{Json, Text},
+    html,
+    html::ChangeData,
+    services::DialogService,
+    Callback, Component, ComponentLink, Html, Properties, ShouldRender,
 };
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["mui", "tabs"])]
-    fn activate(tab: &str);
-}
 
 pub struct Settings {
     link: ComponentLink<Self>,
     callback: Callback<Config>,
     config: Config,
     rule_is_valid: bool,
+    known_cells_string: Option<String>,
 }
 
 #[derive(Clone, Properties)]
@@ -38,6 +36,7 @@ pub enum Msg {
     SetChoose(NewState),
     SetMax(Option<u32>),
     SetDiag(Option<i32>),
+    SetKnown(String),
     SetReduce,
     SetSkipSubperiod,
     SetSkipSubsym,
@@ -56,6 +55,7 @@ impl Component for Settings {
             callback: props.callback,
             config: props.config,
             rule_is_valid,
+            known_cells_string: None,
         }
     }
 
@@ -86,12 +86,30 @@ impl Component for Settings {
             Msg::SetChoose(new_state) => self.config.new_state = new_state,
             Msg::SetMax(max_cell_count) => self.config.max_cell_count = max_cell_count,
             Msg::SetDiag(diagonal_width) => self.config.diagonal_width = diagonal_width,
+            Msg::SetKnown(known_cells_string) => {
+                if known_cells_string.is_empty() {
+                    self.config.known_cells = Vec::new();
+                    self.known_cells_string = None;
+                } else {
+                    let Json(known_cells) = Ok(known_cells_string.clone()).into();
+                    if let Ok(known_cells) = known_cells {
+                        self.config.known_cells = known_cells;
+                        self.known_cells_string = None;
+                    } else {
+                        self.known_cells_string = Some(known_cells_string);
+                    }
+                }
+            }
             Msg::SetReduce => self.config.reduce_max ^= true,
             Msg::SetSkipSubperiod => self.config.skip_subperiod ^= true,
             Msg::SetSkipSubsym => self.config.skip_subsymmetry ^= true,
             Msg::SetBackjump => self.config.backjump ^= true,
             Msg::Apply => {
-                self.callback.emit(self.config.clone());
+                if self.known_cells_string.is_some() {
+                    DialogService::alert("Invalid format for known cells.");
+                } else {
+                    self.callback.emit(self.config.clone());
+                }
                 return false;
             }
             Msg::None => return false,
@@ -103,6 +121,7 @@ impl Component for Settings {
         self.config != props.config && {
             self.config = props.config;
             self.rule_is_valid = self.config.rule_string.parse::<NtLifeGen>().is_ok();
+            self.known_cells_string = None;
             true
         }
     }
@@ -119,15 +138,11 @@ impl Component for Settings {
 
 impl Settings {
     fn apply_button(&self) -> Html {
-        let onclick = self.link.callback(|_| {
-            activate("pane-world");
-            Msg::Apply
-        });
         html! {
             <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
                     type="submit"
-                    onclick=onclick>
+                    onclick=self.link.callback(|_| Msg::Apply) >
                     <i class="fas fa-check"></i>
                     <span>
                         <abbr title="Apply the settings and restart the search.">
@@ -154,6 +169,7 @@ impl Settings {
                 { self.set_max() }
                 { self.set_order() }
                 { self.set_choose() }
+                { self.set_known() }
                 { self.set_reduce() }
                 { self.set_skip_subperiod() }
                 { self.set_skip_subsym() }
@@ -182,7 +198,7 @@ impl Settings {
                 </label>
                 <input id="set_rule"
                     type="text"
-                    class=if self.rule_is_valid { "" } else { "mui--is-invalid" }
+                    class=(!self.rule_is_valid).then(|| "mui--is-invalid")
                     value=self.config.rule_string.clone()
                     onchange=onchange/>
             </div>
@@ -599,6 +615,40 @@ impl Settings {
                         { "Random" }
                     </option>
                 </select>
+            </div>
+        }
+    }
+
+    fn set_known(&self) -> Html {
+        let value = if let Some(known_cells_string) = &self.known_cells_string {
+            known_cells_string.clone()
+        } else if self.config.known_cells.is_empty() {
+            String::new()
+        } else {
+            let text: Text = Json(&self.config.known_cells).into();
+            text.unwrap()
+        };
+        let onchange = self.link.callback(|e: ChangeData| {
+            if let ChangeData::Value(v) = e {
+                Msg::SetKnown(v)
+            } else {
+                Msg::None
+            }
+        });
+        html! {
+            <div class="mui-textfield">
+                <label for="set_known">
+                    <abbr title="Cells whose states are known before the search. \
+                                 Input should be in Json format.">
+                        { "Known cells." }
+                    </abbr>
+                    { ":" }
+                </label>
+                <textarea id="set_known"
+                    class=self.known_cells_string.is_some().then(|| "mui--is-invalid")
+                    placeholder="e.g. [{\"coord\":[0,0,0],\"state\":0},{\"coord\":[1,1,0],\"state\":1}]"
+                    value=value
+                    onchange=onchange />
             </div>
         }
     }

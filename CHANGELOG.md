@@ -2,10 +2,19 @@
 
 ## Unreleased
 
+### Lib
+
 - Disabled backjumping when `max_cell_count` is specified.
 - Remove `Status::Paused`. Now pausing is handled by `tui` and `web` instead of the `lib`.
-- Timing for Web version.
-- Find all results without pause in Web version.
+
+### Web
+
+- Show timing.
+- Now you can find all results without pause.
+- Now you can specify a list of known cells.
+
+### Others
+
 - Fix some bugs.
 - Update dependencies.
 

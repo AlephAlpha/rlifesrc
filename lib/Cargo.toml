@@ -14,6 +14,7 @@ keywords = ["game-of-life", "cellular-automata"]
 auto_enums = "0.7.12"
 bitflags = "1.2.1"
 ca-rules = "0.3.2"
+displaydoc = "0.2.1"
 educe = "0.4.14"
 rand = "0.8.3"
 getrandom = "0.2.2"

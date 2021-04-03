@@ -9,7 +9,7 @@ use js_sys::Array;
 use log::{debug, error};
 use rlifesrc_lib::{Config, Status};
 use std::time::Duration;
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 use web_sys::{Blob, BlobPropertyBag, FileList, HtmlAnchorElement, HtmlElement, Url};
 use yew::{
     events::WheelEvent,
@@ -25,6 +25,12 @@ use yew::{
 };
 
 build_time!("%Y-%m-%d %H:%M:%S UTC");
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["mui", "tabs"])]
+    fn activate(tab: &str);
+}
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -176,6 +182,7 @@ impl Component for App {
                 self.config = config;
                 self.gen = 0;
                 self.worker.send(Request::SetWorld(self.config.clone()));
+                activate("pane-world");
                 return true;
             }
             Msg::DataReceived(response) => {
@@ -208,8 +215,14 @@ impl Component for App {
                             self.timing = timing;
                         }
                     }
-                    Response::Error(error) => {
-                        DialogService::alert(&error);
+                    Response::Error {
+                        message,
+                        goto_config,
+                    } => {
+                        DialogService::alert(&message);
+                        if goto_config {
+                            activate("pane-settings");
+                        }
                     }
                     Response::Save(world_ser) => {
                         let text: Text = Json(&world_ser).into();

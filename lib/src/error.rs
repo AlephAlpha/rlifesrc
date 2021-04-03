@@ -1,28 +1,25 @@
 //! All kinds of errors in this crate.
 
-use crate::cells::Coord;
+use crate::cells::{Coord, State};
 use ca_rules::ParseRuleError;
+use displaydoc::Display;
 use thiserror::Error;
 
 /// All kinds of errors in this crate.
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Error)]
 pub enum Error {
-    /// Unable to set a cell.
-    #[error("Unable to set cell at {0:?}.")]
+    /// Unable to set cell at {0:?}.
     SetCellError(Coord),
-    /// Invalid rule.
-    #[error("Invalid rule: {0:?}.")]
+    /// Invalid rule: {0:?}.
     ParseRuleError(#[from] ParseRuleError),
     /// B0S8 rules are not supported yet. Please use the inverted rule.
-    #[error("B0S8 rules are not supported yet. Please use the inverted rule.")]
     B0S8Error,
     /// Symmetry or transformation requires the world to be square.
-    #[error("Symmetry or transformation requires the world to be square.")]
     SquareWorldError,
     /// Symmetry or transformation requires the world to have no diagonal width.
-    #[error("Symmetry or transformation requires the world to have no diagonal width.")]
     DiagonalWidthError,
     /// Width / height / period should be positive.
-    #[error("Width / height / period should be positive.")]
     NonPositiveError,
+    /// Cell at {0:?} has invalid state: {1:?}.
+    InvalidState(Coord, State),
 }

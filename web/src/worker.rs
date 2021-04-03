@@ -25,7 +25,7 @@ pub enum Request {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Response {
     Update(UpdateMessage),
-    Error(String),
+    Error { message: String, goto_config: bool },
     Save(WorldSer),
 }
 
@@ -195,7 +195,13 @@ impl Agent for Worker {
                     Err(error) => {
                         let message = error.to_string();
                         error!("Error setting world: {}", message);
-                        self.link.respond(id, Response::Error(message));
+                        self.link.respond(
+                            id,
+                            Response::Error {
+                                message,
+                                goto_config: true,
+                            },
+                        );
                     }
                 }
             }
@@ -223,7 +229,13 @@ impl Agent for Worker {
                     Err(error) => {
                         let message = error.to_string();
                         error!("Error loading save file: {}", message);
-                        self.link.respond(id, Response::Error(message));
+                        self.link.respond(
+                            id,
+                            Response::Error {
+                                message,
+                                goto_config: false,
+                            },
+                        );
                     }
                 }
             }

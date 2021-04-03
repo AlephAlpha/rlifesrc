@@ -134,7 +134,13 @@ python3 -m http.server
 
   图样在一个周期中的变化相当于先进行此变换，再进行平移。
 
-  8 种不同的变换，对应二面体群 _D_<sub>8</sub> 的 8 个元素。`Id` 表示恒等变换。`Rotate` 表示旋转， 后面的数字表示逆时针旋转的角度。`Flip` 表示翻转， 后面的符号表示翻转的轴线。比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `Flip |`。
+  8 种不同的变换，对应二面体群 _D_<sub>8</sub> 的 8 个元素。其中：
+  
+  * `Id` 表示恒等变换。
+  * `R` 表示旋转（Rotate）， 后面的数字表示逆时针旋转的角度。
+  * `F` 表示翻转（Flip）， 后面的符号表示翻转的轴线。
+
+  比如说，如果想要搜索竖直方向的 [glide symmetric](https://conwaylife.com/wiki/Types_of_spaceships#Glide_symmetric_spaceship) 的飞船，变换可以设成 `Flip |`。
 
   注意有些变换要求世界是正方形，有些则要求没有对角宽度。
   </dd>
@@ -164,6 +170,16 @@ python3 -m http.server
   `Automatic` 指的是先搜窄的一边。也就是说，行比列少先搜列，列比行少先搜行。当世界为正方形，且对角宽度不大于世界宽度的一半时，会选择对角顺序。
 
   对角搜索顺序要求世界是正方形。
+  </dd>
+
+  <dt>Known cells</dt>
+  <dd>
+  搜索前状态已知的细胞。
+
+  以 Json 格式输入，如 `[{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]`，其中：
+
+  * `coord` 表示细胞的坐标，`[x,y,t]` 表示位于 `(x,y)` 处的细胞的第 `t` 代；
+  * `state` 表示细胞的状态。对于非 Generations 的规则，`0` 表示死，`1` 表示生。
   </dd>
 
   <dt>Choice of state for unknown cells</dt>

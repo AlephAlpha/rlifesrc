@@ -109,6 +109,15 @@ It will always search all generations of one cell before going to another cell.
 
 Diagonal search order requires that the world is square.
 
+### Known cells
+
+Cells whose states are known before the search.
+
+Input should be in Json format, e.g. `[{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]`, where:
+
+* `coord` is the coordinates of the cell. `[x, y, t]` means the cell at `(x, y)` on the generation `t`.
+* `state` is the state of the cell. For non-Generations rules, `0` means dead, `1` means alive.
+
 ### Choice of state for unknown cells
 
 How to choose a state for unknown cells.
@@ -135,4 +144,4 @@ In another word, skip patterns whose symmetry group properly contains the given 
 
 [Backjumping](https://en.wikipedia.org/wiki/Backjumping) will reduce the number of steps, but each step will takes a much longer time. The current implementation is slower for most search, only useful for large (e.g., 64x64) still lifes.
 
-Currently it is only supported for non-generations rules without `Max cell count`. Otherwise this option would be ignored.
+Currently it is only supported for non-Generations rules without `Max cell count`. Otherwise this option would be ignored.

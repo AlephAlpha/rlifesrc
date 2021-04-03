@@ -100,7 +100,7 @@ impl WorldSer {
                     return Err(Error::SetCellError(coord));
                 }
             } else if state.0 >= world.rule.gen() {
-                return Err(Error::SetCellError(coord));
+                return Err(Error::InvalidState(coord, state));
             } else {
                 let reason = RE::deser(reason, world)?;
                 let _ = world.set_cell(cell, state, reason);

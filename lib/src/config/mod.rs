@@ -159,7 +159,7 @@ pub struct Config {
     /// a much longer time. The current implementation is slower for most search,
     /// only useful for large (e.g., 64x64) still lifes.
     ///
-    /// Currently it is only supported for non-generations rules. Generations rules
+    /// Currently it is only supported for non-Generations rules. Generations rules
     /// will ignore this option.
     pub backjump: bool,
 }
@@ -273,23 +273,33 @@ impl Config {
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<Box<dyn Search>, Error> {
         macro_rules! new_world {
-            ($rule:expr) => {
+            ($rule:expr) => {{
+                for known_cell in self.known_cells.iter() {
+                    if known_cell.state.0 >= 2 {
+                        return Err(Error::InvalidState(known_cell.coord, known_cell.state));
+                    }
+                }
                 if self.backjump && self.max_cell_count.is_none() {
                     Ok(Box::new(World::new_backjump(&self, $rule)))
                 } else {
                     Ok(Box::new(World::new_no_backjump(&self, $rule)))
                 }
-            };
+            }};
         }
 
         macro_rules! new_world_gen {
-            ($rule:expr) => {
+            ($rule:expr) => {{
                 if $rule.gen() > 2 {
+                    for known_cell in self.known_cells.iter() {
+                        if known_cell.state.0 >= $rule.gen() {
+                            return Err(Error::InvalidState(known_cell.coord, known_cell.state));
+                        }
+                    }
                     Ok(Box::new(World::new_no_backjump(&self, $rule)))
                 } else {
                     new_world!($rule.non_gen())
                 }
-            };
+            }};
         }
 
         if self.width <= 0 || self.height <= 0 || self.period <= 0 {
