@@ -77,7 +77,6 @@ impl Worker {
         self.timeout_task.take();
         if let Some(instant) = self.start_time.take() {
             self.timing += instant.elapsed();
-            self.start_time = Some(Instant::now());
         }
         self.paused = true;
     }
@@ -87,6 +86,7 @@ impl Worker {
         self.status = Status::Initial;
         self.update_max_martial(false);
         self.timing = Duration::default();
+        self.start_time = None;
         self.found_count = 0;
         self.all_found = vec![String::new(); self.search.config().period as usize];
     }
