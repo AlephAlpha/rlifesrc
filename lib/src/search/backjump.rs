@@ -2,7 +2,7 @@
 use crate::{
     cells::{CellRef, State},
     rules::Rule,
-    search::{Reason, SetCell},
+    search::{private::Sealed, Reason, SetCell},
     world::World,
 };
 use educe::Educe;
@@ -69,6 +69,8 @@ impl<'a, R: Rule> ReasonBackjump<'a, R> {
         }
     }
 }
+
+impl<'a, R: Rule + 'a> Sealed for ReasonBackjump<'a, R> {}
 
 impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonBackjump<'a, R> {
     type ConflReason = ConflReason<'a, R>;

@@ -25,7 +25,7 @@ use crate::cells::ALIVE;
 /// - [`LifeGen`]
 /// - [`NtLife`]
 /// - [`NtLifeGen`]
-pub trait Rule: Sized {
+pub trait Rule: private::Sealed {
     /// The type of neighborhood descriptor of the rule.
     ///
     /// It describes the states of the successor and neighbors of a cell,
@@ -81,4 +81,8 @@ pub trait Rule: Sized {
         world: &mut World<'a, Self, RE>,
         cell: CellRef<'a, Self>,
     ) -> Result<(), RE::ConflReason>;
+}
+
+mod private {
+    pub trait Sealed: Sized {}
 }

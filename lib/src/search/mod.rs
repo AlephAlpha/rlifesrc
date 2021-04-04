@@ -45,7 +45,7 @@ pub enum Status {
 /// Please use the following structs instead of implementing by yourself:
 /// - [`ReasonBackjump`]
 /// - [`ReasonNoBackjump`]
-pub trait Reason<'a, R: Rule>: Sized {
+pub trait Reason<'a, R: Rule>: private::Sealed {
     /// Reasons for a conflict.
     type ConflReason;
 
@@ -114,6 +114,10 @@ pub trait Reason<'a, R: Rule>: Sized {
     #[cfg(feature = "serde")]
     /// Restore the reason from a [`ReasonSer`].
     fn deser(ser: &ReasonSer, world: &World<'a, R, Self>) -> Result<Self, Error>;
+}
+
+mod private {
+    pub trait Sealed: Sized {}
 }
 
 /// Records the cells whose values are set and their reasons.
