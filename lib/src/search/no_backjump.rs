@@ -2,7 +2,7 @@
 use crate::{
     cells::{CellRef, State},
     rules::Rule,
-    search::{Reason, SetCell},
+    search::{private::Sealed, Reason, SetCell},
     world::World,
 };
 
@@ -32,6 +32,8 @@ pub enum ReasonNoBackjump {
     /// Only used in Generations rules.
     TryAnother(usize),
 }
+
+impl Sealed for ReasonNoBackjump {}
 
 impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
     type ConflReason = ();

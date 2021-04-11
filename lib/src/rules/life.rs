@@ -3,7 +3,7 @@
 use crate::{
     cells::{CellRef, State, ALIVE, DEAD},
     error::Error,
-    rules::Rule,
+    rules::{private::Sealed, Rule},
     search::Reason,
     world::World,
 };
@@ -238,6 +238,8 @@ impl FromStr for Life {
     }
 }
 
+impl Sealed for Life {}
+
 impl Rule for Life {
     type Desc = NbhdDesc;
     const IS_GEN: bool = false;
@@ -417,6 +419,8 @@ impl FromStr for LifeGen {
         }
     }
 }
+
+impl Sealed for LifeGen {}
 
 /// NOTE: This implementation does work when the number of states is 2.
 impl Rule for LifeGen {
