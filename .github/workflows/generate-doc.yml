@@ -26,6 +26,11 @@ jobs:
           command: doc
           args: --all-features --document-private-items
 
+      - name: Add a .nojekyll file
+        run: |
+          cd target/doc
+          touch .nojekyll
+
       - name: Deploy to rlifesrc-doc
         uses: cpina/github-action-push-to-another-repository@master
         env:
