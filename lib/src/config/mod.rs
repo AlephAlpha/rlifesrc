@@ -9,6 +9,12 @@ use crate::{
 };
 use educe::Educe;
 
+#[cfg(feature = "read-rle")]
+use ca_formats::{
+    rle::{Error as RleError, Rle},
+    CellData,
+};
+
 mod d8;
 mod search_order;
 
@@ -65,6 +71,35 @@ pub struct KnownCell {
 
     /// The state.
     pub state: State,
+}
+
+#[cfg(feature = "read-rle")]
+impl KnownCell {
+    /// Convert a [`CellData`] to a [`KnownCell`].
+    pub fn from_cell_data(data: CellData, gen: i32) -> Self {
+        let (x, y) = data.position;
+        let coord = (x as i32, y as i32, gen);
+        let state = State(data.state as usize);
+        KnownCell { coord, state }
+    }
+
+    /// Get a list [`KnownCell`] from a list of RLE strings.
+    #[cfg(feature = "read-rle")]
+    pub fn from_rles<I, S>(rles: I) -> Result<Vec<Self>, RleError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let mut known_cells = Vec::new();
+        for (gen, rle) in rles.into_iter().enumerate() {
+            let rle = Rle::new(rle.as_ref())?.with_unknown();
+            for data in rle {
+                known_cells.push(KnownCell::from_cell_data(data?, gen as i32));
+            }
+        }
+
+        Ok(known_cells)
+    }
 }
 
 /// World configuration.
@@ -249,6 +284,19 @@ impl Config {
     pub fn set_known_cells<T: Into<Vec<KnownCell>>>(mut self, known_cells: T) -> Self {
         self.known_cells = known_cells.into();
         self
+    }
+
+    /// Sets cells whose states are known before the search.
+    ///
+    /// The cells are specified by a list of RLE strings.
+    #[cfg(feature = "read-rle")]
+    pub fn set_known_cells_from_rles<I, S>(mut self, rles: I) -> Result<Self, RleError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        self.known_cells = KnownCell::from_rles(rles)?;
+        Ok(self)
     }
 
     /// Sets whether to enable backjumping.

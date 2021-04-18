@@ -113,10 +113,14 @@ Diagonal search order requires that the world is square.
 
 Cells whose states are known before the search.
 
-Input should be in Json format, e.g. `[{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]`, where:
+Input can be a list of known cells in JSON format, e.g. `[{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]`, where:
 
 * `coord` is the coordinates of the cell. `[x, y, t]` means the cell at `(x, y)` on the generation `t`.
 * `state` is the state of the cell. For non-Generations rules, `0` means dead, `1` means alive.
+
+If all known cells are in the first generation, you can also input an RLE, e.g. `?o$2bo$2?o!`.
+
+In this variant of RLE format, there is another symbol, `?`, which represents unknown cells. Now unknown cells are the background. Dead cells at the end of each line must not be omitted.
 
 ### Choice of state for unknown cells
 

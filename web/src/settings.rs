@@ -1,4 +1,6 @@
-use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, SearchOrder, Symmetry, Transform};
+use rlifesrc_lib::{
+    rules::NtLifeGen, Config, KnownCell, NewState, SearchOrder, Symmetry, Transform,
+};
 use std::matches;
 use yew::{
     format::{Json, Text},
@@ -93,6 +95,10 @@ impl Component for Settings {
                 } else {
                     let Json(known_cells) = Ok(known_cells_string.clone()).into();
                     if let Ok(known_cells) = known_cells {
+                        self.config.known_cells = known_cells;
+                        self.known_cells_string = None;
+                    } else if let Ok(known_cells) = KnownCell::from_rles(vec![&known_cells_string])
+                    {
                         self.config.known_cells = known_cells;
                         self.known_cells_string = None;
                     } else {
@@ -639,14 +645,15 @@ impl Settings {
             <div class="mui-textfield">
                 <label for="set_known">
                     <abbr title="Cells whose states are known before the search. \
-                                 Input should be in Json format.">
+                                 Please see the \"Help\" tab for input formats.">
                         { "Known cells." }
                     </abbr>
                     { ":" }
                 </label>
                 <textarea id="set_known"
                     class=self.known_cells_string.is_some().then(|| "mui--is-invalid")
-                    placeholder="e.g. [{\"coord\":[0,0,0],\"state\":0},{\"coord\":[1,1,0],\"state\":1}]"
+                    placeholder="Input in JSON, e.g. [{\"coord\":[0,0,0],\"state\":0},{\"coord\":[1,1,0],\"state\":1}]\n\
+                                 Or in RLE, e.g. ?o$2bo$2?o!"
                     value=value
                     onchange=onchange />
             </div>

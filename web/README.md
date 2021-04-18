@@ -176,10 +176,14 @@ python3 -m http.server
   <dd>
   搜索前状态已知的细胞。
 
-  以 Json 格式输入，如 `[{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]`，其中：
+  输入可以是一个的已知细胞的列表，写成 Json 格式，如 `[{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]`，其中：
 
   * `coord` 表示细胞的坐标，`[x,y,t]` 表示位于 `(x,y)` 处的细胞的第 `t` 代；
   * `state` 表示细胞的状态。对于非 Generations 的规则，`0` 表示死，`1` 表示生。
+
+  如果所有已知细胞都在第一代，还可以直接输入一个 RLE，如 `?o$2bo$2?o!`
+
+  与平常的 RLE 不同，这种 RLE 多了一个符号 `?`，用来表示未知的细胞。此时图样的背景是未知的细胞，每行末尾的死细胞不可省略。
   </dd>
 
   <dt>Choice of state for unknown cells</dt>
