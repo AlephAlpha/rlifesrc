@@ -84,7 +84,6 @@ impl KnownCell {
     }
 
     /// Get a list [`KnownCell`] from a list of RLE strings.
-    #[cfg(feature = "read-rle")]
     pub fn from_rles<I, S>(rles: I) -> Result<Vec<Self>, RleError>
     where
         I: IntoIterator<Item = S>,
