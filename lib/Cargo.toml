@@ -16,7 +16,7 @@ bitflags = "1.2.1"
 ca-formats = { version = "0.3.0", features = ["unknown"], optional = true }
 ca-rules = "0.3.2"
 displaydoc = "0.2.1"
-educe = "0.4.14"
+educe = "0.4.16"
 rand = "0.8.3"
 getrandom = "0.2.2"
 serde = { version = "1.0.125", features = ["derive"], optional = true }
