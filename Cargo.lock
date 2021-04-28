@@ -264,9 +264,9 @@ checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 
 [[package]]
 name = "ca-formats"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b62448dc789658533cea4edba1f6c9a094b63ff6b0429d4a1eb8708c868b934"
+checksum = "1895664fef48aafa9ce2707e9b512249c4866ae283ba4ea27c92e50c2f3e9a1f"
 dependencies = [
  "once_cell",
  "regex",
