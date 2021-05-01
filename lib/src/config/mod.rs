@@ -12,7 +12,7 @@ use educe::Educe;
 #[cfg(feature = "read-rle")]
 use ca_formats::{
     rle::{Error as RleError, Rle},
-    CellData,
+    CellData, Input,
 };
 
 mod d8;
@@ -83,21 +83,40 @@ impl KnownCell {
         KnownCell { coord, state }
     }
 
-    /// Get a list [`KnownCell`] from a list of RLE strings.
-    pub fn from_rles<I, S>(rles: I) -> Result<Vec<Self>, RleError>
+    /// Get a list [`KnownCell`] from multiple RLE's in one string.
+    pub fn from_rles<I, L>(input: I) -> Result<Vec<Self>, RleError>
     where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
+        I: Input<Lines = L>,
+        L: Input<Lines = L>,
     {
         let mut known_cells = Vec::new();
-        for (gen, rle) in rles.into_iter().enumerate() {
-            let rle = Rle::new(rle.as_ref())?.with_unknown();
-            for data in rle {
-                known_cells.push(KnownCell::from_cell_data(data?, gen as i32));
-            }
-        }
+        let rle = Rle::new(input)?;
+
+        Self::from_rles_iter(rle, &mut known_cells, 0)?;
 
         Ok(known_cells)
+    }
+
+    fn from_rles_iter<I, L>(
+        rle: Rle<I>,
+        known_cells: &mut Vec<Self>,
+        gen: i32,
+    ) -> Result<(), RleError>
+    where
+        I: Input<Lines = L>,
+        L: Input<Lines = L>,
+    {
+        let mut rle = rle.with_unknown();
+
+        for data in &mut rle {
+            known_cells.push(KnownCell::from_cell_data(data?, gen));
+        }
+
+        if let Some(rle) = rle.try_remains()? {
+            Self::from_rles_iter(rle, known_cells, gen + 1)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -289,12 +308,12 @@ impl Config {
     ///
     /// The cells are specified by a list of RLE strings.
     #[cfg(feature = "read-rle")]
-    pub fn set_known_cells_from_rles<I, S>(mut self, rles: I) -> Result<Self, RleError>
+    pub fn set_known_cells_from_rles<I, L>(mut self, input: I) -> Result<Self, RleError>
     where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
+        I: Input<Lines = L>,
+        L: Input<Lines = L>,
     {
-        self.known_cells = KnownCell::from_rles(rles)?;
+        self.known_cells = KnownCell::from_rles(input)?;
         Ok(self)
     }
 

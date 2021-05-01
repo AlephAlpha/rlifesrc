@@ -1,3 +1,4 @@
+use log::warn;
 use rlifesrc_lib::{
     rules::NtLifeGen, Config, KnownCell, NewState, SearchOrder, Symmetry, Transform,
 };
@@ -94,15 +95,22 @@ impl Component for Settings {
                     self.known_cells_string = None;
                 } else {
                     let Json(known_cells) = Ok(known_cells_string.clone()).into();
-                    if let Ok(known_cells) = known_cells {
-                        self.config.known_cells = known_cells;
-                        self.known_cells_string = None;
-                    } else if let Ok(known_cells) = KnownCell::from_rles(vec![&known_cells_string])
-                    {
-                        self.config.known_cells = known_cells;
-                        self.known_cells_string = None;
-                    } else {
-                        self.known_cells_string = Some(known_cells_string);
+                    match known_cells {
+                        Ok(known_cells) => {
+                            self.config.known_cells = known_cells;
+                            self.known_cells_string = None;
+                        }
+                        Err(json_err) => match KnownCell::from_rles(known_cells_string.as_str()) {
+                            Ok(known_cells) => {
+                                self.config.known_cells = known_cells;
+                                self.known_cells_string = None;
+                            }
+                            Err(rle_err) => {
+                                warn!("Invalid JSON format: {}", json_err);
+                                warn!("Invalid RLE format: {}", rle_err);
+                                self.known_cells_string = Some(known_cells_string);
+                            }
+                        },
                     }
                 }
             }
