@@ -125,8 +125,8 @@ impl KnownCell {
 /// The world will be generated from this configuration.
 #[derive(Clone, Debug, Educe, PartialEq, Eq, Hash)]
 #[educe(Default)]
-#[serde(default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct Config {
     /// Width.
     #[educe(Default = 16)]

@@ -30,7 +30,6 @@ pub trait Rule: private::Sealed {
     ///
     /// It describes the states of the successor and neighbors of a cell,
     /// and is used to determine the state of the cell in the next generation.
-    #[doc(hidden)]
     type Desc: Copy;
 
     /// Whether the rule is a Generations rule.
