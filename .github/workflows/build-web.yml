@@ -21,7 +21,7 @@ jobs:
           override: true
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v1.0.3
         with:
           command: test
           args: --all-features --manifest-path lib/Cargo.toml
@@ -51,7 +51,7 @@ jobs:
           version: latest
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v1.0.3
         with:
           command: build
           args: --release --target wasm32-unknown-unknown --manifest-path web/Cargo.toml
