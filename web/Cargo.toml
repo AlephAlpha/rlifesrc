@@ -22,4 +22,4 @@ serde = { version = "1.0.125", features = ["derive"] }
 wasm-bindgen = "0.2.74"
 wasm-logger = "0.2.0"
 web-sys = { version = "0.3.50", features = ["Blob", "HtmlAnchorElement", "Selection", "Url", "Window"] }
-yew = "0.17.4"
+yew = "0.18.0"
