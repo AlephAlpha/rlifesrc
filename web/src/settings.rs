@@ -237,7 +237,7 @@ impl Settings {
                 </label>
                 <input id="set_width"
                     type="number"
-                    value=self.config.width
+                    value=self.config.width.to_string()
                     min="1"
                     onchange=onchange/>
             </div>
@@ -262,7 +262,7 @@ impl Settings {
                 </label>
                 <input id="set_height"
                     type="number"
-                    value=self.config.height
+                    value=self.config.height.to_string()
                     min="1"
                     onchange=onchange/>
             </div>
@@ -287,7 +287,7 @@ impl Settings {
                 </label>
                 <input id="set_period"
                     type="number"
-                    value=self.config.period
+                    value=self.config.period.to_string()
                     min="1"
                     onchange=onchange/>
             </div>
@@ -312,7 +312,7 @@ impl Settings {
                 </label>
                 <input id="set_dx"
                     type="number"
-                    value=self.config.dx
+                    value=self.config.dx.to_string()
                     onchange=onchange/>
             </div>
         }
@@ -336,7 +336,7 @@ impl Settings {
                 </label>
                 <input id="set_dy"
                     type="number"
-                    value=self.config.dy
+                    value=self.config.dy.to_string()
                     onchange=onchange/>
             </div>
         }
@@ -368,9 +368,9 @@ impl Settings {
                 </label>
                 <input id="set_diag"
                     type="number"
-                    value=value
+                    value=value.to_string()
                     min="0"
-                    max=self.config.width.max(self.config.height)
+                    max=self.config.width.max(self.config.height).to_string()
                     disabled=self.config.require_no_diagonal_width()
                     onchange=onchange/>
             </div>
@@ -402,7 +402,7 @@ impl Settings {
                 </label>
                 <input id="set_max"
                     type="number"
-                    value=value
+                    value=value.to_string()
                     min="0"
                     onchange=onchange/>
             </div>

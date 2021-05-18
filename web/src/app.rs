@@ -142,8 +142,7 @@ impl Component for App {
             Msg::Save => self.worker.send(Request::Save),
             Msg::Load(files) => {
                 let file = files.get(0).unwrap();
-                let mut reader_service = ReaderService::new();
-                let task = reader_service.read_file(file, self.link.callback(Msg::SendFile));
+                let task = ReaderService::read_file(file, self.link.callback(Msg::SendFile));
                 match task {
                     Ok(task) => self.reader_task = Some(task),
                     Err(e) => error!("Error opening file reader: {}", e),
@@ -356,11 +355,11 @@ impl App {
                                         </abbr>
                                     </label>
                                 </div>
-                                <World world=&self.world/>
+                                <World world=self.world.clone()/>
                                 { self.buttons() }
                             </div>
                             <div class="mui-tabs__pane" id="pane-settings">
-                                <Settings config=&self.config
+                                <Settings config=self.config.clone()
                                     callback=self.link.callback(Msg::Apply)/>
                             </div>
                             <div class="mui-tabs__pane" id="pane-help">
