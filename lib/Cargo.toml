@@ -19,7 +19,7 @@ displaydoc = "0.2.1"
 educe = "0.4.16"
 rand = "0.8.3"
 getrandom = "0.2.2"
-serde = { version = "1.0.125", features = ["derive"], optional = true }
+serde = { version = "1.0.126", features = ["derive"], optional = true }
 thiserror = "1.0.24"
 
 [features]
