@@ -11,6 +11,7 @@ use crate::{
     world::World,
 };
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 /// A representation of reasons for setting a cell which can be easily serialized.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -57,29 +58,30 @@ pub struct SetCellSer {
 }
 
 /// A representation of the world which can be easily serialized.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default)]
 pub struct WorldSer {
     /// World configuration.
-    #[serde(default)]
-    config: Config,
+    pub config: Config,
 
     /// Number of conflicts during the search.
-    #[serde(default)]
-    conflicts: u64,
+    pub conflicts: u64,
 
     /// A stack to records the cells whose values are set during the search.
     ///
     /// The cells in this table always have known states.
-    #[serde(default)]
-    set_stack: Vec<SetCellSer>,
+    pub set_stack: Vec<SetCellSer>,
 
     /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
     ///
     /// Be careful when modifying this value.
     /// If you have changed other things in the saved file, please set this value to `0`,
     /// otherwise rlifesrc might gives the wrong result.
-    #[serde(default)]
-    check_index: u32,
+    pub check_index: u32,
+
+    /// Time used in searching. This field is handled by the frontend.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timing: Option<Duration>,
 }
 
 impl WorldSer {
@@ -129,6 +131,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
             conflicts: self.conflicts,
             set_stack: self.set_stack.iter().map(|s| s.ser()).collect(),
             check_index: self.check_index,
+            timing: None,
         }
     }
 }

@@ -215,7 +215,8 @@ impl Agent for Worker {
                 self.update_message().with_max_partial().send(id);
             }
             Request::Save => {
-                let world_ser = self.search.ser();
+                let mut world_ser = self.search.ser();
+                world_ser.timing = Some(self.timing);
                 self.link.respond(id, Response::Save(world_ser));
             }
             Request::Load(world_ser) => {
