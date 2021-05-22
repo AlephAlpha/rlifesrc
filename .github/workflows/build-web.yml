@@ -64,30 +64,6 @@ jobs:
       - name: Copy files
         run: cp -r web/static/* ${DEPLOY_PATH}
 
-      - name: Upload build result
-        uses: actions/upload-artifact@v2
-        with:
-          name: deploy
-          path: ${{ env.DEPLOY_PATH }}
-          if-no-files-found: error
-
-  deploy:
-    name: Deploy
-    needs: [test, build]
-    runs-on: ubuntu-latest
-    env:
-      DEPLOY_PATH: target/deploy
-    if: github.ref == 'refs/heads/master' && ! startsWith(github.event.head_commit.message, ':construction:')
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2.3.4
-
-      - name: Download build result
-        uses: actions/download-artifact@v2
-        with:
-          name: deploy
-          path: ${{ env.DEPLOY_PATH }}
-
       - name: Deploy to GitHub Pages
         if: success()
         uses: JamesIves/github-pages-deploy-action@4.1.3
