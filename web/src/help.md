@@ -68,7 +68,6 @@ If the diagonal width is `n > 0`, the cells at position `(x, y)` where `abs(x - 
 
 If this value is set to `0`, it would be ignored.
 
-
 ### Transformation
 
 Transformation of the pattern.
@@ -113,14 +112,39 @@ Diagonal search order requires that the world is square.
 
 Cells whose states are known before the search.
 
-Input can be a list of known cells in JSON format, e.g. `[{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]`, where:
+Two different formats are supported:
 
-* `coord` is the coordinates of the cell. `[x, y, t]` means the cell at `(x, y)` on the generation `t`.
-* `state` is the state of the cell. For non-Generations rules, `0` means dead, `1` means alive.
+- **JSON**:
 
-If all known cells are in the first generation, you can also input an RLE, e.g. `?o$2bo$2?o!`.
+  Input can be a list of known cells with coordinates and states in [JSON](https://en.wikipedia.org/wiki/JSON) format, e.g.:
 
-In this variant of RLE format, there is another symbol, `?`, which represents unknown cells. Now unknown cells are the background. Dead cells at the end of each line must not be omitted.
+  ```json
+  [{"coord":[0,0,0],"state":0},{"coord":[1,1,0],"state":1}]
+  ```
+
+  where:
+
+  * `coord` is the coordinates of the cell. `[x, y, t]` means the cell at `(x, y)` on the generation `t`.
+  * `state` is the state of the cell. For non-Generations rules, `0` means dead, `1` means alive. Other states of Generations rules are also represented by integers.
+
+  You can just copy and paste the `"set_stack"` field from a save file. That field has an extra `reason` field, which would be ignored by the JSON parser.
+
+- **RLE**:
+
+  Input can also be in RLE format, e.g.
+
+  ```
+  x = 16, y = 16, rule = B3/S23
+  ?o$2bo$2?o!
+  ```
+
+  Unlike the usual RLE format, this variant of RLE has an extra symbol, `?`, which represents unknown cells. Now unknown cells are the background. Dead cells at the end of each line must not be omitted.
+
+  You can just copy and paste the printed searched result or partial result.
+
+  If the known cells are not all on the first generations, you can input multiple RLE strings, separated by newlines, each representing one generation. Each RLE strings must be ended with `!`.
+
+  Input in RLE format would be automatically converted to JSON format.
 
 ### Choice of state for unknown cells
 
