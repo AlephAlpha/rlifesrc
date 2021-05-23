@@ -225,6 +225,9 @@ impl Agent for Worker {
                     Ok(search) => {
                         debug!("Save file loaded!");
                         self.reset_world(search);
+                        if let Some(timing) = world_ser.timing {
+                            self.timing = timing;
+                        }
                         self.update_message().with_config().with_world(0).send(id);
                     }
                     Err(error) => {
