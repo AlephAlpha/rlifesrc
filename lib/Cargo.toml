@@ -20,7 +20,7 @@ educe = "0.4.16"
 rand = "0.8.3"
 getrandom = "0.2.3"
 serde = { version = "1.0.126", features = ["derive"], optional = true }
-thiserror = "1.0.24"
+thiserror = "1.0.25"
 
 [features]
 default = ["serde"]
