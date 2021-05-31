@@ -4,7 +4,7 @@ use crate::{
     worker::{Request, Response, UpdateMessage, Worker},
     world::World,
 };
-use build_timestamp::build_time;
+use build_time::build_time_utc;
 use js_sys::Array;
 use log::{debug, error};
 use rlifesrc_lib::{Config, Status};
@@ -23,8 +23,6 @@ use yew::{
     },
     Bridge, Bridged, Component, ComponentLink, Html, ShouldRender,
 };
-
-build_time!("%Y-%m-%d %H:%M:%S UTC");
 
 #[wasm_bindgen]
 extern "C" {
@@ -297,7 +295,7 @@ impl App {
                 </div>
                 <div class="mui--text-caption mui--text-center">
                     <a href="https://github.com/AlephAlpha/rlifesrc/blob/master/CHANGELOG.md">
-                        { format!("Last updated at {}", BUILD_TIME) }
+                        { format!("Last updated at {}", build_time_utc!()) }
                     </a>
                 </div>
             </footer>

@@ -13,12 +13,12 @@ keywords = ["game-of-life", "cellular-automata"]
 [dependencies]
 auto_enums = "0.7.12"
 bitflags = "1.2.1"
-ca-formats = { version = "0.3.1", features = ["unknown"], optional = true }
+ca-formats = { version = "0.3.2", features = ["unknown"], optional = true }
 ca-rules = "0.3.2"
 displaydoc = "0.2.1"
 educe = "0.4.16"
-rand = "0.8.3"
 getrandom = "0.2.3"
+rand = "0.8.3"
 serde = { version = "1.0.126", features = ["derive"], optional = true }
 thiserror = "1.0.25"
 
