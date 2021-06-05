@@ -60,9 +60,6 @@ pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
     /// * the first row plus the first column, when the search order is diagonal.
     pub(crate) non_empty_front: bool,
 
-    /// All cells in the front.
-    pub(crate) front: Vec<CellRef<'a, R>>,
-
     /// Other data used by the algorithm.
     pub(crate) algo_data: A,
 }
@@ -74,7 +71,7 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
 
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
         let mut cells = Vec::with_capacity(size);
-        let front = Vec::with_capacity((config.width + config.height) as usize);
+        let algo_data = A::new();
 
         let is_front = config.is_front_fn(rule.has_b0(), &search_order);
 
@@ -111,8 +108,6 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
             }
         }
 
-        let algo_data = A::new();
-
         World {
             config: config.clone(),
             rule,
@@ -124,7 +119,6 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
             check_index: 0,
             next_unknown: None,
             non_empty_front: is_front.is_some(),
-            front,
             algo_data,
         }
         .init_front()

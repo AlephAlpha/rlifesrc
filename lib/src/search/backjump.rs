@@ -28,11 +28,20 @@ pub struct Backjump<'a, R: Rule> {
     /// The global decision level for assigning the cell state.
     pub(crate) level: u32,
 
+    /// All cells in the front.
+    pub(crate) front: Vec<CellRef<'a, R>>,
+
     /// A learnt clause.
     pub(crate) learnt: Vec<CellRef<'a, R>>,
 }
 
 impl<'a, R: Rule> Sealed for Backjump<'a, R> {}
+
+impl<'a, R: Rule<IsGen = False> + 'a> Default for Backjump<'a, R> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
     type Reason = Reason<'a, R>;
@@ -42,6 +51,7 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
     fn new() -> Self {
         Self {
             level: 0,
+            front: Vec::new(),
             learnt: Vec::new(),
         }
     }
@@ -58,6 +68,10 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
 
     #[inline]
     fn init_front(mut world: World<'a, R, Self>) -> World<'a, R, Self> {
+        world
+            .algo_data
+            .front
+            .reserve((world.config.width + world.config.height) as usize);
         for x in -1..=world.config.width {
             for y in -1..=world.config.height {
                 if let Some(d) = world.config.diagonal_width {
@@ -68,13 +82,13 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
                 for t in 0..world.config.period {
                     if let Some(cell) = world.find_cell((x, y, t)) {
                         if cell.is_front {
-                            world.front.push(cell);
+                            world.algo_data.front.push(cell);
                         }
                     }
                 }
             }
         }
-        world.front.shrink_to_fit();
+        world.algo_data.front.shrink_to_fit();
         world
     }
 
@@ -262,7 +276,10 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
                 self.algo_data.learnt.push(cell);
                 self.algo_data.learnt.push(sym);
             }
-            ConflReason::Front => self.algo_data.learnt.extend_from_slice(&self.front),
+            ConflReason::Front => self
+                .algo_data
+                .learnt
+                .extend_from_slice(&self.algo_data.front),
             ConflReason::Deduce => unreachable!(),
         }
     }
