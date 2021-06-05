@@ -4,7 +4,7 @@ use crate::{
     cells::{CellRef, State, ALIVE, DEAD},
     error::Error,
     rules::{private::Sealed, Rule},
-    search::Reason,
+    search::{Algorithm, Reason},
     world::World,
 };
 use bitflags::bitflags;
@@ -304,10 +304,10 @@ impl Rule for Life {
         cell.desc.set(desc);
     }
 
-    fn consistify<'a, RE: Reason<'a, Self>>(
-        world: &mut World<'a, Self, RE>,
+    fn consistify<'a, A: Algorithm<'a, Self>>(
+        world: &mut World<'a, Self, A>,
         cell: CellRef<'a, Self>,
-    ) -> Result<(), RE::ConflReason> {
+    ) -> Result<(), A::ConflReason> {
         let flags = world.rule.impl_table[cell.desc.get().0 as usize];
 
         if flags.is_empty() {
@@ -315,7 +315,7 @@ impl Rule for Life {
         }
 
         if flags.contains(ImplFlags::CONFLICT) {
-            return Err(RE::confl_from_cell(cell));
+            return Err(A::confl_from_cell(cell));
         }
 
         if flags.intersects(ImplFlags::SUCC) {
@@ -325,7 +325,7 @@ impl Rule for Life {
                 ALIVE
             };
             let succ = cell.succ.unwrap();
-            return world.set_cell(succ, state, RE::from_cell(cell));
+            return world.set_cell(succ, state, A::Reason::from_cell(cell));
         }
 
         if flags.intersects(ImplFlags::SELF) {
@@ -334,7 +334,7 @@ impl Rule for Life {
             } else {
                 ALIVE
             };
-            world.set_cell(cell, state, RE::from_cell(cell))?;
+            world.set_cell(cell, state, A::Reason::from_cell(cell))?;
         }
 
         if flags.intersects(ImplFlags::NBHD) {
@@ -347,7 +347,7 @@ impl Rule for Life {
                 for &neigh in cell.nbhd.iter() {
                     if let Some(neigh) = neigh {
                         if neigh.state.get().is_none() {
-                            world.set_cell(neigh, state, RE::from_cell(cell))?;
+                            world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
                         }
                     }
                 }
@@ -482,10 +482,10 @@ impl Rule for LifeGen {
         cell.desc.set(desc);
     }
 
-    fn consistify<'a, RE: Reason<'a, Self>>(
-        world: &mut World<'a, Self, RE>,
+    fn consistify<'a, A: Algorithm<'a, Self>>(
+        world: &mut World<'a, Self, A>,
         cell: CellRef<'a, Self>,
-    ) -> Result<(), RE::ConflReason> {
+    ) -> Result<(), A::ConflReason> {
         let desc = cell.desc.get();
         let flags = world.rule.impl_table[desc.0 as usize];
         let gen = world.rule.gen;
@@ -494,7 +494,7 @@ impl Rule for LifeGen {
             Some(DEAD) => {
                 if let Some(State(j)) = desc.1 {
                     if j >= 2 {
-                        return Err(RE::confl_from_cell(cell));
+                        return Err(A::confl_from_cell(cell));
                     }
                 }
 
@@ -505,13 +505,13 @@ impl Rule for LifeGen {
                         ALIVE
                     };
                     let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, state, RE::from_cell(cell));
+                    return world.set_cell(succ, state, A::Reason::from_cell(cell));
                 }
             }
             Some(ALIVE) => {
                 if let Some(State(j)) = desc.1 {
                     if j == 0 || j > 2 {
-                        return Err(RE::confl_from_cell(cell));
+                        return Err(A::confl_from_cell(cell));
                     }
                 }
 
@@ -522,7 +522,7 @@ impl Rule for LifeGen {
                         ALIVE
                     };
                     let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, state, RE::from_cell(cell));
+                    return world.set_cell(succ, state, A::Reason::from_cell(cell));
                 }
             }
             Some(State(i)) => {
@@ -530,17 +530,17 @@ impl Rule for LifeGen {
                     if j == (i + 1) % gen {
                         return Ok(());
                     } else {
-                        return Err(RE::confl_from_cell(cell));
+                        return Err(A::confl_from_cell(cell));
                     }
                 } else {
                     let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, State((i + 1) % gen), RE::from_cell(cell));
+                    return world.set_cell(succ, State((i + 1) % gen), A::Reason::from_cell(cell));
                 }
             }
             None => match desc.1 {
                 Some(DEAD) => {
                     if flags.contains(ImplFlags::SELF_ALIVE) {
-                        return world.set_cell(cell, State(gen - 1), RE::from_cell(cell));
+                        return world.set_cell(cell, State(gen - 1), A::Reason::from_cell(cell));
                     } else {
                         return Ok(());
                     }
@@ -552,11 +552,11 @@ impl Rule for LifeGen {
                         } else {
                             ALIVE
                         };
-                        world.set_cell(cell, state, RE::from_cell(cell))?;
+                        world.set_cell(cell, state, A::Reason::from_cell(cell))?;
                     }
                 }
                 Some(State(j)) => {
-                    return world.set_cell(cell, State(j - 1), RE::from_cell(cell));
+                    return world.set_cell(cell, State(j - 1), A::Reason::from_cell(cell));
                 }
                 None => return Ok(()),
             },
@@ -567,14 +567,14 @@ impl Rule for LifeGen {
         }
 
         if flags.contains(ImplFlags::CONFLICT) {
-            return Err(RE::confl_from_cell(cell));
+            return Err(A::confl_from_cell(cell));
         }
 
         if flags.intersects(ImplFlags::NBHD_ALIVE) {
             for &neigh in cell.nbhd.iter() {
                 if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
-                        world.set_cell(neigh, ALIVE, RE::from_cell(cell))?;
+                        world.set_cell(neigh, ALIVE, A::Reason::from_cell(cell))?;
                     }
                 }
             }

@@ -4,12 +4,12 @@ use crate::{
     cells::{CellRef, Coord, LifeCell, State, DEAD},
     config::{Config, KnownCell, SearchOrder},
     rules::Rule,
-    search::{Reason, ReasonBackjump, ReasonNoBackjump, SetCell},
+    search::{Algorithm, Backjump, LifeSrc, Reason, SetCell},
 };
 use std::{mem, ptr};
 
 /// The world.
-pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
+pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
     /// World configuration.
     pub(crate) config: Config,
 
@@ -39,7 +39,7 @@ pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     /// The cells in this stack always have known states.
     ///
     /// It is used in the backtracking.
-    pub(crate) set_stack: Vec<SetCell<'a, R, RE>>,
+    pub(crate) set_stack: Vec<SetCell<'a, R, A>>,
 
     /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
     ///
@@ -59,25 +59,16 @@ pub struct World<'a, R: Rule, RE: Reason<'a, R>> {
     /// * the first row plus the first column, when the search order is diagonal.
     pub(crate) non_empty_front: bool,
 
-    /// The global decision level for assigning the cell state.
-    ///
-    /// Only used when backjumping is enabled.
-    pub(crate) level: u32,
-
     /// All cells in the front.
-    ///
-    /// Only used when backjumping is enabled.
     pub(crate) front: Vec<CellRef<'a, R>>,
 
-    /// A learnt clause.
-    ///
-    /// Only used when backjumping is enabled.
-    pub(crate) learnt: Vec<CellRef<'a, R>>,
+    /// Other data used by the algorithm.
+    pub(crate) algo_data: A,
 }
 
-impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
+impl<'a, R: Rule> World<'a, R, LifeSrc> {
     /// Creates a new world from the configuration and the rule.
-    pub fn new_with_rule<RE: Reason<'a, R>>(config: &Config, rule: R) -> World<'a, R, RE> {
+    pub fn new_with_rule<A: Algorithm<'a, R>>(config: &Config, rule: R) -> World<'a, R, A> {
         let search_order = config.auto_search_order();
 
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
@@ -119,6 +110,8 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
             }
         }
 
+        let algo_data = A::new();
+
         World {
             config: config.clone(),
             rule,
@@ -130,9 +123,8 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
             check_index: 0,
             next_unknown: None,
             non_empty_front: is_front.is_some(),
-            level: 0,
             front,
-            learnt: Vec::new(),
+            algo_data,
         }
         .init_front()
         .init_border()
@@ -150,16 +142,16 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
     }
 }
 
-impl<'a, R: Rule> World<'a, R, ReasonBackjump<'a, R>> {
+impl<'a, R: Rule> World<'a, R, Backjump<'a, R>> {
     pub fn new_backjump(config: &Config, rule: R) -> Self {
         World::new_with_rule(config, rule)
     }
 }
 
-impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
+impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     /// Initialize the list of cells in the front.
     fn init_front(self) -> Self {
-        RE::init_front(self)
+        A::init_front(self)
     }
 
     /// Initialize the cells at the borders.
@@ -172,7 +164,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                         if abs == d || abs == d + 1 {
                             for t in 0..self.config.period {
                                 let cell = self.find_cell((x, y, t)).unwrap();
-                                self.set_stack.push(SetCell::new(cell, RE::KNOWN));
+                                self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
                             }
                         }
                         continue;
@@ -181,7 +173,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                 for t in 0..self.config.period {
                     if x == -1 || x == self.config.width || y == -1 || y == self.config.height {
                         let cell = self.find_cell((x, y, t)).unwrap();
-                        self.set_stack.push(SetCell::new(cell, RE::KNOWN));
+                        self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
                     }
                 }
             }
@@ -264,7 +256,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                                 || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
-                            self.set_stack.push(SetCell::new(cell, RE::KNOWN));
+                            self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
                         }
                     }
 
@@ -323,7 +315,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                                 || (x - y).abs() < self.config.diagonal_width.unwrap())
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
-                            self.set_stack.push(SetCell::new(cell, RE::KNOWN));
+                            self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
                         }
                     }
                 }
@@ -361,7 +353,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         for &KnownCell { coord, state } in known_cells.iter() {
             if let Some(cell) = self.find_cell(coord) {
                 if cell.state.get().is_none() && state.0 < self.rule.gen() {
-                    let _ = self.set_cell(cell, state, RE::KNOWN);
+                    let _ = self.set_cell(cell, state, A::Reason::KNOWN);
                 }
             }
         }
@@ -437,9 +429,9 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         &mut self,
         cell: CellRef<'a, R>,
         state: State,
-        reason: RE,
-    ) -> Result<(), RE::ConflReason> {
-        reason.set_cell(self, cell, state)
+        reason: A::Reason,
+    ) -> Result<(), A::ConflReason> {
+        A::set_cell(self, cell, state, reason)
     }
 
     /// Clears the [`state`](LifeCell#structfield.state) of a cell,

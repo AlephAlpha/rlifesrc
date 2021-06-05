@@ -9,10 +9,10 @@ use crate::{
 use rand::{thread_rng, Rng};
 
 mod backjump;
-mod no_backjump;
+mod lifesrc;
 
-pub use backjump::ReasonBackjump;
-pub use no_backjump::ReasonNoBackjump;
+pub use backjump::Backjump;
+pub use lifesrc::LifeSrc;
 
 #[cfg(feature = "serde")]
 use crate::{
@@ -36,33 +36,24 @@ pub enum Status {
     Searching,
 }
 
-/// Reasons for setting a cell.
+/// The search algorithms.
 ///
-/// Different choices of reason set will result in
-/// different choices of algorithm.
+/// Currently only two algorithms are supported:
 ///
-/// Some details of this trait is hidden in the doc.
-/// Please use the following structs instead of implementing by yourself:
-/// - [`ReasonBackjump`]
-/// - [`ReasonNoBackjump`]
-pub trait Reason<'a, R: Rule>: private::Sealed {
-    /// Reasons for a conflict.
+/// - [`LifeSrc`]: The default algorithm based on David Bell's
+///   [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch).
+/// - [`Backjump`]: __(Experimental)__ Adding [Backjumping](https://en.wikipedia.org/wiki/Backjumping)
+///   to the original lifesrc algorithm. Very slow. Do not use it.
+pub trait Algorithm<'a, R: Rule>: private::Sealed {
+    /// Reasons for setting a cell.
+    type Reason: Reason<'a, R>;
+
+    /// Reasons for a conflict. Ignored in [`LifeSrc`] algorithm.
+    #[doc(hidden)]
     type ConflReason;
 
-    /// Known before the search starts,
-    const KNOWN: Self;
-
-    /// Decides the state of a cell by choice.
-    const DECIDED: Self;
-
-    /// Deduced from the rule when constitifying another cell.
-    fn from_cell(cell: CellRef<'a, R>) -> Self;
-
-    /// Deduced from symmetry.
-    fn from_sym(cell: CellRef<'a, R>) -> Self;
-
-    /// Decided or trying another state for generations rules.
-    fn is_decided(&self) -> bool;
+    /// Generate new algorithm data.
+    fn new() -> Self;
 
     /// Conflict when constitifying a cell.
     #[doc(hidden)]
@@ -83,10 +74,10 @@ pub trait Reason<'a, R: Rule>: private::Sealed {
     /// The original state of the cell must be unknown.
     #[doc(hidden)]
     fn set_cell(
-        self,
         world: &mut World<'a, R, Self>,
         cell: CellRef<'a, R>,
         state: State,
+        reason: Self::Reason,
     ) -> Result<(), Self::ConflReason>;
 
     /// Keeps proceeding and backtracking,
@@ -108,12 +99,38 @@ pub trait Reason<'a, R: Rule>: private::Sealed {
     fn retreat(world: &mut World<'a, R, Self>) -> bool;
 
     #[cfg(feature = "serde")]
-    /// Saves the reason as a [`ReasonSer`].
-    fn ser(&self) -> ReasonSer;
+    /// Restore the reason from a [`ReasonSer`].
+    fn deser_reason(world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error>;
+}
+
+/// Reasons for setting a cell.
+///
+/// Different choices of reason set will result in
+/// different choices of algorithm.
+///
+/// Some details of this trait is hidden in the doc.
+/// Please use the following structs instead of implementing by yourself:
+/// - [`ReasonBackjump`]
+/// - [`ReasonNoBackjump`]
+pub trait Reason<'a, R: Rule> {
+    /// Known before the search starts,
+    const KNOWN: Self;
+
+    /// Decides the state of a cell by choice.
+    const DECIDED: Self;
+
+    /// Deduced from the rule when constitifying another cell.
+    fn from_cell(cell: CellRef<'a, R>) -> Self;
+
+    /// Deduced from symmetry.
+    fn from_sym(cell: CellRef<'a, R>) -> Self;
+
+    /// Decided or trying another state for generations rules.
+    fn is_decided(&self) -> bool;
 
     #[cfg(feature = "serde")]
-    /// Restore the reason from a [`ReasonSer`].
-    fn deser(ser: &ReasonSer, world: &World<'a, R, Self>) -> Result<Self, Error>;
+    /// Saves the reason as a [`ReasonSer`].
+    fn ser(&self) -> ReasonSer;
 }
 
 mod private {
@@ -122,17 +139,17 @@ mod private {
 
 /// Records the cells whose values are set and their reasons.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SetCell<'a, R: Rule, RE: Reason<'a, R>> {
+pub struct SetCell<'a, R: Rule, A: Algorithm<'a, R>> {
     /// The set cell.
     pub(crate) cell: CellRef<'a, R>,
 
     /// The reason for setting a cell.
-    pub(crate) reason: RE,
+    pub(crate) reason: A::Reason,
 }
 
-impl<'a, R: Rule, RE: Reason<'a, R>> SetCell<'a, R, RE> {
+impl<'a, R: Rule, A: Algorithm<'a, R>> SetCell<'a, R, A> {
     /// Get a reference to the set cell.
-    pub(crate) fn new(cell: CellRef<'a, R>, reason: RE) -> Self {
+    pub(crate) fn new(cell: CellRef<'a, R>, reason: A::Reason) -> Self {
         SetCell { cell, reason }
     }
 
@@ -147,7 +164,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> SetCell<'a, R, RE> {
     }
 }
 
-impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
+impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     /// Consistifies a cell.
     ///
     /// Examines the state and the neighborhood descriptor of the cell,
@@ -156,14 +173,14 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
     /// cells involved.
     ///
     /// If there is a conflict, returns its reason.
-    fn consistify(&mut self, cell: CellRef<'a, R>) -> Result<(), RE::ConflReason> {
+    fn consistify(&mut self, cell: CellRef<'a, R>) -> Result<(), A::ConflReason> {
         Rule::consistify(self, cell)
     }
 
     /// Consistifies a cell, its neighbors, and its predecessor.
     ///
     /// If there is a conflict, returns its reason.
-    fn consistify10(&mut self, cell: CellRef<'a, R>) -> Result<(), RE::ConflReason> {
+    fn consistify10(&mut self, cell: CellRef<'a, R>) -> Result<(), A::ConflReason> {
         self.consistify(cell)?;
 
         if let Some(pred) = cell.pred {
@@ -180,7 +197,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
     /// Deduces all the consequences by [`consistify`](Self::consistify) and symmetry.
     ///
     /// If there is a conflict, returns its reason.
-    pub(crate) fn proceed(&mut self) -> Result<(), RE::ConflReason> {
+    pub(crate) fn proceed(&mut self) -> Result<(), A::ConflReason> {
         while self.check_index < self.set_stack.len() as u32 {
             let cell = self.set_stack[self.check_index as usize].cell;
             let state = cell.state.get().unwrap();
@@ -189,10 +206,10 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
             for &sym in cell.sym.iter() {
                 if let Some(old_state) = sym.state.get() {
                     if state != old_state {
-                        return Err(RE::confl_from_sym(cell, sym));
+                        return Err(A::confl_from_sym(cell, sym));
                     }
                 } else {
-                    self.set_cell(sym, state, RE::from_sym(cell))?;
+                    self.set_cell(sym, state, A::Reason::from_sym(cell))?;
                 }
             }
 
@@ -210,7 +227,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
     pub(crate) fn retreat(&mut self) -> bool {
-        RE::retreat(self)
+        A::retreat(self)
     }
 
     /// Makes a decision.
@@ -228,7 +245,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
                 NewState::ChooseAlive => !cell.background,
                 NewState::Random => State(thread_rng().gen_range(0..self.rule.gen())),
             };
-            Some(self.set_cell(cell, state, RE::DECIDED).is_ok())
+            Some(self.set_cell(cell, state, A::Reason::DECIDED).is_ok())
         } else {
             None
         }
@@ -261,7 +278,7 @@ impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
         if self.next_unknown.is_none() && !self.retreat() {
             return Status::None;
         }
-        while RE::go(self, &mut step_count) {
+        while A::go(self, &mut step_count) {
             if let Some(result) = self.decide() {
                 if !result && !self.retreat() {
                     return Status::None;

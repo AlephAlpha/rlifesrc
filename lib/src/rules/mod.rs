@@ -8,7 +8,7 @@ mod ntlife;
 
 use crate::{
     cells::{CellRef, State},
-    search::Reason,
+    search::Algorithm,
     world::World,
 };
 pub use life::{Life, LifeGen};
@@ -76,10 +76,10 @@ pub trait Rule: private::Sealed {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     #[doc(hidden)]
-    fn consistify<'a, RE: Reason<'a, Self>>(
-        world: &mut World<'a, Self, RE>,
+    fn consistify<'a, A: Algorithm<'a, Self>>(
+        world: &mut World<'a, Self, A>,
         cell: CellRef<'a, Self>,
-    ) -> Result<(), RE::ConflReason>;
+    ) -> Result<(), A::ConflReason>;
 }
 
 mod private {

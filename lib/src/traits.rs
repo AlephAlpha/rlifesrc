@@ -3,7 +3,7 @@ use crate::{
     cells::{Coord, State, ALIVE, DEAD},
     config::Config,
     rules::Rule,
-    search::{Reason, Status},
+    search::{Algorithm, Status},
     world::World,
 };
 use std::fmt::Write;
@@ -137,7 +137,7 @@ pub trait Search {
 }
 
 /// The [`Search`] trait is implemented for every [`World`].
-impl<'a, R: Rule, RE: Reason<'a, R>> Search for World<'a, R, RE> {
+impl<'a, R: Rule, A: Algorithm<'a, R>> Search for World<'a, R, A> {
     #[inline]
     fn search(&mut self, max_step: Option<u64>) -> Status {
         self.search(max_step)

@@ -4,12 +4,17 @@
 
 ### Lib
 
+For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
+
 - Disabled backjumping when `max_cell_count` is specified.
 - Remove `Status::Paused`. Now pausing is handled by `tui` and `web` instead of the `lib`.
 - Traits `Rule` and `Reason` are now [sealed](https://rust-lang.github.io/api-guidelines/future-proofing.html).
 - Add a `timing` field in the save file.
+- Add an `Algorithm` trait, but no new algorithm is added.
 
 ### Web
+
+The web version on GitHub.io is always the newest unreleased version on the master branch.
 
 - Show timing.
 - Now you can find all results without pause.

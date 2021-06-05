@@ -6,7 +6,7 @@ use crate::{
     config::Config,
     error::Error,
     rules::Rule,
-    search::Reason,
+    search::Algorithm,
     traits::Search,
     world::World,
 };
@@ -86,9 +86,9 @@ pub struct WorldSer {
 
 impl WorldSer {
     /// Restores the world from the [`WorldSer`].
-    pub fn deser<'a, R: Rule, RE: Reason<'a, R>>(
+    pub fn deser<'a, R: Rule, A: Algorithm<'a, R>>(
         &self,
-        world: &mut World<'a, R, RE>,
+        world: &mut World<'a, R, A>,
     ) -> Result<(), Error> {
         for &SetCellSer {
             coord,
@@ -104,7 +104,7 @@ impl WorldSer {
             } else if state.0 >= world.rule.gen() {
                 return Err(Error::InvalidState(coord, state));
             } else {
-                let reason = RE::deser(reason, world)?;
+                let reason = A::deser_reason(world, reason)?;
                 let _ = world.set_cell(cell, state, reason);
             }
         }
@@ -123,7 +123,7 @@ impl WorldSer {
     }
 }
 
-impl<'a, R: Rule, RE: Reason<'a, R>> World<'a, R, RE> {
+impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     /// Saves the world as a [`WorldSer`].
     pub fn ser(&self) -> WorldSer {
         WorldSer {

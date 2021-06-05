@@ -2,7 +2,7 @@
 use crate::{
     cells::{CellRef, State},
     rules::Rule,
-    search::{private::Sealed, Reason, SetCell},
+    search::{private::Sealed, Algorithm, Reason as TraitReason, SetCell},
     world::World,
 };
 
@@ -12,9 +12,68 @@ use crate::{error::Error, save::ReasonSer};
 #[cfg(doc)]
 use crate::cells::LifeCell;
 
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+/// The default algorithm based on David Bell's
+/// [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch).
+pub struct LifeSrc;
+
+impl Sealed for LifeSrc {}
+
+impl<'a, R: Rule + 'a> Algorithm<'a, R> for LifeSrc {
+    type Reason = Reason;
+
+    type ConflReason = ();
+
+    fn new() -> Self {
+        Self
+    }
+
+    #[inline]
+    fn confl_from_cell(_cell: CellRef<'a, R>) -> Self::ConflReason {}
+
+    #[inline]
+    fn confl_from_sym(_cell: CellRef<'a, R>, _sym: CellRef<'a, R>) -> Self::ConflReason {}
+
+    #[inline]
+    fn init_front(world: World<'a, R, Self>) -> World<'a, R, Self> {
+        world
+    }
+
+    #[inline]
+    fn set_cell(
+        world: &mut World<'a, R, Self>,
+        cell: CellRef<'a, R>,
+        state: State,
+        reason: Self::Reason,
+    ) -> Result<(), Self::ConflReason> {
+        world.set_cell_impl(cell, state, reason)
+    }
+
+    #[inline]
+    fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool {
+        world.go(step)
+    }
+
+    #[inline]
+    fn retreat(world: &mut World<'a, R, Self>) -> bool {
+        world.retreat_impl()
+    }
+
+    #[cfg(feature = "serde")]
+    #[inline]
+    fn deser_reason(_world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
+        Ok(match *ser {
+            ReasonSer::Known => Reason::Known,
+            ReasonSer::Decide => Reason::Decide,
+            ReasonSer::TryAnother(n) => Reason::TryAnother(n),
+            _ => Reason::Deduce,
+        })
+    }
+}
+
 /// Reasons for setting a cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum ReasonNoBackjump {
+pub enum Reason {
     /// Known before the search starts,
     Known,
 
@@ -33,10 +92,7 @@ pub enum ReasonNoBackjump {
     TryAnother(usize),
 }
 
-impl Sealed for ReasonNoBackjump {}
-
-impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
-    type ConflReason = ();
+impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason {
     const KNOWN: Self = Self::Known;
     const DECIDED: Self = Self::Decide;
 
@@ -55,38 +111,8 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
         matches!(self, Self::Decide | Self::TryAnother(_))
     }
 
-    #[inline]
-    fn confl_from_cell(_cell: CellRef<'a, R>) -> Self::ConflReason {}
-
-    #[inline]
-    fn confl_from_sym(_cell: CellRef<'a, R>, _sym: CellRef<'a, R>) -> Self::ConflReason {}
-
-    #[inline]
-    fn init_front(world: World<'a, R, Self>) -> World<'a, R, Self> {
-        world
-    }
-
-    #[inline]
-    fn set_cell(
-        self,
-        world: &mut World<'a, R, Self>,
-        cell: CellRef<'a, R>,
-        state: State,
-    ) -> Result<(), Self::ConflReason> {
-        world.set_cell_impl(cell, state, self)
-    }
-
-    #[inline]
-    fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool {
-        world.go(step)
-    }
-
-    #[inline]
-    fn retreat(world: &mut World<'a, R, Self>) -> bool {
-        world.retreat_impl()
-    }
-
     #[cfg(feature = "serde")]
+    #[inline]
     fn ser(&self) -> ReasonSer {
         match self {
             Self::Known => ReasonSer::Known,
@@ -95,19 +121,9 @@ impl<'a, R: Rule + 'a> Reason<'a, R> for ReasonNoBackjump {
             Self::TryAnother(n) => ReasonSer::TryAnother(*n),
         }
     }
-
-    #[cfg(feature = "serde")]
-    fn deser(ser: &ReasonSer, _world: &World<'a, R, Self>) -> Result<Self, Error> {
-        Ok(match *ser {
-            ReasonSer::Known => Self::Known,
-            ReasonSer::Decide => Self::Decide,
-            ReasonSer::TryAnother(n) => Self::TryAnother(n),
-            _ => Self::Deduce,
-        })
-    }
 }
 
-impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
+impl<'a, R: Rule> World<'a, R, LifeSrc> {
     /// Sets the [`state`](LifeCell#structfield.state) of a cell,
     /// push it to the [`set_stack`](#structfield.set_stack),
     /// and update the neighborhood descriptor of its neighbors.
@@ -120,7 +136,7 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
         &mut self,
         cell: CellRef<'a, R>,
         state: State,
-        reason: ReasonNoBackjump,
+        reason: Reason,
     ) -> Result<(), ()> {
         cell.state.set(Some(state));
         let mut result = Ok(());
@@ -151,15 +167,15 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
     fn retreat_impl(&mut self) -> bool {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
-                ReasonNoBackjump::Decide => {
+                Reason::Decide => {
                     let (state, reason) = if R::IS_GEN {
                         let State(j) = cell.state.get().unwrap();
                         (
                             State((j + 1) % self.rule.gen()),
-                            ReasonNoBackjump::TryAnother(self.rule.gen() - 2),
+                            Reason::TryAnother(self.rule.gen() - 2),
                         )
                     } else {
-                        (!cell.state.get().unwrap(), ReasonNoBackjump::Deduce)
+                        (!cell.state.get().unwrap(), Reason::Deduce)
                     };
 
                     self.check_index = self.set_stack.len() as u32;
@@ -169,13 +185,13 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
                         return true;
                     }
                 }
-                ReasonNoBackjump::TryAnother(n) => {
+                Reason::TryAnother(n) => {
                     let State(j) = cell.state.get().unwrap();
                     let state = State((j + 1) % self.rule.gen());
                     let reason = if n == 1 {
-                        ReasonNoBackjump::Deduce
+                        Reason::Deduce
                     } else {
-                        ReasonNoBackjump::TryAnother(n - 1)
+                        Reason::TryAnother(n - 1)
                     };
 
                     self.check_index = self.set_stack.len() as u32;
@@ -185,10 +201,10 @@ impl<'a, R: Rule> World<'a, R, ReasonNoBackjump> {
                         return true;
                     }
                 }
-                ReasonNoBackjump::Known => {
+                Reason::Known => {
                     break;
                 }
-                ReasonNoBackjump::Deduce => {
+                Reason::Deduce => {
                     self.clear_cell(cell);
                 }
             }
