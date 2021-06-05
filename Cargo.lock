@@ -533,9 +533,9 @@ checksum = "acc499defb3b348f8d8f3f66415835a9131856ff7714bf10dadfc4ec4bdb29a1"
 
 [[package]]
 name = "futures-lite"
-version = "1.11.3"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4481d0cd0de1d204a4fa55e7d45f07b1d958abcb06714b3446438e2eff695fb"
+checksum = "7694489acd39452c77daa48516b894c153f192c3578d5a839b62c58099fcbf48"
 dependencies = [
  "fastrand",
  "futures-core",
@@ -744,9 +744,9 @@ dependencies = [
 
 [[package]]
 name = "lazy-regex"
-version = "2.0.2"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ccd39a8bca82b0a9c186d5ae0a73a79cc68ac3ff8dd35712baae188ea3b61d1"
+checksum = "09d48478f4f51f92da5ffccc346cbd837f11d3421b3de3e2e35dcc537a0956b3"
 dependencies = [
  "lazy-regex-proc_macros",
  "once_cell",
@@ -755,9 +755,9 @@ dependencies = [
 
 [[package]]
 name = "lazy-regex-proc_macros"
-version = "2.0.2"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "495df213e9f7f0defedfe0138d038e8ef3dc662facefa0c6ab91e6f4bf34ab13"
+checksum = "47781c19aa24bbf46ea0c07306f89e710dcb2dc38895848bf328ca95fedd188b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1171,9 +1171,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16f1d0fef1604ba8f7a073c7e701f213e056707210e9020af4528e0101ce11a6"
+checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
 dependencies = [
  "libc",
 ]
