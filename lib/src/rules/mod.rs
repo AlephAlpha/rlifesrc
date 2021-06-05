@@ -13,6 +13,7 @@ use crate::{
 };
 pub use life::{Life, LifeGen};
 pub use ntlife::{NtLife, NtLifeGen};
+use typebool::Bool;
 
 #[cfg(doc)]
 use crate::cells::ALIVE;
@@ -36,7 +37,7 @@ pub trait Rule: private::Sealed {
     type Desc: Copy;
 
     /// Whether the rule is a Generations rule.
-    const IS_GEN: bool;
+    type IsGen: Bool;
 
     /// Whether the rule contains `B0`.
     ///

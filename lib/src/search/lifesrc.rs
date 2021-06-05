@@ -5,6 +5,7 @@ use crate::{
     search::{private::Sealed, Algorithm, Reason as TraitReason, SetCell},
     world::World,
 };
+use typebool::Bool;
 
 #[cfg(feature = "serde")]
 #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
@@ -171,7 +172,7 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
                 Reason::Decide => {
-                    let (state, reason) = if R::IS_GEN {
+                    let (state, reason) = if R::IsGen::VALUE {
                         let State(j) = cell.state.get().unwrap();
                         (
                             State((j + 1) % self.rule.gen()),

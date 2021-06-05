@@ -7,6 +7,7 @@ use crate::{
     world::World,
 };
 use std::fmt::Write;
+use typebool::Bool;
 
 #[cfg(feature = "serde")]
 #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
@@ -158,7 +159,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> Search for World<'a, R, A> {
 
     #[inline]
     fn is_gen_rule(&self) -> bool {
-        R::IS_GEN
+        R::IsGen::VALUE
     }
 
     #[inline]

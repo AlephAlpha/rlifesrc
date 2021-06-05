@@ -7,6 +7,7 @@ use crate::{
     search::{Algorithm, Backjump, LifeSrc, Reason, SetCell},
 };
 use std::{mem, ptr};
+use typebool::False;
 
 /// The world.
 pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
@@ -144,7 +145,7 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
     }
 }
 
-impl<'a, R: Rule> World<'a, R, Backjump<'a, R>> {
+impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
     /// Creates a new world from the configuration and the rule,
     /// using the [`Backjump`] algorithm.
     pub fn new_backjump(config: &Config, rule: R) -> Self {

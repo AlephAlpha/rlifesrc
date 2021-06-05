@@ -6,6 +6,7 @@ use crate::{
     world::World,
 };
 use educe::Educe;
+use typebool::{Bool, False};
 
 #[cfg(feature = "serde")]
 #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
@@ -33,7 +34,7 @@ pub struct Backjump<'a, R: Rule> {
 
 impl<'a, R: Rule> Sealed for Backjump<'a, R> {}
 
-impl<'a, R: Rule + 'a> Algorithm<'a, R> for Backjump<'a, R> {
+impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
     type Reason = Reason<'a, R>;
 
     type ConflReason = ConflReason<'a, R>;
@@ -241,7 +242,7 @@ impl<'a, R: Rule> ConflReason<'a, R> {
     }
 }
 
-impl<'a, R: Rule> World<'a, R, Backjump<'a, R>> {
+impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
     /// Store the cells involved in the conflict reason into  [`self.algo_data.learnt`](Backjump::learnt).
     fn learn_from_confl(&mut self, reason: ConflReason<'a, R>) {
         self.algo_data.learnt.clear();
@@ -314,7 +315,7 @@ impl<'a, R: Rule> World<'a, R, Backjump<'a, R>> {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
                 Reason::Decide => {
-                    let (state, reason) = if R::IS_GEN {
+                    let (state, reason) = if R::IsGen::VALUE {
                         let State(j) = cell.state.get().unwrap();
                         (
                             State((j + 1) % self.rule.gen()),

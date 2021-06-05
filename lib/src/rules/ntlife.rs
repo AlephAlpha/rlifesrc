@@ -10,6 +10,7 @@ use crate::{
 use bitflags::bitflags;
 use ca_rules::{ParseNtLife, ParseNtLifeGen};
 use std::str::FromStr;
+use typebool::{False, True};
 
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
@@ -245,7 +246,7 @@ impl Sealed for NtLife {}
 
 impl Rule for NtLife {
     type Desc = NbhdDesc;
-    const IS_GEN: bool = false;
+    type IsGen = False;
 
     #[inline]
     fn has_b0(&self) -> bool {
@@ -433,7 +434,7 @@ impl Sealed for NtLifeGen {}
 /// NOTE: This implementation does work when the number of states is 2.
 impl Rule for NtLifeGen {
     type Desc = NbhdDescGen;
-    const IS_GEN: bool = true;
+    type IsGen = True;
 
     fn has_b0(&self) -> bool {
         self.b0
