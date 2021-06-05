@@ -14,14 +14,17 @@ mod lifesrc;
 pub use backjump::Backjump;
 pub use lifesrc::LifeSrc;
 
+#[cfg(doc)]
+use crate::cells::LifeCell;
+
 #[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use crate::{
     error::Error,
     save::{ReasonSer, SetCellSer},
 };
 #[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// Search status.
@@ -54,22 +57,22 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     type Reason: Reason<'a, R>;
 
     /// Reasons for a conflict. Ignored in [`LifeSrc`] algorithm.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     type ConflReason;
 
     /// Generate new algorithm data.
     fn new() -> Self;
 
     /// Conflict when constitifying a cell.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn confl_from_cell(cell: CellRef<'a, R>) -> Self::ConflReason;
 
     /// Conflict from symmetry.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn confl_from_sym(cell: CellRef<'a, R>, sym: CellRef<'a, R>) -> Self::ConflReason;
 
     /// Conflict when constitifying a cell.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn init_front(world: World<'a, R, Self>) -> World<'a, R, Self>;
 
     /// Sets the [`state`](LifeCell#structfield.state) of a cell,
@@ -77,7 +80,7 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     /// and update the neighborhood descriptor of its neighbors.
     ///
     /// The original state of the cell must be unknown.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn set_cell(
         world: &mut World<'a, R, Self>,
         cell: CellRef<'a, R>,
@@ -92,7 +95,7 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     ///
     /// It also records the number of steps it has walked in the parameter
     /// `step`.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool;
 
     /// Retreats to the last time when a unknown cell is decided by choice,
@@ -100,11 +103,11 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     ///
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn retreat(world: &mut World<'a, R, Self>) -> bool;
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     /// Restore the reason from a [`ReasonSer`].
     fn deser_reason(world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error>;
 }
@@ -127,12 +130,16 @@ pub trait Reason<'a, R: Rule> {
     fn is_decided(&self) -> bool;
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     /// Saves the reason as a [`ReasonSer`].
     fn ser(&self) -> ReasonSer;
 }
 
+/// A helper mod for [sealing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
+/// the [`Algorithm`] trait.
 mod private {
+    /// A helper trait for [sealing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
+    /// the [`Algorithm`](super::Algorithm) trait.
     pub trait Sealed: Sized {}
 }
 
@@ -153,7 +160,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> SetCell<'a, R, A> {
     }
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     /// Saves the [`SetCell`] as a [`SetCellSer`].
     pub(crate) fn ser(&self) -> SetCellSer {
         SetCellSer {

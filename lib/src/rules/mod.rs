@@ -55,7 +55,7 @@ pub trait Rule: private::Sealed {
 
     /// Generates a neighborhood descriptor which says that all neighboring
     /// cells have states `state`, and the successor has state `succ_state`.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn new_desc(state: State, succ_state: State) -> Self::Desc;
 
     /// Updates the neighborhood descriptors of all neighbors and the predecessor
@@ -63,7 +63,7 @@ pub trait Rule: private::Sealed {
     ///
     /// The `state` is the new state of the cell when `new` is true,
     /// the old state when `new` is false.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn update_desc(cell: CellRef<Self>, state: Option<State>, new: bool);
 
     /// Consistifies a cell.
@@ -75,13 +75,17 @@ pub trait Rule: private::Sealed {
     ///
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
-    #[doc(hidden)]
+    #[cfg_attr(not(github_io), doc(hidden))]
     fn consistify<'a, A: Algorithm<'a, Self>>(
         world: &mut World<'a, Self, A>,
         cell: CellRef<'a, Self>,
     ) -> Result<(), A::ConflReason>;
 }
 
+/// A helper mod for [sealing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
+/// the [`Rule`] trait.
 mod private {
+    /// A helper trait for [sealing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
+    /// the [`Rule`](super::Rule) trait.
     pub trait Sealed: Sized {}
 }

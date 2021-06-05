@@ -76,7 +76,7 @@ pub struct Life {
 
 impl Life {
     /// Constructs a new rule from the `b` and `s` data.
-    pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
+    pub fn new(b: &[u8], s: &[u8]) -> Self {
         let b0 = b.contains(&0);
         let s8 = s.contains(&8);
 
@@ -90,7 +90,7 @@ impl Life {
     }
 
     /// Deduces the implication for the successor.
-    fn init_trans(mut self, b: Vec<u8>, s: Vec<u8>) -> Self {
+    fn init_trans(mut self, b: &[u8], s: &[u8]) -> Self {
         // Fills in the positions of the neighborhood descriptors
         // that have no unknown neighbors.
         for alives in 0..=8 {
@@ -222,7 +222,7 @@ impl Life {
 /// A parser for the rule.
 impl ParseLife for Life {
     fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
-        Self::new(b, s)
+        Self::new(&b, &s)
     }
 }
 
@@ -278,7 +278,7 @@ impl Rule for Life {
             Some(_) => 0x10,
             None => 0,
         };
-        for &neigh in cell.nbhd.iter() {
+        for &neigh in &cell.nbhd {
             let neigh = neigh.unwrap();
             let mut desc = neigh.desc.get();
             if new {
@@ -292,7 +292,7 @@ impl Rule for Life {
         let change_num = match state {
             Some(ALIVE) => 0b01,
             Some(_) => 0b10,
-            _ => 0,
+            None => 0,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
@@ -344,7 +344,7 @@ impl Rule for Life {
                 } else {
                     ALIVE
                 };
-                for &neigh in cell.nbhd.iter() {
+                for &neigh in &cell.nbhd {
                     if let Some(neigh) = neigh {
                         if neigh.state.get().is_none() {
                             world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
@@ -380,7 +380,7 @@ pub struct LifeGen {
 impl LifeGen {
     /// Constructs a new rule from the `b` and `s` data
     /// and the number of states.
-    pub fn new(b: Vec<u8>, s: Vec<u8>, gen: usize) -> Self {
+    pub fn new(b: &[u8], s: &[u8], gen: usize) -> Self {
         let life = Life::new(b, s);
         let impl_table = life.impl_table;
         Self {
@@ -404,7 +404,7 @@ impl LifeGen {
 /// A parser for the rule.
 impl ParseLifeGen for LifeGen {
     fn from_bsg(b: Vec<u8>, s: Vec<u8>, gen: usize) -> Self {
-        Self::new(b, s, gen)
+        Self::new(&b, &s, gen)
     }
 }
 
@@ -455,7 +455,7 @@ impl Rule for LifeGen {
                 Some(_) => 0x10,
                 None => 0,
             };
-            for &neigh in cell.nbhd.iter() {
+            for &neigh in &cell.nbhd {
                 let neigh = neigh.unwrap();
                 let mut desc = neigh.desc.get();
                 if new {
@@ -469,7 +469,7 @@ impl Rule for LifeGen {
         let change_num = match state {
             Some(ALIVE) => 0b01,
             Some(_) => 0b10,
-            _ => 0,
+            None => 0,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
@@ -571,7 +571,7 @@ impl Rule for LifeGen {
         }
 
         if flags.intersects(ImplFlags::NBHD_ALIVE) {
-            for &neigh in cell.nbhd.iter() {
+            for &neigh in &cell.nbhd {
                 if let Some(neigh) = neigh {
                     if neigh.state.get().is_none() {
                         world.set_cell(neigh, ALIVE, A::Reason::from_cell(cell))?;

@@ -24,7 +24,7 @@ pub use search_order::SearchOrder;
 #[cfg(doc)]
 use crate::cells::{ALIVE, DEAD};
 #[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// How to choose a state for an unknown cell.
@@ -349,7 +349,7 @@ impl Config {
                 if self.backjump && self.max_cell_count.is_none() {
                     Ok(Box::new(World::new_backjump(&self, $rule)))
                 } else {
-                    Ok(Box::new(World::new_no_backjump(&self, $rule)))
+                    Ok(Box::new(World::new_lifesrc(&self, $rule)))
                 }
             }};
         }
@@ -362,7 +362,7 @@ impl Config {
                             return Err(Error::InvalidState(known_cell.coord, known_cell.state));
                         }
                     }
-                    Ok(Box::new(World::new_no_backjump(&self, $rule)))
+                    Ok(Box::new(World::new_lifesrc(&self, $rule)))
                 } else {
                     new_world!($rule.non_gen())
                 }

@@ -47,7 +47,7 @@ o..o.oo...o..oo.$
 ```
 */
 
-#![cfg_attr(doc_cfg, feature(doc_cfg))]
+#![cfg_attr(any(docs_rs, github_io), feature(doc_cfg))]
 
 mod cells;
 mod config;
@@ -58,7 +58,7 @@ mod traits;
 mod world;
 
 #[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 pub mod save;
 
 pub use cells::{Coord, State, ALIVE, DEAD};

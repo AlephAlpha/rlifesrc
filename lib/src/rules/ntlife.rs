@@ -72,7 +72,7 @@ pub struct NtLife {
 
 impl NtLife {
     /// Constructs a new rule from the `b` and `s` data.
-    pub fn new(b: Vec<u8>, s: Vec<u8>) -> Self {
+    pub fn new(b: &[u8], s: &[u8]) -> Self {
         let b0 = b.contains(&0x00);
         let s8 = s.contains(&0xff);
 
@@ -86,7 +86,7 @@ impl NtLife {
     }
 
     /// Deduces the implication for the successor.
-    fn init_trans(mut self, b: Vec<u8>, s: Vec<u8>) -> Self {
+    fn init_trans(mut self, b: &[u8], s: &[u8]) -> Self {
         // Fills in the positions of the neighborhood descriptors
         // that have no unknown neighbors.
         for alives in 0..=0xff {
@@ -112,7 +112,7 @@ impl NtLife {
         }
 
         // Fills in the other positions.
-        for unknowns in 1usize..=0xff {
+        for unknowns in 1_usize..=0xff {
             // `n` is the largest power of two smaller than `unknowns`.
             let n = unknowns.next_power_of_two() >> usize::from(!unknowns.is_power_of_two());
             for alives in (0..=0xff).filter(|a| a & unknowns == 0) {
@@ -182,7 +182,7 @@ impl NtLife {
 
     ///  Deduces the implication for the neighbors.
     fn init_impl_nbhd(mut self) -> Self {
-        for unknowns in 1usize..=0xff {
+        for unknowns in 1_usize..=0xff {
             // `n` runs through all the non-zero binary digits of `unknowns`.
             for n in (0..8).map(|i| 1 << i).filter(|n| unknowns & n != 0) {
                 for alives in 0..=0xff {
@@ -225,7 +225,7 @@ impl NtLife {
 /// A parser for the rule.
 impl ParseNtLife for NtLife {
     fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
-        Self::new(b, s)
+        Self::new(&b, &s)
     }
 }
 
@@ -283,7 +283,7 @@ impl Rule for NtLife {
         let nbhd_change_num = match state {
             Some(ALIVE) => 0x0001,
             Some(_) => 0x0100,
-            _ => 0x0000,
+            None => 0x0000,
         };
         for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
             let neigh = neigh.unwrap();
@@ -295,7 +295,7 @@ impl Rule for NtLife {
         let change_num = match state {
             Some(ALIVE) => 0b01,
             Some(_) => 0b10,
-            _ => 0,
+            None => 0,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
@@ -388,7 +388,7 @@ pub struct NtLifeGen {
 impl NtLifeGen {
     /// Constructs a new rule from the `b` and `s` data
     /// and the number of states.
-    pub fn new(b: Vec<u8>, s: Vec<u8>, gen: usize) -> Self {
+    pub fn new(b: &[u8], s: &[u8], gen: usize) -> Self {
         let life = NtLife::new(b, s);
         let impl_table = life.impl_table;
         Self {
@@ -412,7 +412,7 @@ impl NtLifeGen {
 /// A parser for the rule.
 impl ParseNtLifeGen for NtLifeGen {
     fn from_bsg(b: Vec<u8>, s: Vec<u8>, gen: usize) -> Self {
-        Self::new(b, s, gen)
+        Self::new(&b, &s, gen)
     }
 }
 
@@ -452,11 +452,11 @@ impl Rule for NtLifeGen {
         NbhdDescGen(desc.0, Some(succ_state))
     }
 
-    fn update_desc(cell: CellRef<Self>, state: Option<State>, _new: bool) {
+    fn update_desc(cell: CellRef<Self>, state: Option<State>, new: bool) {
         let nbhd_change_num = match state {
             Some(ALIVE) => 0x0001,
             Some(_) => 0x0100,
-            _ => 0x0000,
+            None => 0x0000,
         };
         for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
             let neigh = neigh.unwrap();
@@ -468,12 +468,12 @@ impl Rule for NtLifeGen {
         let change_num = match state {
             Some(ALIVE) => 0b01,
             Some(_) => 0b10,
-            _ => 0,
+            None => 0,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
             desc.0 ^= change_num << 2;
-            desc.1 = if _new { state } else { None };
+            desc.1 = if new { state } else { None };
             pred.desc.set(desc);
         }
         let mut desc = cell.desc.get();

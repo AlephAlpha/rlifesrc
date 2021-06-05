@@ -11,7 +11,7 @@ use std::{
 };
 
 #[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// Possible states of a known cell.
@@ -119,11 +119,11 @@ impl<'a, R: Rule> LifeCell<'a, R> {
             background,
             state: Cell::new(Some(background)),
             desc: Cell::new(R::new_desc(background, succ_state)),
-            pred: Default::default(),
-            succ: Default::default(),
-            nbhd: Default::default(),
-            sym: Default::default(),
-            next: Default::default(),
+            pred: None,
+            succ: None,
+            nbhd: [None; 8],
+            sym: Vec::new(),
+            next: None,
             is_front: false,
             level: Cell::new(0),
             seen: Cell::new(false),
@@ -153,6 +153,7 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
 #[derive(Educe)]
 #[educe(Clone, Copy, Eq)]
 pub struct CellRef<'a, R: Rule> {
+    /// The [`LifeCell`] it refers to.
     cell: &'a LifeCell<'a, R>,
 }
 

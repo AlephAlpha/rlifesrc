@@ -8,13 +8,11 @@ use crate::{
 use educe::Educe;
 
 #[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use crate::{error::Error, save::ReasonSer};
 
 #[cfg(doc)]
 use crate::cells::LifeCell;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 
 /// __(Experimental)__ Adding [Backjumping](https://en.wikipedia.org/wiki/Backjumping)
 /// to the original lifesrc algorithm.
@@ -24,6 +22,7 @@ use crate::cells::LifeCell;
 /// only useful for large (e.g., 64x64) still lifes.
 ///
 /// Currently it is only supported for non-Generations rules.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Backjump<'a, R: Rule> {
     /// The global decision level for assigning the cell state.
     pub(crate) level: u32,
@@ -99,7 +98,7 @@ impl<'a, R: Rule + 'a> Algorithm<'a, R> for Backjump<'a, R> {
     }
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     #[inline]
     fn deser_reason(world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
         Ok(match *ser {
@@ -201,7 +200,7 @@ impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason<'a, R> {
     }
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     #[inline]
     fn ser(&self) -> ReasonSer {
         match self {
@@ -243,7 +242,7 @@ impl<'a, R: Rule> ConflReason<'a, R> {
 }
 
 impl<'a, R: Rule> World<'a, R, Backjump<'a, R>> {
-    /// Store the cells involved in the conflict reason into  [`self.algo_data.learnt`](Self::learnt).
+    /// Store the cells involved in the conflict reason into  [`self.algo_data.learnt`](Backjump::learnt).
     fn learn_from_confl(&mut self, reason: ConflReason<'a, R>) {
         self.algo_data.learnt.clear();
         match reason {
@@ -263,7 +262,7 @@ impl<'a, R: Rule> World<'a, R, Backjump<'a, R>> {
                 self.algo_data.learnt.push(sym);
             }
             ConflReason::Front => self.algo_data.learnt.extend_from_slice(&self.front),
-            _ => unreachable!(),
+            ConflReason::Deduce => unreachable!(),
         }
     }
 

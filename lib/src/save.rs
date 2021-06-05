@@ -5,7 +5,7 @@ use crate::{
     config::Config,
     error::Error,
     rules::Rule,
-    search::Algorithm,
+    search::{Algorithm, SetCell},
     traits::Search,
     world::World,
 };
@@ -93,7 +93,7 @@ impl WorldSer {
             coord,
             state,
             ref reason,
-        } in self.set_stack.iter()
+        } in &self.set_stack
         {
             let cell = world.find_cell(coord).ok_or(Error::SetCellError(coord))?;
             if let Some(old_state) = cell.state.get() {
@@ -104,7 +104,7 @@ impl WorldSer {
                 return Err(Error::InvalidState(coord, state));
             } else {
                 let reason = A::deser_reason(world, reason)?;
-                let _ = world.set_cell(cell, state, reason);
+                world.set_cell(cell, state, reason).ok();
             }
         }
         world.conflicts = self.conflicts;
@@ -128,7 +128,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
         WorldSer {
             config: self.config.clone(),
             conflicts: self.conflicts,
-            set_stack: self.set_stack.iter().map(|s| s.ser()).collect(),
+            set_stack: self.set_stack.iter().map(SetCell::ser).collect(),
             check_index: self.check_index,
             timing: None,
         }

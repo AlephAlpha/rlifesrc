@@ -7,15 +7,15 @@ use crate::{
 };
 
 #[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use crate::{error::Error, save::ReasonSer};
 
 #[cfg(doc)]
 use crate::cells::LifeCell;
 
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 /// The default algorithm based on David Bell's
 /// [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch).
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct LifeSrc;
 
 impl Sealed for LifeSrc {}
@@ -61,7 +61,7 @@ impl<'a, R: Rule + 'a> Algorithm<'a, R> for LifeSrc {
     }
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     #[inline]
     fn deser_reason(_world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
         Ok(match *ser {
@@ -114,7 +114,7 @@ impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason {
     }
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     #[inline]
     fn ser(&self) -> ReasonSer {
         match self {

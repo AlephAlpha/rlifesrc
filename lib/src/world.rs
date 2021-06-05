@@ -137,12 +137,16 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
         .presearch()
     }
 
-    pub fn new_no_backjump(config: &Config, rule: R) -> Self {
+    /// Creates a new world from the configuration and the rule,
+    /// using the [`LifeSrc`] algorithm.
+    pub fn new_lifesrc(config: &Config, rule: R) -> Self {
         World::new_with_rule(config, rule)
     }
 }
 
 impl<'a, R: Rule> World<'a, R, Backjump<'a, R>> {
+    /// Creates a new world from the configuration and the rule,
+    /// using the [`Backjump`] algorithm.
     pub fn new_backjump(config: &Config, rule: R) -> Self {
         World::new_with_rule(config, rule)
     }
@@ -186,6 +190,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     /// Note that for cells on the edges of the search range,
     /// some neighbors might point to `None`.
     fn init_nbhd(mut self) -> Self {
+        /// Relative positions of the neighbors.
         const NBHD: [(i32, i32); 8] = [
             (-1, -1),
             (-1, 0),
@@ -353,7 +358,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
         for &KnownCell { coord, state } in known_cells.iter() {
             if let Some(cell) = self.find_cell(coord) {
                 if cell.state.get().is_none() && state.0 < self.rule.gen() {
-                    let _ = self.set_cell(cell, state, A::Reason::KNOWN);
+                    self.set_cell(cell, state, A::Reason::KNOWN).ok();
                 }
             }
         }
