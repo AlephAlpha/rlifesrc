@@ -19,7 +19,10 @@ use crate::cells::ALIVE;
 
 /// A cellular automaton rule.
 ///
-/// Some details of this trait is hidden in the doc.
+#[cfg_attr(
+    not(github_io),
+    doc = "Some details of this trait is hidden in the doc."
+)]
 /// Please use the following structs instead of implementing by yourself:
 /// - [`Life`]
 /// - [`LifeGen`]
