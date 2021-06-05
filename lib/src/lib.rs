@@ -47,6 +47,8 @@ o..o.oo...o..oo.$
 ```
 */
 
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
+
 mod cells;
 mod config;
 mod error;
@@ -56,6 +58,7 @@ mod traits;
 mod world;
 
 #[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 pub mod save;
 
 pub use cells::{Coord, State, ALIVE, DEAD};

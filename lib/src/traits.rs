@@ -9,6 +9,7 @@ use crate::{
 use std::fmt::Write;
 
 #[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 use crate::{error::Error, save::WorldSer};
 
 /// A trait for [`World`].
@@ -58,11 +59,13 @@ pub trait Search {
     fn set_max_cell_count(&mut self, max_cell_count: Option<u32>);
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     /// Saves the world as a [`WorldSer`],
     /// which can be easily serialized.
     fn ser(&self) -> WorldSer;
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     /// Restores the world from the [`WorldSer`].
     fn deser(&mut self, ser: &WorldSer) -> Result<(), Error>;
 
@@ -184,12 +187,14 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> Search for World<'a, R, A> {
     }
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     #[inline]
     fn ser(&self) -> WorldSer {
         self.ser()
     }
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     #[inline]
     fn deser(&mut self, ser: &WorldSer) -> Result<(), Error> {
         ser.deser(self)

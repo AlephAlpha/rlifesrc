@@ -8,6 +8,7 @@ use crate::{
 use educe::Educe;
 
 #[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 use crate::{error::Error, save::ReasonSer};
 
 #[cfg(doc)]
@@ -98,6 +99,7 @@ impl<'a, R: Rule + 'a> Algorithm<'a, R> for Backjump<'a, R> {
     }
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     #[inline]
     fn deser_reason(world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
         Ok(match *ser {
@@ -199,6 +201,7 @@ impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason<'a, R> {
     }
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     #[inline]
     fn ser(&self) -> ReasonSer {
         match self {

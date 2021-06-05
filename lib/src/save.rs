@@ -1,4 +1,3 @@
-#![cfg(feature = "serde")]
 //! Saves the world.
 
 use crate::{

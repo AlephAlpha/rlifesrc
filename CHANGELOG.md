@@ -14,7 +14,7 @@ For the documentation of the unreleased lib, please visit https://alephalpha.git
 
 ### Web
 
-The web version on GitHub.io is always the newest unreleased version on the master branch.
+The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
 
 - Show timing.
 - Now you can find all results without pause.

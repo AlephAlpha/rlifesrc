@@ -15,11 +15,13 @@ pub use backjump::Backjump;
 pub use lifesrc::LifeSrc;
 
 #[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 use crate::{
     error::Error,
     save::{ReasonSer, SetCellSer},
 };
 #[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// Search status.
@@ -44,6 +46,9 @@ pub enum Status {
 ///   [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch).
 /// - [`Backjump`]: __(Experimental)__ Adding [Backjumping](https://en.wikipedia.org/wiki/Backjumping)
 ///   to the original lifesrc algorithm. Very slow. Do not use it.
+///
+/// Some details of this trait is hidden in the doc.
+/// Please use the above structs instead of implementing by yourself.
 pub trait Algorithm<'a, R: Rule>: private::Sealed {
     /// Reasons for setting a cell.
     type Reason: Reason<'a, R>;
@@ -99,19 +104,12 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     fn retreat(world: &mut World<'a, R, Self>) -> bool;
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     /// Restore the reason from a [`ReasonSer`].
     fn deser_reason(world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error>;
 }
 
 /// Reasons for setting a cell.
-///
-/// Different choices of reason set will result in
-/// different choices of algorithm.
-///
-/// Some details of this trait is hidden in the doc.
-/// Please use the following structs instead of implementing by yourself:
-/// - [`ReasonBackjump`]
-/// - [`ReasonNoBackjump`]
 pub trait Reason<'a, R: Rule> {
     /// Known before the search starts,
     const KNOWN: Self;
@@ -129,6 +127,7 @@ pub trait Reason<'a, R: Rule> {
     fn is_decided(&self) -> bool;
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     /// Saves the reason as a [`ReasonSer`].
     fn ser(&self) -> ReasonSer;
 }
@@ -154,6 +153,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> SetCell<'a, R, A> {
     }
 
     #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     /// Saves the [`SetCell`] as a [`SetCellSer`].
     pub(crate) fn ser(&self) -> SetCellSer {
         SetCellSer {

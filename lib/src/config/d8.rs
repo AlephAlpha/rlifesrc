@@ -17,6 +17,7 @@ use std::{
 };
 
 #[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// Transformations (rotations and reflections) after the last generation
