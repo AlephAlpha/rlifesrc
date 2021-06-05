@@ -10,6 +10,7 @@ use crate::{
 use educe::Educe;
 
 #[cfg(feature = "read-rle")]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "read-rle")))]
 use ca_formats::{
     rle::{Error as RleError, Rle},
     CellData, Input,
@@ -75,6 +76,7 @@ pub struct KnownCell {
 }
 
 #[cfg(feature = "read-rle")]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "read-rle")))]
 impl KnownCell {
     /// Convert a [`CellData`] to a [`KnownCell`].
     pub fn from_cell_data(data: CellData, gen: i32) -> Self {
@@ -309,6 +311,7 @@ impl Config {
     ///
     /// The cells are specified by a list of RLE strings.
     #[cfg(feature = "read-rle")]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "read-rle")))]
     pub fn set_known_cells_from_rles<I, L>(mut self, input: I) -> Result<Self, RleError>
     where
         I: Input<Lines = L>,
