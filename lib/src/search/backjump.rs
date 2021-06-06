@@ -6,7 +6,7 @@ use crate::{
     world::World,
 };
 use educe::Educe;
-use typebool::{Bool, False};
+use typebool::False;
 
 #[cfg(feature = "serde")]
 #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
@@ -133,7 +133,8 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
                 }
                 Reason::Clause(clause)
             }
-            ReasonSer::TryAnother(n) => Reason::TryAnother(n),
+            // Generations rules are not supported, so fallback to [`Reason::Deduce`].
+            ReasonSer::TryAnother(_) => Reason::Deduce,
         })
     }
 }
@@ -161,14 +162,6 @@ pub enum Reason<'a, R: Rule> {
 
     /// Deduced from a learnt clause.
     Clause(Vec<CellRef<'a, R>>),
-
-    /// Tries another state of a cell when the original state
-    /// leads to a conflict.
-    ///
-    /// Remembers the number of remaining states to try.
-    ///
-    /// Only used in Generations rules.
-    TryAnother(usize),
 }
 
 impl<'a, R: Rule> Reason<'a, R> {
@@ -211,7 +204,7 @@ impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason<'a, R> {
 
     #[inline]
     fn is_decided(&self) -> bool {
-        matches!(self, Self::Decide | Self::TryAnother(_))
+        matches!(self, Self::Decide)
     }
 
     #[cfg(feature = "serde")]
@@ -225,7 +218,6 @@ impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason<'a, R> {
             Self::Sym(cell) => ReasonSer::Sym(cell.coord),
             Self::Deduce => ReasonSer::Deduce,
             Self::Clause(c) => ReasonSer::Clause(c.iter().map(|cell| cell.coord).collect()),
-            Self::TryAnother(n) => ReasonSer::TryAnother(*n),
         }
     }
 }
@@ -332,32 +324,8 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
         while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
             match reason {
                 Reason::Decide => {
-                    let (state, reason) = if R::IsGen::VALUE {
-                        let State(j) = cell.state.get().unwrap();
-                        (
-                            State((j + 1) % self.rule.gen()),
-                            Reason::TryAnother(self.rule.gen() - 2),
-                        )
-                    } else {
-                        (!cell.state.get().unwrap(), Reason::Deduce)
-                    };
-
-                    self.check_index = self.set_stack.len() as u32;
-                    self.next_unknown = cell.next;
-                    self.algo_data.level -= 1;
-                    self.clear_cell(cell);
-                    if self.set_cell_impl(cell, state, reason).is_ok() {
-                        return true;
-                    }
-                }
-                Reason::TryAnother(n) => {
-                    let State(j) = cell.state.get().unwrap();
-                    let state = State((j + 1) % self.rule.gen());
-                    let reason = if n == 1 {
-                        Reason::Deduce
-                    } else {
-                        Reason::TryAnother(n - 1)
-                    };
+                    let state = !cell.state.get().unwrap();
+                    let reason = Reason::Deduce;
 
                     self.check_index = self.set_stack.len() as u32;
                     self.next_unknown = cell.next;
@@ -428,7 +396,6 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
                     self.clear_cell(cell);
                     return self.set_cell_impl(cell, state, reason).is_ok() || self.retreat_impl();
                 }
-                Reason::TryAnother(_) => unreachable!(),
                 Reason::Deduce => {
                     self.clear_cell(cell);
                     return self.retreat_impl();
@@ -460,7 +427,7 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
                                 break;
                             }
                             while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
-                                if matches!(reason, Reason::Decide | Reason::TryAnother(_)) {
+                                if matches!(reason, Reason::Decide) {
                                     self.clear_cell(cell);
                                     self.next_unknown = cell.next;
                                     self.algo_data.level -= 1;
