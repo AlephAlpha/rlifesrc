@@ -20,15 +20,15 @@ use crate::cells::ALIVE;
 
 /// A cellular automaton rule.
 ///
-#[cfg_attr(
-    not(github_io),
-    doc = "Some details of this trait is hidden in the doc."
-)]
-/// Please use the following structs instead of implementing by yourself:
+/// The following rules are supported:
+///
 /// - [`Life`]
 /// - [`LifeGen`]
 /// - [`NtLife`]
 /// - [`NtLifeGen`]
+///
+/// This trait is sealed and cannot be implemented outside of this crate.
+#[cfg_attr(not(github_io), doc = "Some details of it is hidden in the doc.")]
 pub trait Rule: private::Sealed {
     /// The type of neighborhood descriptor of the rule.
     ///

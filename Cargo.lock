@@ -969,6 +969,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "proxy-enum"
+version = "0.3.1"
+source = "git+https://github.com/AlephAlpha/proxy-enum.git#20e2995f3d281dc63b1faf0a94834daf074014be"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "pulldown-cmark"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1080,6 +1090,7 @@ dependencies = [
  "displaydoc",
  "educe",
  "getrandom",
+ "proxy-enum",
  "rand",
  "serde",
  "thiserror",

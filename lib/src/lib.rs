@@ -52,9 +52,9 @@ o..o.oo...o..oo.$
 mod cells;
 mod config;
 mod error;
+mod poly_world;
 pub mod rules;
 pub mod search;
-mod traits;
 mod world;
 
 #[cfg(feature = "serde")]
@@ -64,6 +64,6 @@ pub mod save;
 pub use cells::{Coord, State, ALIVE, DEAD};
 pub use config::{Config, KnownCell, NewState, SearchOrder, Symmetry, Transform};
 pub use error::Error;
+pub use poly_world::PolyWorld;
 pub use search::Status;
-pub use traits::Search;
 pub use world::World;

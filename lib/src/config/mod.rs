@@ -3,8 +3,8 @@
 use crate::{
     cells::{Coord, State},
     error::Error,
+    poly_world::PolyWorld,
     rules::{Life, LifeGen, NtLife, NtLifeGen, Rule},
-    traits::Search,
     world::World,
 };
 use educe::Educe;
@@ -341,7 +341,7 @@ impl Config {
 
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
-    pub fn world(&self) -> Result<Box<dyn Search>, Error> {
+    pub fn world(&self) -> Result<PolyWorld, Error> {
         macro_rules! new_world {
             ($rule:expr) => {{
                 for known_cell in self.known_cells.iter() {
@@ -350,9 +350,9 @@ impl Config {
                     }
                 }
                 if self.backjump && self.max_cell_count.is_none() {
-                    Ok(Box::new(World::new_backjump(&self, $rule)))
+                    Ok(World::new_backjump(&self, $rule).into())
                 } else {
-                    Ok(Box::new(World::new_lifesrc(&self, $rule)))
+                    Ok(World::new_lifesrc(&self, $rule).into())
                 }
             }};
         }
@@ -365,7 +365,7 @@ impl Config {
                             return Err(Error::InvalidState(known_cell.coord, known_cell.state));
                         }
                     }
-                    Ok(Box::new(World::new_lifesrc(&self, $rule)))
+                    Ok(World::new_lifesrc(&self, $rule).into())
                 } else {
                     new_world!($rule.non_gen())
                 }

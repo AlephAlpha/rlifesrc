@@ -7,7 +7,7 @@ use crossterm::{
     ExecutableCommand, QueueableCommand, Result as CrosstermResult,
 };
 use futures::{select, FutureExt, TryStreamExt};
-use rlifesrc_lib::{Search, State, Status, ALIVE, DEAD};
+use rlifesrc_lib::{PolyWorld, State, Status, ALIVE, DEAD};
 use std::{
     io::{stdout, Write},
     time::{Duration, Instant},
@@ -30,7 +30,7 @@ enum Mode {
 struct App<'a, W: Write> {
     gen: i32,
     period: i32,
-    search: Box<dyn Search>,
+    world: PolyWorld,
     status: Status,
     paused: bool,
     start_time: Option<Instant>,
@@ -43,12 +43,12 @@ struct App<'a, W: Write> {
 }
 
 impl<'a, W: Write> App<'a, W> {
-    fn new(search: Box<dyn Search>, reset: bool, output: &'a mut W) -> CrosstermResult<Self> {
-        let period = search.config().period;
+    fn new(world: PolyWorld, reset: bool, output: &'a mut W) -> CrosstermResult<Self> {
+        let period = world.config().period;
         let mut app = App {
             gen: 0,
             period,
-            search,
+            world,
             status: Status::Initial,
             paused: true,
             start_time: None,
@@ -71,8 +71,8 @@ impl<'a, W: Write> App<'a, W> {
             .execute(SetTitle("rlifesrc"))?;
         terminal::enable_raw_mode()?;
         self.term_size = terminal::size()?;
-        self.world_size.0 = self.search.config().width.min(self.term_size.0 as i32 - 1);
-        self.world_size.1 = self.search.config().height.min(self.term_size.1 as i32 - 3);
+        self.world_size.0 = self.world.config().width.min(self.term_size.0 as i32 - 1);
+        self.world_size.1 = self.world.config().height.min(self.term_size.1 as i32 - 3);
         self.update()
     }
 
@@ -97,8 +97,8 @@ impl<'a, W: Write> App<'a, W> {
                 format!(
                     "Gen: {}  Cells: {}  Confl: {}{}",
                     self.gen,
-                    self.search.cell_count_gen(self.gen),
-                    self.search.conflicts(),
+                    self.world.cell_count_gen(self.gen),
+                    self.world.conflicts(),
                     if !self.paused {
                         String::new()
                     } else {
@@ -120,19 +120,19 @@ impl<'a, W: Write> App<'a, W> {
             .queue(ResetColor)?
             .queue(Print(format!(
                 "x = {}, y = {}, rule = {}",
-                self.search.config().width,
-                self.search.config().height,
-                self.search.config().rule_string
+                self.world.config().width,
+                self.world.config().height,
+                self.world.config().rule_string
             )))?
             .queue(MoveToNextLine(1))?;
         for y in 0..self.world_size.1 {
             let mut line = String::new();
             for x in 0..self.world_size.0 {
-                let state = self.search.get_cell_state((x, y, self.gen));
+                let state = self.world.get_cell_state((x, y, self.gen));
                 match state {
                     Some(DEAD) => line.push('.'),
                     Some(ALIVE) => {
-                        if self.search.is_gen_rule() {
+                        if self.world.is_gen_rule() {
                             line.push('A')
                         } else {
                             line.push('o')
@@ -142,7 +142,7 @@ impl<'a, W: Write> App<'a, W> {
                     _ => line.push('?'),
                 };
             }
-            if y == self.search.config().height - 1 {
+            if y == self.world.config().height - 1 {
                 line.push('!')
             } else {
                 line.push('$')
@@ -207,7 +207,7 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Searches for one step.
     async fn step(&mut self) {
-        match self.search.search(Some(VIEW_FREQ)) {
+        match self.world.search(Some(VIEW_FREQ)) {
             Status::Searching => (),
             s => {
                 self.status = s;
@@ -281,9 +281,8 @@ impl<'a, W: Write> App<'a, W> {
                 }
                 Some(Event::Resize(width, height)) => {
                     self.term_size = (width, height);
-                    self.world_size.0 = self.search.config().width.min(self.term_size.0 as i32 - 1);
-                    self.world_size.1 =
-                        self.search.config().height.min(self.term_size.1 as i32 - 3);
+                    self.world_size.0 = self.world.config().width.min(self.term_size.0 as i32 - 1);
+                    self.world_size.1 = self.world.config().height.min(self.term_size.1 as i32 - 3);
                     self.output
                         .queue(ResetColor)?
                         .queue(Clear(ClearType::All))?;
@@ -355,14 +354,14 @@ impl<'a, W: Write> Drop for App<'a, W> {
 /// Runs the search with a TUI.
 ///
 /// If `reset` is true, the time will be reset when starting a new search.
-pub fn tui(search: Box<dyn Search>, reset: bool) -> CrosstermResult<()> {
+pub fn tui(world: PolyWorld, reset: bool) -> CrosstermResult<()> {
     let mut stdout = stdout();
     let mut reader = EventStream::new();
     let result;
     {
-        let mut app = App::new(search, reset, &mut stdout)?;
+        let mut app = App::new(world, reset, &mut stdout)?;
         task::block_on(app.main_loop(&mut reader))?;
-        result = app.search.rle_gen(app.gen);
+        result = app.world.rle_gen(app.gen);
     }
     println!("{}", result);
     Ok(())

@@ -4,21 +4,21 @@ mod args;
 mod tui;
 
 use args::Args;
-use rlifesrc_lib::{Search, Status};
+use rlifesrc_lib::{PolyWorld, Status};
 use std::process::exit;
 
 /// Runs the search without TUI.
 ///
 /// If `all` is true, it will print all possible results
 /// instead of only the first one.
-fn run_search(search: &mut (impl Search + ?Sized), all: bool) {
+fn run_search(world: &mut PolyWorld, all: bool) {
     if all {
         let mut found = false;
         loop {
-            match search.search(None) {
+            match world.search(None) {
                 Status::Found => {
                     found = true;
-                    println!("{}", search.rle_gen(0))
+                    println!("{}", world.rle_gen(0))
                 }
                 Status::None => break,
                 _ => (),
@@ -28,8 +28,8 @@ fn run_search(search: &mut (impl Search + ?Sized), all: bool) {
             eprintln!("Not found.");
             exit(1);
         }
-    } else if let Status::Found = search.search(None) {
-        println!("{}", search.rle_gen(0));
+    } else if let Status::Found = world.search(None) {
+        println!("{}", world.rle_gen(0));
     } else {
         eprintln!("Not found.");
         exit(1);
@@ -39,16 +39,16 @@ fn run_search(search: &mut (impl Search + ?Sized), all: bool) {
 #[cfg(feature = "tui")]
 fn main() {
     let args = Args::parse().unwrap_or_else(|e| e.exit());
-    let mut search = args.search;
+    let mut world = args.world;
     if args.no_tui {
-        run_search(search.as_mut(), args.all);
+        run_search(&mut world, args.all);
     } else {
-        tui::tui(search, args.reset).unwrap();
+        tui::tui(world, args.reset).unwrap();
     }
 }
 
 #[cfg(not(feature = "tui"))]
 fn main() {
     let mut args = Args::parse().unwrap_or_else(|e| e.exit());
-    run_search(args.search.as_mut(), args.all);
+    run_search(args.world.as_mut(), args.all);
 }

@@ -1,6 +1,6 @@
 use instant::Instant;
 use log::{debug, error};
-use rlifesrc_lib::{save::WorldSer, Config, Search, Status};
+use rlifesrc_lib::{save::WorldSer, Config, PolyWorld, Status};
 use serde::{Deserialize, Serialize};
 use std::{option_env, time::Duration};
 use yew::{
@@ -48,7 +48,7 @@ pub enum WorkerMsg {
 pub struct Worker {
     status: Status,
     paused: bool,
-    search: Box<dyn Search>,
+    world: PolyWorld,
     max_partial_count: u32,
     max_partial: String,
     find_all: bool,
@@ -81,32 +81,32 @@ impl Worker {
         self.paused = true;
     }
 
-    fn reset_world(&mut self, search: Box<dyn Search>) {
-        self.search = search;
+    fn reset_world(&mut self, world: PolyWorld) {
+        self.world = world;
         self.status = Status::Initial;
         self.update_max_martial(false);
         self.timing = Duration::default();
         self.start_time = None;
         self.found_count = 0;
-        self.all_found = vec![String::new(); self.search.config().period as usize];
+        self.all_found = vec![String::new(); self.world.config().period as usize];
     }
 
     fn update_max_martial(&mut self, check_max: bool) {
-        let (gen, cell_count) = (0..self.search.config().period)
-            .map(|t| (t, self.search.cell_count_gen(t)))
+        let (gen, cell_count) = (0..self.world.config().period)
+            .map(|t| (t, self.world.cell_count_gen(t)))
             .max_by_key(|p| p.1)
             .unwrap();
         if !check_max || cell_count > self.max_partial_count {
             self.max_partial_count = cell_count;
-            self.max_partial = self.search.rle_gen(gen);
+            self.max_partial = self.world.rle_gen(gen);
         }
     }
 
     fn update_message(&self) -> UpdateMessageBuilder<'_> {
         let status = self.status;
         let paused = self.paused;
-        let config = (status == Status::Found && self.search.config().reduce_max)
-            .then(|| self.search.config().clone());
+        let config = (status == Status::Found && self.world.config().reduce_max)
+            .then(|| self.world.config().clone());
         let timing = self.paused.then(|| self.timing);
         let found_count = self.found_count;
 
@@ -132,13 +132,13 @@ impl Agent for Worker {
     fn create(link: AgentLink<Self>) -> Self {
         debug!("Worker path: {}", Self::name_of_resource());
         let config: Config = Config::default();
-        let search = config.world().unwrap();
+        let world = config.world().unwrap();
         let all_found = vec![String::new(); config.period as usize];
 
         let mut worker = Worker {
             status: Status::Initial,
             paused: true,
-            search,
+            world,
             max_partial_count: 0,
             max_partial: String::new(),
             find_all: false,
@@ -156,14 +156,14 @@ impl Agent for Worker {
     fn update(&mut self, msg: Self::Message) {
         match msg {
             WorkerMsg::Step => {
-                self.status = self.search.search(Some(VIEW_FREQ));
+                self.status = self.world.search(Some(VIEW_FREQ));
                 self.update_max_martial(true);
                 match self.status {
                     Status::Searching => self.start_job(),
                     Status::Found => {
                         self.found_count += 1;
-                        for gen in 0..self.search.config().period {
-                            self.all_found[gen as usize].push_str(&self.search.rle_gen(gen));
+                        for gen in 0..self.world.config().period {
+                            self.all_found[gen as usize].push_str(&self.world.rle_gen(gen));
                         }
                         if self.find_all {
                             self.start_job();
@@ -188,8 +188,8 @@ impl Agent for Worker {
             Request::SetWorld(config) => {
                 self.stop_job();
                 match config.world() {
-                    Ok(search) => {
-                        self.reset_world(search);
+                    Ok(world) => {
+                        self.reset_world(world);
                         self.update_message().with_config().with_world(0).send(id);
                     }
                     Err(error) => {
@@ -215,16 +215,16 @@ impl Agent for Worker {
                 self.update_message().with_max_partial().send(id);
             }
             Request::Save => {
-                let mut world_ser = self.search.ser();
+                let mut world_ser = self.world.ser();
                 world_ser.timing = Some(self.timing);
                 self.link.respond(id, Response::Save(world_ser));
             }
             Request::Load(world_ser) => {
                 self.stop_job();
                 match world_ser.world() {
-                    Ok(search) => {
+                    Ok(world) => {
                         debug!("Save file loaded!");
-                        self.reset_world(search);
+                        self.reset_world(world);
                         if let Some(timing) = world_ser.timing {
                             self.timing = timing;
                         }
@@ -263,7 +263,7 @@ struct UpdateMessageBuilder<'a> {
 impl<'a> UpdateMessageBuilder<'a> {
     fn with_config(mut self) -> Self {
         if self.msg.config.is_none() {
-            self.msg.config = Some(self.worker.search.config().clone());
+            self.msg.config = Some(self.worker.world.config().clone());
         }
         self
     }
@@ -273,9 +273,9 @@ impl<'a> UpdateMessageBuilder<'a> {
             if self.worker.find_all && self.worker.paused && self.worker.found_count > 0 {
                 Some(self.worker.all_found[gen as usize].clone())
             } else {
-                Some(self.worker.search.rle_gen(gen))
+                Some(self.worker.world.rle_gen(gen))
             };
-        self.msg.cells = Some(self.worker.search.cell_count_gen(gen));
+        self.msg.cells = Some(self.worker.world.cell_count_gen(gen));
         self
     }
 

@@ -50,11 +50,8 @@ pub enum Status {
 /// - [`Backjump`]: __(Experimental)__ Adding [Backjumping](https://en.wikipedia.org/wiki/Backjumping)
 ///   to the original lifesrc algorithm. Very slow. Do not use it.
 ///
-#[cfg_attr(
-    not(github_io),
-    doc = "Some details of this trait is hidden in the doc."
-)]
-/// Please use the above structs instead of implementing by yourself.
+/// This trait is sealed and cannot be implemented outside of this crate.
+#[cfg_attr(not(github_io), doc = "Some details of it is hidden in the doc.")]
 pub trait Algorithm<'a, R: Rule>: private::Sealed {
     /// Reasons for setting a cell.
     type Reason: Reason<'a, R>;

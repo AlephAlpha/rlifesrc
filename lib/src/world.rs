@@ -1,13 +1,14 @@
 //! The world.
 
 use crate::{
-    cells::{CellRef, Coord, LifeCell, State, DEAD},
+    cells::{CellRef, Coord, LifeCell, State, ALIVE, DEAD},
     config::{Config, KnownCell, SearchOrder},
     rules::Rule,
     search::{Algorithm, Backjump, LifeSrc, Reason, SetCell},
 };
+use std::fmt::Write;
 use std::{mem, ptr};
-use typebool::False;
+use typebool::{Bool, False};
 
 /// The world.
 pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
@@ -522,6 +523,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     }
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
+    #[inline]
     pub fn get_cell_state(&self, coord: Coord) -> Option<State> {
         let (x, y, t) = self.config.translate(coord);
         self.find_cell((x, y, t)).map_or_else(
@@ -530,15 +532,55 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
         )
     }
 
+    /// World configuration.
+    #[inline]
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    /// Whether the rule is a Generations rule.
+    #[inline]
+    pub fn is_gen_rule(&self) -> bool {
+        R::IsGen::VALUE
+    }
+
+    /// Whether the rule contains `B0`.
+    ///
+    /// In other words, whether a cell would become [`ALIVE`] in the next
+    /// generation, if all its neighbors in this generation are dead.
+    #[inline]
+    pub fn is_b0_rule(&self) -> bool {
+        self.rule.has_b0()
+    }
+
+    /// Number of known living cells in some generation.
+    ///
+    /// For Generations rules, dying cells are not counted.
+    #[inline]
+    pub fn cell_count_gen(&self, t: i32) -> u32 {
+        self.cell_count[t as usize]
+    }
+
     /// Minimum number of known living cells in all generation.
     ///
     /// For Generations rules, dying cells are not counted.
-    pub(crate) fn cell_count(&self) -> u32 {
+    #[inline]
+    pub fn cell_count(&self) -> u32 {
         *self.cell_count.iter().min().unwrap()
     }
 
+    /// Number of conflicts during the search.
+    #[inline]
+    pub fn conflicts(&self) -> u64 {
+        self.conflicts
+    }
+
     /// Set the max cell counts.
-    pub(crate) fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
+    ///
+    /// Currently this is the only parameter that you can change
+    /// during the search.
+    #[inline]
+    pub fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
         self.config.max_cell_count = max_cell_count;
         if let Some(max) = self.config.max_cell_count {
             while self.cell_count() > max {
@@ -547,5 +589,76 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
                 }
             }
         }
+    }
+
+    /// Displays the whole world in some generation,
+    /// in a mix of [Plaintext](https://conwaylife.com/wiki/Plaintext) and
+    /// [RLE](https://conwaylife.com/wiki/Rle) format.
+    ///
+    /// * **Dead** cells are represented by `.`;
+    /// * **Living** cells are represented by `o` for rules with 2 states,
+    ///   `A` for rules with more states;
+    /// * **Dying** cells are represented by uppercase letters starting from `B`;
+    /// * **Unknown** cells are represented by `?`;
+    /// * Each line is ended with `$`;
+    /// * The whole pattern is ended with `!`.
+    pub fn rle_gen(&self, t: i32) -> String {
+        let mut str = String::new();
+        writeln!(
+            str,
+            "x = {}, y = {}, rule = {}",
+            self.config().width,
+            self.config().height,
+            self.config().rule_string
+        )
+        .unwrap();
+        for y in 0..self.config().height {
+            for x in 0..self.config().width {
+                let state = self.get_cell_state((x, y, t));
+                match state {
+                    Some(DEAD) => str.push('.'),
+                    Some(ALIVE) => {
+                        if self.is_gen_rule() {
+                            str.push('A')
+                        } else {
+                            str.push('o')
+                        }
+                    }
+                    Some(State(i)) => str.push((b'A' + i as u8 - 1) as char),
+                    _ => str.push('?'),
+                };
+            }
+            if y == self.config().height - 1 {
+                str.push('!')
+            } else {
+                str.push('$')
+            };
+            str.push('\n');
+        }
+        str
+    }
+
+    /// Displays the whole world in some generation in
+    /// [Plaintext](https://conwaylife.com/wiki/Plaintext) format.
+    ///
+    /// Do not use this for Generations rules.
+    ///
+    /// * **Dead** cells are represented by `.`;
+    /// * **Living** and **Dying** cells are represented by `o`;
+    /// * **Unknown** cells are represented by `?`.
+    pub fn plaintext_gen(&self, t: i32) -> String {
+        let mut str = String::new();
+        for y in 0..self.config().height {
+            for x in 0..self.config().width {
+                let state = self.get_cell_state((x, y, t));
+                match state {
+                    Some(DEAD) => str.push('.'),
+                    Some(_) => str.push('o'),
+                    None => str.push('?'),
+                };
+            }
+            str.push('\n');
+        }
+        str
     }
 }

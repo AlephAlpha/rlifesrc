@@ -5,7 +5,9 @@ use clap::{
     AppSettings::{AllowNegativeNumbers, ColoredHelp},
     Arg, Error, ErrorKind, Result as ClapResult,
 };
-use rlifesrc_lib::{rules::NtLifeGen, Config, NewState, Search, SearchOrder, Symmetry, Transform};
+use rlifesrc_lib::{
+    rules::NtLifeGen, Config, NewState, PolyWorld, SearchOrder, Symmetry, Transform,
+};
 use std::{
     fs::File,
     io::{BufReader, Read},
@@ -18,7 +20,7 @@ fn is_positive(s: &str) -> bool {
 
 /// A struct to store the parse results.
 pub struct Args {
-    pub(crate) search: Box<dyn Search>,
+    pub(crate) world: PolyWorld,
     pub(crate) all: bool,
     #[cfg(feature = "tui")]
     pub(crate) reset: bool,
@@ -420,11 +422,11 @@ impl Args {
         #[cfg(feature = "tui")]
         let no_tui = matches.is_present("NOTUI");
 
-        let search = config.world().map_err(|e| {
+        let world = config.world().map_err(|e| {
             Error::with_description(&format! {"Invalid config: {}",e}, ErrorKind::InvalidValue)
         })?;
 
-        if search.is_gen_rule() && config.backjump {
+        if world.is_gen_rule() && config.backjump {
             return Err(Error::with_description(
                 "Backjumping is not yet supported for Generations rules.",
                 ErrorKind::InvalidValue,
@@ -432,7 +434,7 @@ impl Args {
         }
 
         Ok(Self {
-            search,
+            world,
             all,
             #[cfg(feature = "tui")]
             reset,

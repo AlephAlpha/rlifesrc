@@ -11,6 +11,7 @@ For the documentation of the unreleased lib, please visit https://alephalpha.git
 - Traits `Rule` and `Reason` are now [sealed](https://rust-lang.github.io/api-guidelines/future-proofing.html).
 - Add a `timing` field in the save file.
 - Add an `Algorithm` trait, but no new algorithm is added.
+- Use an enum (`PolyWorld`) instead of a trait object (`Box<dyn Search>`), and remove the `Search` trait.
 
 ### Web
 
@@ -18,7 +19,7 @@ The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always
 
 - Show timing.
 - Now you can find all results without pause.
-- Now you can specify a list of known cells.
+- Now you can specify a list of known cells. [See the doc for input format.](web/src/help.md#known-cells).
 
 ### Others
 

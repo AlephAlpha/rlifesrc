@@ -4,9 +4,9 @@ use crate::{
     cells::{Coord, State},
     config::Config,
     error::Error,
+    poly_world::PolyWorld,
     rules::Rule,
     search::{Algorithm, SetCell},
-    traits::Search,
     world::World,
 };
 use serde::{Deserialize, Serialize};
@@ -115,7 +115,7 @@ impl WorldSer {
     }
 
     /// Restores the world from the [`WorldSer`].
-    pub fn world(&self) -> Result<Box<dyn Search>, Error> {
+    pub fn world(&self) -> Result<PolyWorld, Error> {
         let mut world = self.config.world()?;
         world.deser(self)?;
         Ok(world)
@@ -124,6 +124,7 @@ impl WorldSer {
 
 impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     /// Saves the world as a [`WorldSer`].
+    #[inline]
     pub fn ser(&self) -> WorldSer {
         WorldSer {
             config: self.config.clone(),
@@ -132,5 +133,11 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
             check_index: self.check_index,
             timing: None,
         }
+    }
+
+    /// Restores the world from the [`WorldSer`].
+    #[inline]
+    pub fn deser(&mut self, ser: &WorldSer) -> Result<(), Error> {
+        ser.deser(self)
     }
 }
