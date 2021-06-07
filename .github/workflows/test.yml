@@ -41,11 +41,31 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Run cargo test
+      - name: Run cargo test without default features
+        uses: actions-rs/cargo@v1.0.3
+        with:
+          command: test
+          args: --no-default-features
+
+      - name: Run cargo test with all features
         uses: actions-rs/cargo@v1.0.3
         with:
           command: test
           args: --all-features
+
+  test-cli:
+    name: Test command line
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2.3.4
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1.0.7
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
 
       - name: Run command line test
         uses: actions-rs/cargo@v1.0.3
