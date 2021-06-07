@@ -18,13 +18,11 @@ pub use lifesrc::LifeSrc;
 use crate::cells::LifeCell;
 
 #[cfg(feature = "serde")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use crate::{
     error::Error,
     save::{ReasonSer, SetCellSer},
 };
 #[cfg(feature = "serde")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// Search status.
@@ -81,6 +79,7 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     ///
     /// The original state of the cell must be unknown.
     #[cfg_attr(not(github_io), doc(hidden))]
+    #[cfg_attr(github_io, allow(rustdoc::private_intra_doc_links))]
     fn set_cell(
         world: &mut World<'a, R, Self>,
         cell: CellRef<'a, R>,

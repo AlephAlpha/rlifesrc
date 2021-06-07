@@ -17,7 +17,6 @@ use std::{
 };
 
 #[cfg(feature = "serde")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// Transformations (rotations and reflections) after the last generation

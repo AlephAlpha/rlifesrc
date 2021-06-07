@@ -25,7 +25,6 @@ pub use search_order::SearchOrder;
 #[cfg(doc)]
 use crate::cells::{ALIVE, DEAD};
 #[cfg(feature = "serde")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// How to choose a state for an unknown cell.

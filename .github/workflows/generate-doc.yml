@@ -44,3 +44,25 @@ jobs:
           target-branch: main
           user-email: alephalpha911@gmail.com
           commit-message: ":rocket: Update from ORIGIN_COMMIT"
+
+  test-docs-rs:
+    name: Test generating doc for docs.rs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2.3.4
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1.0.7
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - name: Test generating doc
+        uses: actions-rs/cargo@v1.0.3
+        with:
+          command: doc
+          args: --all-features
+        env:
+          RUSTDOCFLAGS: --cfg docs_rs --deny warnings

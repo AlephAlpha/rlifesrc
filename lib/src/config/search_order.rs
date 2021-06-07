@@ -5,7 +5,6 @@ use auto_enums::auto_enum;
 use std::{borrow::Cow, cmp::Ordering};
 
 #[cfg(feature = "serde")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// The order to find a new unknown cell.

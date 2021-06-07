@@ -50,5 +50,5 @@ fn main() {
 #[cfg(not(feature = "tui"))]
 fn main() {
     let mut args = Args::parse().unwrap_or_else(|e| e.exit());
-    run_search(args.world.as_mut(), args.all);
+    run_search(&mut args.world, args.all);
 }

@@ -8,7 +8,6 @@ use crate::{
 use typebool::Bool;
 
 #[cfg(feature = "serde")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use crate::{error::Error, save::ReasonSer};
 
 #[cfg(doc)]

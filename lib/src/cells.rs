@@ -11,7 +11,6 @@ use std::{
 };
 
 #[cfg(feature = "serde")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
 use serde::{Deserialize, Serialize};
 
 /// Possible states of a known cell.

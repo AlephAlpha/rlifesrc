@@ -16,8 +16,10 @@ mod proxy {
     };
 
     #[cfg(feature = "serde")]
-    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     use crate::{error::Error, save::WorldSer};
+
+    #[cfg(doc)]
+    use crate::cells::ALIVE;
 
     /// A polymorphic [`World`].
     #[non_exhaustive]
