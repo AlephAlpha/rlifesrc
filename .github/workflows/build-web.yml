@@ -2,8 +2,8 @@ name: Build and Deploy Web Version
 
 on:
   push:
-    branches-ignore:
-      - gh-pages
+    branches:
+      - master
 
 jobs:
   test:
@@ -70,3 +70,4 @@ jobs:
         with:
           branch: gh-pages
           folder: ${{ env.DEPLOY_PATH }}
+          single-commit: true
