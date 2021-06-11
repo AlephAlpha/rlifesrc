@@ -2,8 +2,9 @@ name: Mirror this repo to Gitee
 
 on:
   push:
-    branches-ignore:
-      - "dependabot/*"
+    branches:
+      - master
+      - gh-pages
 
 jobs:
   mirror:
