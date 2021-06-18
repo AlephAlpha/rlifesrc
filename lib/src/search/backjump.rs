@@ -403,8 +403,9 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
                     break;
                 }
                 _ => {
-                    if cell.seen.get() {
-                        self.clear_cell(cell);
+                    let seen = cell.seen.get();
+                    self.clear_cell(cell);
+                    if seen {
                         counter -= 1;
                         for reason_cell in reason.cells() {
                             if reason_cell.state.get().is_some() {
@@ -426,21 +427,17 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
                                 break;
                             }
                             while let Some(SetCell { cell, reason }) = self.set_stack.pop() {
+                                self.clear_cell(cell);
                                 if matches!(reason, Reason::Decide) {
-                                    self.clear_cell(cell);
                                     self.next_unknown = cell.next;
                                     self.algo_data.level -= 1;
                                     if self.algo_data.level == max_level {
                                         return self.analyze();
                                     }
-                                } else {
-                                    self.clear_cell(cell);
                                 }
                             }
                             break;
                         }
-                    } else {
-                        self.clear_cell(cell);
                     }
                 }
             }
