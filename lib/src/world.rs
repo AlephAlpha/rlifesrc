@@ -6,7 +6,7 @@ use crate::{
     rules::Rule,
     search::{Algorithm, Backjump, LifeSrc, Reason, SetCell},
 };
-use std::{convert::TryInto, fmt::Write, mem};
+use std::{cell::UnsafeCell, convert::TryInto, fmt::Write, mem};
 use typebool::{Bool, False};
 
 /// The world.
@@ -21,7 +21,10 @@ pub struct World<R: Rule, A: Algorithm<R>> {
     ///
     /// This vector will not be moved after its creation.
     /// All the cells will live throughout the lifetime of the world.
-    cells: Box<[LifeCell<R>]>,
+    ///
+    /// Here [`UnsafeCell`] is used to (hopefully) avoid the Undefined Behavior caused by
+    /// [Stacked Borrows](https://github.com/rust-lang/unsafe-code-guidelines/blob/master/wip/stacked-borrows.md).
+    cells: Box<[UnsafeCell<LifeCell<R>>]>,
 
     /// Number of known living cells in each generation.
     ///
@@ -102,7 +105,7 @@ impl<R: Rule> World<R, LifeSrc> {
                             cell.is_front = true;
                         }
                     }
-                    cells.push(cell);
+                    cells.push(UnsafeCell::new(cell));
                 }
             }
         }
@@ -383,6 +386,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
         {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
             let cell = &self.cells[index as usize];
+            let cell = unsafe { &*cell.get() };
             Some(cell)
         } else {
             None
@@ -410,7 +414,8 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                 || (x - y).abs() <= self.config.diagonal_width.unwrap() + 1)
         {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
-            Some(&mut self.cells[index as usize])
+            let cell = self.cells[index as usize].get_mut();
+            Some(cell)
         } else {
             None
         }
@@ -477,7 +482,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
             && self
                 .cells
                 .chunks(self.config.period as usize)
-                .all(|c| c[0].state.get() == c[1].state.get())
+                .all(|c| unsafe { (*c[0].get()).state.get() == (*c[1].get()).state.get() })
     }
 
     /// Tests if the fundamental period of the result is smaller than the given period.
@@ -490,13 +495,13 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                 self.cells
                     .iter()
                     .step_by(self.config.period as usize)
-                    .all(|c| {
+                    .all(|c| unsafe {
                         let (x, y, _) = self.config.transform.act_on(
-                            c.coord,
+                            (*c.get()).coord,
                             self.config.width,
                             self.config.height,
                         );
-                        c.state.get() == self.get_cell_state((x - dx, y - dy, t))
+                        (*c.get()).state.get() == self.get_cell_state((x - dx, y - dy, t))
                     })
             }
         })
@@ -510,9 +515,9 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
             .iter()
             .step_by(self.config.period as usize)
             .all(|c| {
-                cosets.iter().skip(1).any(|t| {
-                    let coord = t.act_on(c.coord, self.config.width, self.config.height);
-                    c.state.get() == self.get_cell_state(coord)
+                cosets.iter().skip(1).any(|t| unsafe {
+                    let coord = t.act_on((*c.get()).coord, self.config.width, self.config.height);
+                    (*c.get()).state.get() == self.get_cell_state(coord)
                 })
             })
     }

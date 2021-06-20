@@ -12,6 +12,7 @@ For the documentation of the unreleased lib, please visit https://alephalpha.git
 - Add a `timing` field in the save file.
 - Add an `Algorithm` trait, but no new algorithm is added.
 - Use an enum (`PolyWorld`) instead of a trait object (`Box<dyn Search>`), and remove the `Search` trait.
+- Remove the lifetime parameter for many type.
 
 ### Web
 
