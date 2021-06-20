@@ -1,7 +1,7 @@
 //! Totalistic Life-like rules.
 
 use crate::{
-    cells::{CellRef, State, ALIVE, DEAD},
+    cells::{CellRef, LifeCell, State, ALIVE, DEAD},
     error::Error,
     rules::{private::Sealed, Rule},
     search::{Algorithm, Reason},
@@ -273,7 +273,7 @@ impl Rule for Life {
         NbhdDesc(nbhd_state << 4 | succ_state << 2 | state)
     }
 
-    fn update_desc(cell: CellRef<Self>, state: Option<State>, new: bool) {
+    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, new: bool) {
         let state_num = match state {
             Some(ALIVE) => 0x01,
             Some(_) => 0x10,
@@ -449,7 +449,7 @@ impl Rule for LifeGen {
         NbhdDescGen(desc.0, Some(succ_state))
     }
 
-    fn update_desc(cell: CellRef<Self>, state: Option<State>, new: bool) {
+    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, new: bool) {
         {
             let state_num = match state {
                 Some(ALIVE) => 0x01,

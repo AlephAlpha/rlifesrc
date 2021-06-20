@@ -134,6 +134,15 @@ impl<R: Rule> LifeCell<R> {
             unsafe { NonNull::new_unchecked(self as *const LifeCell<R> as *mut LifeCell<R>) };
         CellRef { cell }
     }
+
+    /// Updates the neighborhood descriptors of all neighbors and the predecessor
+    /// when the state of one cell is changed.
+    ///
+    /// Here `state` is the new state of the cell when `new` is true,
+    /// the old state when `new` is false.
+    pub(crate) fn update_desc(&self, state: Option<State>, new: bool) {
+        R::update_desc(&self, state, new);
+    }
 }
 
 impl<R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<R> {
@@ -147,24 +156,20 @@ impl<R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<R> {
     }
 }
 
-/// A reference to a [`LifeCell`] which has the same lifetime as the cell
-/// it refers to.
+/// A reference to a [`LifeCell`]. It is just a wrapped [`NonNull`] pointer.
+///
+/// # Safety
+///
+/// This type is just a wrapped raw pointer. Dereferring a [`CellRef`] should
+/// follow the same guarantees for dereferring a raw mut pointer.
+///
+/// Furthermore, a [`CellRef`] referring to a cell in one world should never be
+/// used in any function or method involving another world.
 #[derive(Educe)]
 #[educe(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CellRef<R: Rule> {
     /// The [`LifeCell`] it refers to.
     cell: NonNull<LifeCell<R>>,
-}
-
-impl<R: Rule> CellRef<R> {
-    /// Updates the neighborhood descriptors of all neighbors and the predecessor
-    /// when the state of one cell is changed.
-    ///
-    /// Here `state` is the new state of the cell when `new` is true,
-    /// the old state when `new` is false.
-    pub(crate) fn update_desc(self, state: Option<State>, new: bool) {
-        R::update_desc(self, state, new);
-    }
 }
 
 impl<R: Rule> Deref for CellRef<R> {

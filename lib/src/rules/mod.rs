@@ -7,7 +7,7 @@ mod life;
 mod ntlife;
 
 use crate::{
-    cells::{CellRef, State},
+    cells::{CellRef, LifeCell, State},
     search::Algorithm,
     world::World,
 };
@@ -68,7 +68,7 @@ pub trait Rule: private::Sealed {
     /// The `state` is the new state of the cell when `new` is true,
     /// the old state when `new` is false.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn update_desc(cell: CellRef<Self>, state: Option<State>, new: bool);
+    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, new: bool);
 
     /// Consistifies a cell.
     ///
