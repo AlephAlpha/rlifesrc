@@ -5,9 +5,8 @@ use educe::Educe;
 use std::{
     cell::Cell,
     fmt::{Debug, Error, Formatter},
-    hash::{Hash, Hasher},
     ops::{Deref, Not},
-    ptr,
+    ptr::NonNull,
 };
 
 #[cfg(feature = "serde")]
@@ -50,7 +49,7 @@ pub type Coord = (i32, i32, i32);
 ///
 /// The name `LifeCell` is chosen to avoid ambiguity with
 /// [`std::cell::Cell`].
-pub struct LifeCell<'a, R: Rule> {
+pub struct LifeCell<R: Rule> {
     /// The coordinates of a cell.
     pub coord: Coord,
 
@@ -77,19 +76,19 @@ pub struct LifeCell<'a, R: Rule> {
     /// The predecessor of the cell.
     ///
     /// The cell in the last generation at the same position.
-    pub(crate) pred: Option<CellRef<'a, R>>,
+    pub(crate) pred: Option<CellRef<R>>,
     /// The successor of the cell.
     ///
     /// The cell in the next generation at the same position.
-    pub(crate) succ: Option<CellRef<'a, R>>,
+    pub(crate) succ: Option<CellRef<R>>,
     /// The eight cells in the neighborhood.
-    pub(crate) nbhd: [Option<CellRef<'a, R>>; 8],
+    pub(crate) nbhd: [Option<CellRef<R>>; 8],
     /// The cells in the same generation that must has the same state
     /// with this cell because of the symmetry.
-    pub(crate) sym: Vec<CellRef<'a, R>>,
+    pub(crate) sym: Vec<CellRef<R>>,
 
     /// The next cell to be searched when searching for an unknown cell.
-    pub(crate) next: Option<CellRef<'a, R>>,
+    pub(crate) next: Option<CellRef<R>>,
 
     /// Whether the cell is on the first row or column.
     ///
@@ -107,7 +106,7 @@ pub struct LifeCell<'a, R: Rule> {
     pub(crate) seen: Cell<bool>,
 }
 
-impl<'a, R: Rule> LifeCell<'a, R> {
+impl<R: Rule> LifeCell<R> {
     /// Generates a new cell with background state, such that its neighborhood
     /// descriptor says that all neighboring cells also have the same state.
     ///
@@ -130,13 +129,14 @@ impl<'a, R: Rule> LifeCell<'a, R> {
     }
 
     /// Returns a [`CellRef`] from a [`LifeCell`].
-    pub(crate) fn borrow(&self) -> CellRef<'a, R> {
-        let cell = unsafe { (self as *const LifeCell<'a, R>).as_ref().unwrap() };
+    pub(crate) fn borrow(&self) -> CellRef<R> {
+        let cell =
+            unsafe { NonNull::new_unchecked(self as *const LifeCell<R> as *mut LifeCell<R>) };
         CellRef { cell }
     }
 }
 
-impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
+impl<R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.debug_struct("LifeCell")
             .field("coord", &self.coord)
@@ -150,13 +150,13 @@ impl<'a, R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<'a, R> {
 /// A reference to a [`LifeCell`] which has the same lifetime as the cell
 /// it refers to.
 #[derive(Educe)]
-#[educe(Clone, Copy, Eq)]
-pub struct CellRef<'a, R: Rule> {
+#[educe(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CellRef<R: Rule> {
     /// The [`LifeCell`] it refers to.
-    cell: &'a LifeCell<'a, R>,
+    cell: NonNull<LifeCell<R>>,
 }
 
-impl<'a, R: Rule> CellRef<'a, R> {
+impl<R: Rule> CellRef<R> {
     /// Updates the neighborhood descriptors of all neighbors and the predecessor
     /// when the state of one cell is changed.
     ///
@@ -167,30 +167,18 @@ impl<'a, R: Rule> CellRef<'a, R> {
     }
 }
 
-impl<'a, R: Rule> PartialEq for CellRef<'a, R> {
-    fn eq(&self, other: &Self) -> bool {
-        ptr::eq(self.cell, other.cell)
-    }
-}
-
-impl<'a, R: Rule> Deref for CellRef<'a, R> {
-    type Target = LifeCell<'a, R>;
+impl<R: Rule> Deref for CellRef<R> {
+    type Target = LifeCell<R>;
 
     fn deref(&self) -> &Self::Target {
-        self.cell
+        unsafe { self.cell.as_ref() }
     }
 }
 
-impl<'a, R: Rule> Debug for CellRef<'a, R> {
+impl<R: Rule> Debug for CellRef<R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.debug_struct("CellRef")
             .field("coord", &self.coord)
             .finish()
-    }
-}
-
-impl<'a, R: Rule> Hash for CellRef<'a, R> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        ptr::hash(self.cell, state)
     }
 }

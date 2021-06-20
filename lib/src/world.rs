@@ -11,7 +11,7 @@ use std::{mem, ptr};
 use typebool::{Bool, False};
 
 /// The world.
-pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
+pub struct World<R: Rule, A: Algorithm<R>> {
     /// World configuration.
     pub(crate) config: Config,
 
@@ -23,7 +23,7 @@ pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
     /// This vector will not be moved after its creation.
     /// All the cells will live throughout the lifetime of the world.
     // So the unsafe codes below are actually safe.
-    cells: Box<[LifeCell<'a, R>]>,
+    cells: Box<[LifeCell<R>]>,
 
     /// Number of known living cells in each generation.
     ///
@@ -41,7 +41,7 @@ pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
     /// The cells in this stack always have known states.
     ///
     /// It is used in the backtracking.
-    pub(crate) set_stack: Vec<SetCell<'a, R, A>>,
+    pub(crate) set_stack: Vec<SetCell<R, A>>,
 
     /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
     ///
@@ -51,7 +51,7 @@ pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
     /// The starting point to look for an unknown cell.
     ///
     /// There must be no unknown cell before this cell.
-    pub(crate) next_unknown: Option<CellRef<'a, R>>,
+    pub(crate) next_unknown: Option<CellRef<R>>,
 
     /// Whether to force the first row/column to be nonempty.
     ///
@@ -65,9 +65,9 @@ pub struct World<'a, R: Rule, A: Algorithm<'a, R>> {
     pub(crate) algo_data: A,
 }
 
-impl<'a, R: Rule> World<'a, R, LifeSrc> {
+impl<R: Rule> World<R, LifeSrc> {
     /// Creates a new world from the configuration and the rule.
-    pub fn new_with_rule<A: Algorithm<'a, R>>(config: &Config, rule: R) -> World<'a, R, A> {
+    pub fn new_with_rule<A: Algorithm<R>>(config: &Config, rule: R) -> World<R, A> {
         let search_order = config.auto_search_order();
 
         let size = ((config.width + 2) * (config.height + 2) * config.period) as usize;
@@ -140,7 +140,7 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
     }
 }
 
-impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
+impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
     /// Creates a new world from the configuration and the rule,
     /// using the [`Backjump`] algorithm.
     pub fn new_backjump(config: &Config, rule: R) -> Self {
@@ -148,7 +148,7 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
     }
 }
 
-impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
+impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// Initialize the list of cells in the front.
     fn init_front(self) -> Self {
         A::init_front(self)
@@ -386,7 +386,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     }
 
     /// Finds a cell by its coordinates. Returns a [`CellRef`].
-    pub(crate) fn find_cell(&self, coord: Coord) -> Option<CellRef<'a, R>> {
+    pub(crate) fn find_cell(&self, coord: Coord) -> Option<CellRef<R>> {
         let (x, y, t) = coord;
         if x >= -1
             && x <= self.config.width
@@ -404,7 +404,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     }
 
     /// Finds a cell by its coordinates. Returns a mutable pointer.
-    fn find_cell_mut(&mut self, coord: Coord) -> *mut LifeCell<'a, R> {
+    fn find_cell_mut(&mut self, coord: Coord) -> *mut LifeCell<R> {
         let (x, y, t) = coord;
         if x >= -1
             && x <= self.config.width
@@ -428,7 +428,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     /// The original state of the cell must be unknown.
     pub(crate) fn set_cell(
         &mut self,
-        cell: CellRef<'a, R>,
+        cell: CellRef<R>,
         state: State,
         reason: A::Reason,
     ) -> Result<(), A::ConflReason> {
@@ -437,7 +437,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
 
     /// Clears the [`state`](LifeCell#structfield.state) of a cell,
     /// and update the neighborhood descriptor of its neighbors.
-    pub(crate) fn clear_cell(&mut self, cell: CellRef<'a, R>) {
+    pub(crate) fn clear_cell(&mut self, cell: CellRef<R>) {
         cell.seen.set(false);
         let old_state = cell.state.take();
         if old_state != None {
@@ -452,7 +452,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     }
 
     /// Gets a references to the first unknown cell since [`next_unknown`](#structfield.next_unknown).
-    pub(crate) fn get_unknown(&mut self) -> Option<CellRef<'a, R>> {
+    pub(crate) fn get_unknown(&mut self) -> Option<CellRef<R>> {
         while let Some(cell) = self.next_unknown {
             if cell.state.get().is_none() {
                 return Some(cell);

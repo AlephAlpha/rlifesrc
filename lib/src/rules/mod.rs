@@ -80,9 +80,9 @@ pub trait Rule: private::Sealed {
     /// Returns `false` if there is a conflict,
     /// `true` if the cells are consistent.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn consistify<'a, A: Algorithm<'a, Self>>(
-        world: &mut World<'a, Self, A>,
-        cell: CellRef<'a, Self>,
+    fn consistify<A: Algorithm<Self>>(
+        world: &mut World<Self, A>,
+        cell: CellRef<Self>,
     ) -> Result<(), A::ConflReason>;
 }
 

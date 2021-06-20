@@ -85,10 +85,7 @@ pub struct WorldSer {
 
 impl WorldSer {
     /// Restores the world from the [`WorldSer`].
-    pub fn deser<'a, R: Rule, A: Algorithm<'a, R>>(
-        &self,
-        world: &mut World<'a, R, A>,
-    ) -> Result<(), Error> {
+    pub fn deser<R: Rule, A: Algorithm<R>>(&self, world: &mut World<R, A>) -> Result<(), Error> {
         for &SetCellSer {
             coord,
             state,
@@ -122,7 +119,7 @@ impl WorldSer {
     }
 }
 
-impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
+impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// Saves the world as a [`WorldSer`].
     #[inline]
     pub fn ser(&self) -> WorldSer {

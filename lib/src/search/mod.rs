@@ -50,9 +50,9 @@ pub enum Status {
 ///
 /// This trait is sealed and cannot be implemented outside of this crate.
 #[cfg_attr(not(github_io), doc = "Some details of it is hidden in the doc.")]
-pub trait Algorithm<'a, R: Rule>: private::Sealed {
+pub trait Algorithm<R: Rule>: private::Sealed {
     /// Reasons for setting a cell.
-    type Reason: Reason<'a, R>;
+    type Reason: Reason<R>;
 
     /// Reasons for a conflict. Ignored in [`LifeSrc`] algorithm.
     #[cfg_attr(not(github_io), doc(hidden))]
@@ -63,15 +63,15 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
 
     /// Conflict when constitifying a cell.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn confl_from_cell(cell: CellRef<'a, R>) -> Self::ConflReason;
+    fn confl_from_cell(cell: CellRef<R>) -> Self::ConflReason;
 
     /// Conflict from symmetry.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn confl_from_sym(cell: CellRef<'a, R>, sym: CellRef<'a, R>) -> Self::ConflReason;
+    fn confl_from_sym(cell: CellRef<R>, sym: CellRef<R>) -> Self::ConflReason;
 
     /// Conflict when constitifying a cell.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn init_front(world: World<'a, R, Self>) -> World<'a, R, Self>;
+    fn init_front(world: World<R, Self>) -> World<R, Self>;
 
     /// Sets the [`state`](LifeCell#structfield.state) of a cell,
     /// push it to the [`set_stack`](World#structfield.set_stack),
@@ -81,8 +81,8 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     #[cfg_attr(not(github_io), doc(hidden))]
     #[cfg_attr(github_io, allow(rustdoc::private_intra_doc_links))]
     fn set_cell(
-        world: &mut World<'a, R, Self>,
-        cell: CellRef<'a, R>,
+        world: &mut World<R, Self>,
+        cell: CellRef<R>,
         state: State,
         reason: Self::Reason,
     ) -> Result<(), Self::ConflReason>;
@@ -95,7 +95,7 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     /// It also records the number of steps it has walked in the parameter
     /// `step`.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool;
+    fn go(world: &mut World<R, Self>, step: &mut u64) -> bool;
 
     /// Retreats to the last time when a unknown cell is decided by choice,
     /// and switch that cell to the other state.
@@ -103,16 +103,16 @@ pub trait Algorithm<'a, R: Rule>: private::Sealed {
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn retreat(world: &mut World<'a, R, Self>) -> bool;
+    fn retreat(world: &mut World<R, Self>) -> bool;
 
     #[cfg(feature = "serde")]
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     /// Restore the reason from a [`ReasonSer`].
-    fn deser_reason(world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error>;
+    fn deser_reason(world: &World<R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error>;
 }
 
 /// Reasons for setting a cell.
-pub trait Reason<'a, R: Rule> {
+pub trait Reason<R: Rule> {
     /// Known before the search starts,
     const KNOWN: Self;
 
@@ -120,10 +120,10 @@ pub trait Reason<'a, R: Rule> {
     const DECIDED: Self;
 
     /// Deduced from the rule when constitifying another cell.
-    fn from_cell(cell: CellRef<'a, R>) -> Self;
+    fn from_cell(cell: CellRef<R>) -> Self;
 
     /// Deduced from symmetry.
-    fn from_sym(cell: CellRef<'a, R>) -> Self;
+    fn from_sym(cell: CellRef<R>) -> Self;
 
     /// Decided or trying another state for generations rules.
     fn is_decided(&self) -> bool;
@@ -144,17 +144,17 @@ mod private {
 
 /// Records the cells whose values are set and their reasons.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SetCell<'a, R: Rule, A: Algorithm<'a, R>> {
+pub struct SetCell<R: Rule, A: Algorithm<R>> {
     /// The set cell.
-    pub(crate) cell: CellRef<'a, R>,
+    pub(crate) cell: CellRef<R>,
 
     /// The reason for setting a cell.
     pub(crate) reason: A::Reason,
 }
 
-impl<'a, R: Rule, A: Algorithm<'a, R>> SetCell<'a, R, A> {
+impl<R: Rule, A: Algorithm<R>> SetCell<R, A> {
     /// Get a reference to the set cell.
-    pub(crate) fn new(cell: CellRef<'a, R>, reason: A::Reason) -> Self {
+    pub(crate) fn new(cell: CellRef<R>, reason: A::Reason) -> Self {
         SetCell { cell, reason }
     }
 
@@ -170,7 +170,7 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> SetCell<'a, R, A> {
     }
 }
 
-impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
+impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// Consistifies a cell.
     ///
     /// Examines the state and the neighborhood descriptor of the cell,
@@ -179,14 +179,14 @@ impl<'a, R: Rule, A: Algorithm<'a, R>> World<'a, R, A> {
     /// cells involved.
     ///
     /// If there is a conflict, returns its reason.
-    fn consistify(&mut self, cell: CellRef<'a, R>) -> Result<(), A::ConflReason> {
+    fn consistify(&mut self, cell: CellRef<R>) -> Result<(), A::ConflReason> {
         Rule::consistify(self, cell)
     }
 
     /// Consistifies a cell, its neighbors, and its predecessor.
     ///
     /// If there is a conflict, returns its reason.
-    fn consistify10(&mut self, cell: CellRef<'a, R>) -> Result<(), A::ConflReason> {
+    fn consistify10(&mut self, cell: CellRef<R>) -> Result<(), A::ConflReason> {
         self.consistify(cell)?;
 
         if let Some(pred) = cell.pred {

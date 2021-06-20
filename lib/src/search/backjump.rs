@@ -23,29 +23,29 @@ use crate::cells::LifeCell;
 ///
 /// Currently it is only supported for non-Generations rules.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Backjump<'a, R: Rule> {
+pub struct Backjump<R: Rule> {
     /// The global decision level for assigning the cell state.
     pub(crate) level: u32,
 
     /// All cells in the front.
-    pub(crate) front: Vec<CellRef<'a, R>>,
+    pub(crate) front: Vec<CellRef<R>>,
 
     /// A learnt clause.
-    pub(crate) learnt: Vec<CellRef<'a, R>>,
+    pub(crate) learnt: Vec<CellRef<R>>,
 }
 
-impl<'a, R: Rule> Sealed for Backjump<'a, R> {}
+impl<R: Rule> Sealed for Backjump<R> {}
 
-impl<'a, R: Rule<IsGen = False> + 'a> Default for Backjump<'a, R> {
+impl<R: Rule<IsGen = False>> Default for Backjump<R> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
-    type Reason = Reason<'a, R>;
+impl<R: Rule<IsGen = False>> Algorithm<R> for Backjump<R> {
+    type Reason = Reason<R>;
 
-    type ConflReason = ConflReason<'a, R>;
+    type ConflReason = ConflReason<R>;
 
     fn new() -> Self {
         Self {
@@ -56,17 +56,17 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
     }
 
     #[inline]
-    fn confl_from_cell(cell: CellRef<'a, R>) -> Self::ConflReason {
+    fn confl_from_cell(cell: CellRef<R>) -> Self::ConflReason {
         ConflReason::Rule(cell)
     }
 
     #[inline]
-    fn confl_from_sym(cell: CellRef<'a, R>, sym: CellRef<'a, R>) -> Self::ConflReason {
+    fn confl_from_sym(cell: CellRef<R>, sym: CellRef<R>) -> Self::ConflReason {
         ConflReason::Sym(cell, sym)
     }
 
     #[inline]
-    fn init_front(mut world: World<'a, R, Self>) -> World<'a, R, Self> {
+    fn init_front(mut world: World<R, Self>) -> World<R, Self> {
         world
             .algo_data
             .front
@@ -93,8 +93,8 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
 
     #[inline]
     fn set_cell(
-        world: &mut World<'a, R, Self>,
-        cell: CellRef<'a, R>,
+        world: &mut World<R, Self>,
+        cell: CellRef<R>,
         state: State,
         reason: Self::Reason,
     ) -> Result<(), Self::ConflReason> {
@@ -102,19 +102,19 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
     }
 
     #[inline]
-    fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool {
+    fn go(world: &mut World<R, Self>, step: &mut u64) -> bool {
         world.go(step)
     }
 
     #[inline]
-    fn retreat(world: &mut World<'a, R, Self>) -> bool {
+    fn retreat(world: &mut World<R, Self>) -> bool {
         world.retreat_impl()
     }
 
     #[cfg(feature = "serde")]
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     #[inline]
-    fn deser_reason(world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
+    fn deser_reason(world: &World<R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
         Ok(match *ser {
             ReasonSer::Known => Reason::Known,
             ReasonSer::Decide => Reason::Decide,
@@ -141,7 +141,7 @@ impl<'a, R: Rule<IsGen = False> + 'a> Algorithm<'a, R> for Backjump<'a, R> {
 /// Reasons for setting a cell, with informations for backjumping.
 #[derive(Educe)]
 #[educe(Clone, Debug, PartialEq, Eq)]
-pub enum Reason<'a, R: Rule> {
+pub enum Reason<R: Rule> {
     /// Known before the search starts,
     Known,
 
@@ -149,10 +149,10 @@ pub enum Reason<'a, R: Rule> {
     Decide,
 
     /// Deduced from the rule when constitifying another cell.
-    Rule(CellRef<'a, R>),
+    Rule(CellRef<R>),
 
     /// Deduced from symmetry.
-    Sym(CellRef<'a, R>),
+    Sym(CellRef<R>),
 
     /// Deduced from other cells or conflicts.
     ///
@@ -160,12 +160,12 @@ pub enum Reason<'a, R: Rule> {
     Deduce,
 
     /// Deduced from a learnt clause.
-    Clause(Vec<CellRef<'a, R>>),
+    Clause(Vec<CellRef<R>>),
 }
 
-impl<'a, R: Rule> Reason<'a, R> {
+impl<R: Rule> Reason<R> {
     /// Cells involved in the reason.
-    fn cells(self) -> Vec<CellRef<'a, R>> {
+    fn cells(self) -> Vec<CellRef<R>> {
         match self {
             Reason::Rule(cell) => {
                 let mut cells = Vec::with_capacity(10);
@@ -187,17 +187,17 @@ impl<'a, R: Rule> Reason<'a, R> {
     }
 }
 
-impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason<'a, R> {
+impl<R: Rule> TraitReason<R> for Reason<R> {
     const KNOWN: Self = Self::Known;
     const DECIDED: Self = Self::Decide;
 
     #[inline]
-    fn from_cell(cell: CellRef<'a, R>) -> Self {
+    fn from_cell(cell: CellRef<R>) -> Self {
         Self::Rule(cell)
     }
 
     #[inline]
-    fn from_sym(cell: CellRef<'a, R>) -> Self {
+    fn from_sym(cell: CellRef<R>) -> Self {
         Self::Sym(cell)
     }
 
@@ -224,12 +224,12 @@ impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason<'a, R> {
 /// Reasons for a conflict.
 #[derive(Educe)]
 #[educe(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ConflReason<'a, R: Rule> {
+pub enum ConflReason<R: Rule> {
     /// Conflict from the rule when constitifying another cell.
-    Rule(CellRef<'a, R>),
+    Rule(CellRef<R>),
 
     /// Conflict from symmetry.
-    Sym(CellRef<'a, R>, CellRef<'a, R>),
+    Sym(CellRef<R>, CellRef<R>),
 
     /// Conflict from non-empty-front condition.
     Front,
@@ -240,16 +240,16 @@ pub enum ConflReason<'a, R: Rule> {
     Deduce,
 }
 
-impl<'a, R: Rule> ConflReason<'a, R> {
+impl<R: Rule> ConflReason<R> {
     /// Whether this reason should be analyzed before retreating.
     fn should_analyze(&self) -> bool {
         !matches!(self, Self::Deduce)
     }
 }
 
-impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
+impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
     /// Store the cells involved in the conflict reason into  [`self.algo_data.learnt`](Backjump::learnt).
-    fn learn_from_confl(&mut self, reason: ConflReason<'a, R>) {
+    fn learn_from_confl(&mut self, reason: ConflReason<R>) {
         self.algo_data.learnt.clear();
         match reason {
             ConflReason::Rule(cell) => {
@@ -285,10 +285,10 @@ impl<'a, R: Rule<IsGen = False>> World<'a, R, Backjump<'a, R>> {
     /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
     pub(crate) fn set_cell_impl(
         &mut self,
-        cell: CellRef<'a, R>,
+        cell: CellRef<R>,
         state: State,
-        reason: Reason<'a, R>,
-    ) -> Result<(), ConflReason<'a, R>> {
+        reason: Reason<R>,
+    ) -> Result<(), ConflReason<R>> {
         cell.state.set(Some(state));
         let mut result = Ok(());
         cell.update_desc(Some(state), true);

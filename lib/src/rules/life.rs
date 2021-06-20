@@ -305,9 +305,9 @@ impl Rule for Life {
         cell.desc.set(desc);
     }
 
-    fn consistify<'a, A: Algorithm<'a, Self>>(
-        world: &mut World<'a, Self, A>,
-        cell: CellRef<'a, Self>,
+    fn consistify<A: Algorithm<Self>>(
+        world: &mut World<Self, A>,
+        cell: CellRef<Self>,
     ) -> Result<(), A::ConflReason> {
         let flags = world.rule.impl_table[cell.desc.get().0 as usize];
 
@@ -483,9 +483,9 @@ impl Rule for LifeGen {
         cell.desc.set(desc);
     }
 
-    fn consistify<'a, A: Algorithm<'a, Self>>(
-        world: &mut World<'a, Self, A>,
-        cell: CellRef<'a, Self>,
+    fn consistify<A: Algorithm<Self>>(
+        world: &mut World<Self, A>,
+        cell: CellRef<Self>,
     ) -> Result<(), A::ConflReason> {
         let desc = cell.desc.get();
         let flags = world.rule.impl_table[desc.0 as usize];

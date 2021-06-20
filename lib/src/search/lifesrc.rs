@@ -20,7 +20,7 @@ pub struct LifeSrc;
 
 impl Sealed for LifeSrc {}
 
-impl<'a, R: Rule + 'a> Algorithm<'a, R> for LifeSrc {
+impl<R: Rule> Algorithm<R> for LifeSrc {
     type Reason = Reason;
 
     type ConflReason = ();
@@ -30,20 +30,20 @@ impl<'a, R: Rule + 'a> Algorithm<'a, R> for LifeSrc {
     }
 
     #[inline]
-    fn confl_from_cell(_cell: CellRef<'a, R>) -> Self::ConflReason {}
+    fn confl_from_cell(_cell: CellRef<R>) -> Self::ConflReason {}
 
     #[inline]
-    fn confl_from_sym(_cell: CellRef<'a, R>, _sym: CellRef<'a, R>) -> Self::ConflReason {}
+    fn confl_from_sym(_cell: CellRef<R>, _sym: CellRef<R>) -> Self::ConflReason {}
 
     #[inline]
-    fn init_front(world: World<'a, R, Self>) -> World<'a, R, Self> {
+    fn init_front(world: World<R, Self>) -> World<R, Self> {
         world
     }
 
     #[inline]
     fn set_cell(
-        world: &mut World<'a, R, Self>,
-        cell: CellRef<'a, R>,
+        world: &mut World<R, Self>,
+        cell: CellRef<R>,
         state: State,
         reason: Self::Reason,
     ) -> Result<(), Self::ConflReason> {
@@ -51,19 +51,19 @@ impl<'a, R: Rule + 'a> Algorithm<'a, R> for LifeSrc {
     }
 
     #[inline]
-    fn go(world: &mut World<'a, R, Self>, step: &mut u64) -> bool {
+    fn go(world: &mut World<R, Self>, step: &mut u64) -> bool {
         world.go(step)
     }
 
     #[inline]
-    fn retreat(world: &mut World<'a, R, Self>) -> bool {
+    fn retreat(world: &mut World<R, Self>) -> bool {
         world.retreat_impl()
     }
 
     #[cfg(feature = "serde")]
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     #[inline]
-    fn deser_reason(_world: &World<'a, R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
+    fn deser_reason(_world: &World<R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error> {
         Ok(match *ser {
             ReasonSer::Known => Reason::Known,
             ReasonSer::Decide => Reason::Decide,
@@ -94,17 +94,17 @@ pub enum Reason {
     TryAnother(usize),
 }
 
-impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason {
+impl<R: Rule> TraitReason<R> for Reason {
     const KNOWN: Self = Self::Known;
     const DECIDED: Self = Self::Decide;
 
     #[inline]
-    fn from_cell(_cell: CellRef<'a, R>) -> Self {
+    fn from_cell(_cell: CellRef<R>) -> Self {
         Self::Deduce
     }
 
     #[inline]
-    fn from_sym(_cell: CellRef<'a, R>) -> Self {
+    fn from_sym(_cell: CellRef<R>) -> Self {
         Self::Deduce
     }
 
@@ -126,7 +126,7 @@ impl<'a, R: Rule + 'a> TraitReason<'a, R> for Reason {
     }
 }
 
-impl<'a, R: Rule> World<'a, R, LifeSrc> {
+impl<R: Rule> World<R, LifeSrc> {
     /// Sets the [`state`](LifeCell#structfield.state) of a cell,
     /// push it to the [`set_stack`](#structfield.set_stack),
     /// and update the neighborhood descriptor of its neighbors.
@@ -137,7 +137,7 @@ impl<'a, R: Rule> World<'a, R, LifeSrc> {
     /// [`max_cell_count`](#structfield.max_cell_count) or the front becomes empty.
     pub(crate) fn set_cell_impl(
         &mut self,
-        cell: CellRef<'a, R>,
+        cell: CellRef<R>,
         state: State,
         reason: Reason,
     ) -> Result<(), ()> {

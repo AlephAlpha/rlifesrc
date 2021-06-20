@@ -25,17 +25,17 @@ mod proxy {
     #[non_exhaustive]
     pub enum PolyWorld {
         /// A [`World`] with [`Life`] rule and [`LifeSrc`] algorithm.
-        Life(World<'static, Life, LifeSrc>),
+        Life(World<Life, LifeSrc>),
         /// A [`World`] with [`LifeGen`] rule and [`LifeSrc`] algorithm.
-        LifeGen(World<'static, LifeGen, LifeSrc>),
+        LifeGen(World<LifeGen, LifeSrc>),
         /// A [`World`] with [`NtLife`] rule and [`LifeSrc`] algorithm.
-        NtLife(World<'static, NtLife, LifeSrc>),
+        NtLife(World<NtLife, LifeSrc>),
         /// A [`World`] with [`NtLifeGen`] rule and [`LifeSrc`] algorithm.
-        NtLifeGen(World<'static, NtLifeGen, LifeSrc>),
+        NtLifeGen(World<NtLifeGen, LifeSrc>),
         /// A [`World`] with [`Life`] rule and [`Backjump`] algorithm.
-        LifeBackjump(World<'static, Life, Backjump<'static, Life>>),
+        LifeBackjump(World<Life, Backjump<Life>>),
         /// A [`World`] with [`NtLife`] rule and [`Backjump`] algorithm.
-        NtLifeBackjump(World<'static, NtLife, Backjump<'static, NtLife>>),
+        NtLifeBackjump(World<NtLife, Backjump<NtLife>>),
     }
 
     impl PolyWorld {
