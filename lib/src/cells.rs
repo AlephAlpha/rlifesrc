@@ -158,6 +158,7 @@ impl<R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<R> {
 ///
 /// Furthermore, a [`CellRef`] referring to a cell in one world should never be
 /// used in any function or method involving another world.
+#[repr(transparent)]
 #[derive(Educe)]
 #[educe(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CellRef<R: Rule> {

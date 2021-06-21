@@ -1,4 +1,3 @@
-use async_std::task;
 use crossterm::{
     cursor::{Hide, MoveTo, MoveToNextLine, Show},
     event::{Event, EventStream, KeyCode, KeyEvent},
@@ -6,7 +5,7 @@ use crossterm::{
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
     ExecutableCommand, QueueableCommand, Result as CrosstermResult,
 };
-use futures::{select, FutureExt, TryStreamExt};
+use futures_util::{select, FutureExt, TryStreamExt};
 use rlifesrc_lib::{PolyWorld, State, Status, ALIVE, DEAD};
 use std::{
     io::{stdout, Write},
@@ -238,21 +237,20 @@ impl<'a, W: Write> App<'a, W> {
         Ok(())
     }
 
-    /// Handles a key event. Return `true` to quit the program.
-    #[allow(unreachable_patterns)]
-    async fn handle(&mut self, event: Option<Event>) -> CrosstermResult<bool> {
-        /// A macro to generate constant key events patterns.
+    /// Handles a key event. Returns `true` to quit the program.
+    fn handle(&mut self, event: Option<Event>) -> CrosstermResult<bool> {
+        /// A macro to generate key event patterns.
         macro_rules! key_event {
-            ($code:pat) => {
-                Some(Event::Key(KeyEvent { code: $code, .. }))
+            ($( $code:pat )|+) => {
+                $(
+                    Some(Event::Key(KeyEvent { code: $code , .. }))
+                )|+
             };
         }
 
         match self.mode {
             Mode::Main => match event {
-                key_event!(KeyCode::Char('q'))
-                | key_event!(KeyCode::Char('Q'))
-                | key_event!(KeyCode::Esc) => {
+                key_event!(KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc) => {
                     if !self.paused {
                         self.pause();
                     }
@@ -271,7 +269,7 @@ impl<'a, W: Write> App<'a, W> {
                     self.gen = (self.gen + self.period - 1) % self.period;
                     self.update()?;
                 }
-                key_event!(KeyCode::Char(' ')) | key_event!(KeyCode::Enter) => {
+                key_event!(KeyCode::Char(' ') | KeyCode::Enter) => {
                     if !self.paused {
                         self.pause();
                     } else {
@@ -329,7 +327,7 @@ impl<'a, W: Write> App<'a, W> {
             if !self.paused {
                 select! {
                     event = reader.try_next().fuse() => {
-                        if self.handle(event?).await? {
+                        if self.handle(event?)? {
                             break;
                         }
                     },
@@ -337,7 +335,7 @@ impl<'a, W: Write> App<'a, W> {
                         self.update()?;
                     },
                 };
-            } else if self.handle(reader.try_next().await?).await? {
+            } else if self.handle(reader.try_next().await?)? {
                 break;
             }
         }
@@ -360,7 +358,7 @@ pub fn tui(world: PolyWorld, reset: bool) -> CrosstermResult<()> {
     let result;
     {
         let mut app = App::new(world, reset, &mut stdout)?;
-        task::block_on(app.main_loop(&mut reader))?;
+        futures_executor::block_on(app.main_loop(&mut reader))?;
         result = app.world.rle_gen(app.gen);
     }
     println!("{}", result);
