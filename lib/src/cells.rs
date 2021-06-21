@@ -128,13 +128,6 @@ impl<R: Rule> LifeCell<R> {
         }
     }
 
-    /// Returns a [`CellRef`] from a [`LifeCell`].
-    pub(crate) fn borrow(&self) -> CellRef<R> {
-        let cell =
-            unsafe { NonNull::new_unchecked(self as *const LifeCell<R> as *mut LifeCell<R>) };
-        CellRef { cell }
-    }
-
     /// Updates the neighborhood descriptors of all neighbors and the predecessor
     /// when the state of one cell is changed.
     ///
@@ -170,6 +163,15 @@ impl<R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<R> {
 pub struct CellRef<R: Rule> {
     /// The [`LifeCell`] it refers to.
     cell: NonNull<LifeCell<R>>,
+}
+
+impl<R: Rule> CellRef<R> {
+    /// Creates a new [`CellRef`] from a mut pointer to a [`LifeCell`].
+    pub(crate) unsafe fn new(ptr: *mut LifeCell<R>) -> Self {
+        CellRef {
+            cell: NonNull::new_unchecked(ptr),
+        }
+    }
 }
 
 impl<R: Rule> Deref for CellRef<R> {

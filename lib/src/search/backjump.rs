@@ -79,7 +79,7 @@ impl<R: Rule<IsGen = False>> Algorithm<R> for Backjump<R> {
                     }
                 }
                 for t in 0..world.config.period {
-                    if let Some(cell) = world.find_cell_ref((x, y, t)) {
+                    if let Some(cell) = world.find_cell((x, y, t)) {
                         if cell.is_front {
                             world.algo_data.front.push(cell);
                         }
@@ -118,25 +118,17 @@ impl<R: Rule<IsGen = False>> Algorithm<R> for Backjump<R> {
         Ok(match *ser {
             ReasonSer::Known => Reason::Known,
             ReasonSer::Decide => Reason::Decide,
-            ReasonSer::Rule(coord) => Reason::Rule(
-                world
-                    .find_cell_ref(coord)
-                    .ok_or(Error::SetCellError(coord))?,
-            ),
-            ReasonSer::Sym(coord) => Reason::Sym(
-                world
-                    .find_cell_ref(coord)
-                    .ok_or(Error::SetCellError(coord))?,
-            ),
+            ReasonSer::Rule(coord) => {
+                Reason::Rule(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
+            }
+            ReasonSer::Sym(coord) => {
+                Reason::Sym(world.find_cell(coord).ok_or(Error::SetCellError(coord))?)
+            }
             ReasonSer::Deduce => Reason::Deduce,
             ReasonSer::Clause(ref c) => {
                 let mut clause = Vec::new();
                 for &coord in c {
-                    clause.push(
-                        world
-                            .find_cell_ref(coord)
-                            .ok_or(Error::SetCellError(coord))?,
-                    );
+                    clause.push(world.find_cell(coord).ok_or(Error::SetCellError(coord))?);
                 }
                 Reason::Clause(clause)
             }

@@ -164,7 +164,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                     if abs >= d {
                         if abs == d || abs == d + 1 {
                             for t in 0..self.config.period {
-                                let cell = self.find_cell_ref((x, y, t)).unwrap();
+                                let cell = self.find_cell((x, y, t)).unwrap();
                                 self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
                             }
                         }
@@ -173,7 +173,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                 }
                 for t in 0..self.config.period {
                     if x == -1 || x == self.config.width || y == -1 || y == self.config.height {
-                        let cell = self.find_cell_ref((x, y, t)).unwrap();
+                        let cell = self.find_cell((x, y, t)).unwrap();
                         self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
                     }
                 }
@@ -208,7 +208,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                 for t in 0..self.config.period {
                     let mut nbhd = Vec::with_capacity(NBHD.len());
                     for (nx, ny) in NBHD {
-                        nbhd.push(self.find_cell_ref((x + nx, y + ny, t)));
+                        nbhd.push(self.find_cell((x + nx, y + ny, t)));
                     }
                     let cell_mut = self.find_cell_mut((x, y, t)).unwrap();
                     cell_mut.nbhd = nbhd.try_into().unwrap();
@@ -234,14 +234,14 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                     }
                 }
                 for t in 0..self.config.period {
-                    let cell = self.find_cell_ref((x, y, t)).unwrap();
+                    let cell = self.find_cell((x, y, t)).unwrap();
 
                     if t != 0 {
-                        let pred = self.find_cell_ref((x, y, t - 1));
+                        let pred = self.find_cell((x, y, t - 1));
                         let cell_mut = self.find_cell_mut((x, y, t)).unwrap();
                         cell_mut.pred = pred;
                     } else {
-                        let pred = self.find_cell_ref(self.config.translate((x, y, t - 1)));
+                        let pred = self.find_cell(self.config.translate((x, y, t - 1)));
                         if pred.is_some() {
                             let cell_mut = self.find_cell_mut((x, y, t)).unwrap();
                             cell_mut.pred = pred;
@@ -258,9 +258,9 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                     }
 
                     let succ = if t != self.config.period - 1 {
-                        self.find_cell_ref((x, y, t + 1))
+                        self.find_cell((x, y, t + 1))
                     } else {
-                        self.find_cell_ref(self.config.translate((x, y, t + 1)))
+                        self.find_cell(self.config.translate((x, y, t + 1)))
                     };
                     let cell_mut = self.find_cell_mut((x, y, t)).unwrap();
                     cell_mut.succ = succ;
@@ -283,7 +283,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                     }
                 }
                 for t in 0..self.config.period {
-                    let cell = self.find_cell_ref((x, y, t)).unwrap();
+                    let cell = self.find_cell((x, y, t)).unwrap();
                     let mut sym = Vec::with_capacity(8);
 
                     for transform in self.config.symmetry.members() {
@@ -296,7 +296,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                             && (self.config.diagonal_width.is_none()
                                 || (coord.0 - coord.1).abs() < self.config.diagonal_width.unwrap())
                         {
-                            sym.push(self.find_cell_ref(coord).unwrap());
+                            sym.push(self.find_cell(coord).unwrap());
                         } else if 0 <= x
                             && x < self.config.width
                             && 0 <= y
@@ -331,7 +331,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                     }
                 }
                 for t in 0..self.config.period {
-                    let cell = self.find_cell_ref((x, y, t)).unwrap();
+                    let cell = self.find_cell((x, y, t)).unwrap();
                     if !self.set_stack.iter().any(|s| s.cell == cell) {
                         self.clear_cell(cell);
                     }
@@ -344,7 +344,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// Sets the known cells.
     fn init_known_cells(mut self, known_cells: &[KnownCell]) -> Self {
         for &KnownCell { coord, state } in known_cells.iter() {
-            if let Some(cell) = self.find_cell_ref(coord) {
+            if let Some(cell) = self.find_cell(coord) {
                 if cell.state.get().is_none() && state.0 < self.rule.gen() {
                     self.set_cell(cell, state, A::Reason::KNOWN).ok();
                 }
@@ -357,7 +357,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// [`next_unknown`](#structfield.next_unknown) and set
     /// [`next_unknown`](#structfield.next_unknown) to be this cell.
     fn set_next(&mut self, coord: Coord) {
-        if let Some(cell) = self.find_cell_ref(coord) {
+        if let Some(cell) = self.find_cell(coord) {
             if cell.state.get().is_none() && cell.next.is_none() {
                 let next = mem::replace(&mut self.next_unknown, Some(cell));
                 let cell_mut = self.find_cell_mut(coord).unwrap();
@@ -374,8 +374,8 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
         self
     }
 
-    /// Finds a cell by its coordinates.
-    pub(crate) fn find_cell(&self, coord: Coord) -> Option<&LifeCell<R>> {
+    /// Finds a cell by its coordinates. Returns a [`CellRef`].
+    pub(crate) fn find_cell(&self, coord: Coord) -> Option<CellRef<R>> {
         let (x, y, t) = coord;
         if x >= -1
             && x <= self.config.width
@@ -386,16 +386,11 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
         {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
             let cell = &self.cells[index as usize];
-            let cell = unsafe { &*cell.get() };
+            let cell = unsafe { CellRef::new(cell.get()) };
             Some(cell)
         } else {
             None
         }
-    }
-
-    /// Finds a cell by its coordinates. Returns a [`CellRef`].
-    pub(crate) fn find_cell_ref(&self, coord: Coord) -> Option<CellRef<R>> {
-        self.find_cell(coord).map(|cell| cell.borrow())
     }
 
     /// Finds a cell by its coordinates.
@@ -526,8 +521,8 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     #[inline]
     pub fn get_cell_state(&self, coord: Coord) -> Option<State> {
         let (x, y, t) = self.config.translate(coord);
-        self.find_cell_ref((x, y, t)).map_or_else(
-            || self.find_cell_ref((0, 0, t)).map(|c1| c1.background),
+        self.find_cell((x, y, t)).map_or_else(
+            || self.find_cell((0, 0, t)).map(|c1| c1.background),
             |c1| c1.state.get(),
         )
     }
