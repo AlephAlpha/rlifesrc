@@ -28,7 +28,7 @@ use crate::cells::ALIVE;
 /// - [`NtLifeGen`]
 ///
 /// This trait is sealed and cannot be implemented outside of this crate.
-#[cfg_attr(not(github_io), doc = "Some details of it is hidden in the doc.")]
+#[cfg_attr(not(github_io), doc = "Some of its items are hidden in the doc.")]
 pub trait Rule: private::Sealed {
     /// The type of neighborhood descriptor of the rule.
     ///

@@ -8,12 +8,6 @@ use crate::{
 };
 use rand::{thread_rng, Rng};
 
-mod backjump;
-mod lifesrc;
-
-pub use backjump::Backjump;
-pub use lifesrc::LifeSrc;
-
 #[cfg(doc)]
 use crate::cells::LifeCell;
 
@@ -24,6 +18,14 @@ use crate::{
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+mod backjump;
+mod lifesrc;
+mod reason;
+
+pub use backjump::Backjump;
+pub use lifesrc::LifeSrc;
+pub(crate) use reason::Reason;
 
 /// Search status.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -49,9 +51,10 @@ pub enum Status {
 ///   to the original lifesrc algorithm. Very slow. Do not use it.
 ///
 /// This trait is sealed and cannot be implemented outside of this crate.
-#[cfg_attr(not(github_io), doc = "Some details of it is hidden in the doc.")]
+#[cfg_attr(not(github_io), doc = "Most of its items are hidden in the doc.")]
 pub trait Algorithm<R: Rule>: private::Sealed {
     /// Reasons for setting a cell.
+    #[cfg_attr(not(github_io), doc(hidden))]
     type Reason: Reason<R>;
 
     /// Reasons for a conflict. Ignored in [`LifeSrc`] algorithm.
@@ -109,29 +112,6 @@ pub trait Algorithm<R: Rule>: private::Sealed {
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     /// Restore the reason from a [`ReasonSer`].
     fn deser_reason(world: &World<R, Self>, ser: &ReasonSer) -> Result<Self::Reason, Error>;
-}
-
-/// Reasons for setting a cell.
-pub trait Reason<R: Rule> {
-    /// Known before the search starts,
-    const KNOWN: Self;
-
-    /// Decides the state of a cell by choice.
-    const DECIDED: Self;
-
-    /// Deduced from the rule when constitifying another cell.
-    fn from_cell(cell: CellRef<R>) -> Self;
-
-    /// Deduced from symmetry.
-    fn from_sym(cell: CellRef<R>) -> Self;
-
-    /// Decided or trying another state for generations rules.
-    fn is_decided(&self) -> bool;
-
-    #[cfg(feature = "serde")]
-    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
-    /// Saves the reason as a [`ReasonSer`].
-    fn ser(&self) -> ReasonSer;
 }
 
 /// A helper mod for [sealing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
