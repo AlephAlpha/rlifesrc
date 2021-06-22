@@ -5,7 +5,7 @@ use crossterm::{
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
     ExecutableCommand, QueueableCommand, Result as CrosstermResult,
 };
-use futures_util::{select, FutureExt, TryStreamExt};
+use futures_util::{future, select_biased, FutureExt, TryStreamExt};
 use rlifesrc_lib::{PolyWorld, State, Status, ALIVE, DEAD};
 use std::{
     io::{stdout, Write},
@@ -205,7 +205,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Searches for one step.
-    async fn step(&mut self) {
+    fn step(&mut self) {
         match self.world.search(Some(VIEW_FREQ)) {
             Status::Searching => (),
             s => {
@@ -295,9 +295,9 @@ impl<'a, W: Write> App<'a, W> {
                 }
             },
             Mode::AskingQuit => match event {
-                key_event!(KeyCode::Char('y'))
-                | key_event!(KeyCode::Char('Y'))
-                | key_event!(KeyCode::Enter) => return Ok(true),
+                key_event!(KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter) => {
+                    return Ok(true)
+                }
                 Some(Event::Resize(width, height)) => {
                     self.term_size = (width, height);
                     self.world_size.0 = self.world_size.0.min(self.term_size.0 as i32 - 1);
@@ -325,13 +325,13 @@ impl<'a, W: Write> App<'a, W> {
     async fn main_loop(&mut self, reader: &mut EventStream) -> CrosstermResult<()> {
         loop {
             if !self.paused {
-                select! {
+                select_biased! {
                     event = reader.try_next().fuse() => {
                         if self.handle(event?)? {
                             break;
                         }
                     },
-                    _ = self.step().fuse() => {
+                    _ = future::lazy(|_| self.step()) => {
                         self.update()?;
                     },
                 };
