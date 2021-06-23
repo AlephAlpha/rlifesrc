@@ -137,7 +137,7 @@ impl<R: Rule> World<R, LifeSrc> {
     /// Creates a new world from the configuration and the rule,
     /// using the [`LifeSrc`] algorithm.
     pub fn new_lifesrc(config: &Config, rule: R) -> Self {
-        World::new_with_rule(config, rule)
+        Self::new_with_rule(config, rule)
     }
 }
 
@@ -343,7 +343,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
 
     /// Sets the known cells.
     fn init_known_cells(mut self, known_cells: &[KnownCell]) -> Self {
-        for &KnownCell { coord, state } in known_cells.iter() {
+        for &KnownCell { coord, state } in known_cells {
             if let Some(cell) = self.find_cell(coord) {
                 if cell.state.get().is_none() && state.0 < self.rule.gen() {
                     self.set_cell(cell, state, A::Reason::KNOWN).ok();

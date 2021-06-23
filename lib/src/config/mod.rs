@@ -221,6 +221,7 @@ pub struct Config {
 
 impl Config {
     /// Sets up a new configuration with given size.
+    #[must_use]
     pub fn new(width: i32, height: i32, period: i32) -> Self {
         Self {
             width,
@@ -231,6 +232,7 @@ impl Config {
     }
 
     /// Sets the translations `(dx, dy)`.
+    #[must_use]
     pub const fn set_translate(mut self, dx: i32, dy: i32) -> Self {
         self.dx = dx;
         self.dy = dy;
@@ -238,30 +240,35 @@ impl Config {
     }
 
     /// Sets the transformation.
+    #[must_use]
     pub const fn set_transform(mut self, transform: Transform) -> Self {
         self.transform = transform;
         self
     }
 
     /// Sets the symmetry.
+    #[must_use]
     pub const fn set_symmetry(mut self, symmetry: Symmetry) -> Self {
         self.symmetry = symmetry;
         self
     }
 
     /// Sets the search order.
+    #[must_use]
     pub fn set_search_order<T: Into<Option<SearchOrder>>>(mut self, search_order: T) -> Self {
         self.search_order = search_order.into();
         self
     }
 
     /// Sets how to choose a state for an unknown cell.
+    #[must_use]
     pub const fn set_new_state(mut self, new_state: NewState) -> Self {
         self.new_state = new_state;
         self
     }
 
     /// Sets the maximal number of living cells.
+    #[must_use]
     pub fn set_max_cell_count<T: Into<Option<u32>>>(mut self, max_cell_count: T) -> Self {
         self.max_cell_count = max_cell_count.into();
         self
@@ -269,18 +276,21 @@ impl Config {
 
     /// Sets whether to automatically reduce the `max_cell_count`
     /// when a result is found.
+    #[must_use]
     pub const fn set_reduce_max(mut self, reduce_max: bool) -> Self {
         self.reduce_max = reduce_max;
         self
     }
 
     /// Sets the rule string.
+    #[must_use]
     pub fn set_rule_string<S: ToString>(mut self, rule_string: S) -> Self {
         self.rule_string = rule_string.to_string();
         self
     }
 
     /// Sets the diagonal width.
+    #[must_use]
     pub fn set_diagonal_width<T: Into<Option<i32>>>(mut self, diagonal_width: T) -> Self {
         self.diagonal_width = diagonal_width.into();
         self
@@ -288,6 +298,7 @@ impl Config {
 
     /// Sets whether to skip patterns whose fundamental period
     /// is smaller than the given period.
+    #[must_use]
     pub const fn set_skip_subperiod(mut self, skip_subperiod: bool) -> Self {
         self.skip_subperiod = skip_subperiod;
         self
@@ -295,12 +306,14 @@ impl Config {
 
     /// Sets whether to skip patterns which are invariant under
     /// more transformations than required by the given symmetry.
+    #[must_use]
     pub const fn set_skip_subsymmetry(mut self, skip_subsymmetry: bool) -> Self {
         self.skip_subsymmetry = skip_subsymmetry;
         self
     }
 
     /// Sets cells whose states are known before the search.
+    #[must_use]
     pub fn set_known_cells<T: Into<Vec<KnownCell>>>(mut self, known_cells: T) -> Self {
         self.known_cells = known_cells.into();
         self
@@ -321,6 +334,7 @@ impl Config {
     }
 
     /// Sets whether to enable backjumping.
+    #[must_use]
     pub const fn set_backjump(mut self, backjump: bool) -> Self {
         self.backjump = backjump;
         self
@@ -343,7 +357,7 @@ impl Config {
     pub fn world(&self) -> Result<PolyWorld, Error> {
         macro_rules! new_world {
             ($rule:expr) => {{
-                for known_cell in self.known_cells.iter() {
+                for known_cell in &self.known_cells {
                     if known_cell.state.0 >= 2 {
                         return Err(Error::InvalidState(known_cell.coord, known_cell.state));
                     }
@@ -359,7 +373,7 @@ impl Config {
         macro_rules! new_world_gen {
             ($rule:expr) => {{
                 if $rule.gen() > 2 {
-                    for known_cell in self.known_cells.iter() {
+                    for known_cell in &self.known_cells {
                         if known_cell.state.0 >= $rule.gen() {
                             return Err(Error::InvalidState(known_cell.coord, known_cell.state));
                         }

@@ -135,7 +135,7 @@ pub struct SetCell<R: Rule, A: Algorithm<R>> {
 impl<R: Rule, A: Algorithm<R>> SetCell<R, A> {
     /// Get a reference to the set cell.
     pub(crate) fn new(cell: CellRef<R>, reason: A::Reason) -> Self {
-        SetCell { cell, reason }
+        Self { cell, reason }
     }
 
     #[cfg(feature = "serde")]
@@ -172,10 +172,8 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
         if let Some(pred) = cell.pred {
             self.consistify(pred)?;
         }
-        for &neigh in cell.nbhd.iter() {
-            if let Some(neigh) = neigh {
-                self.consistify(neigh)?;
-            }
+        for &neigh in cell.nbhd.iter().flatten() {
+            self.consistify(neigh)?;
         }
         Ok(())
     }
@@ -189,7 +187,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
             let state = cell.state.get().unwrap();
 
             // Determines some cells by symmetry.
-            for &sym in cell.sym.iter() {
+            for &sym in &cell.sym {
                 if let Some(old_state) = sym.state.get() {
                     if state != old_state {
                         return Err(A::confl_from_sym(cell, sym));

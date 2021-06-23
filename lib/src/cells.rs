@@ -112,7 +112,7 @@ impl<R: Rule> LifeCell<R> {
     ///
     /// `is_front` are set to `false`.
     pub(crate) fn new(coord: Coord, background: State, succ_state: State) -> Self {
-        LifeCell {
+        Self {
             coord,
             background,
             state: Cell::new(Some(background)),
@@ -134,7 +134,7 @@ impl<R: Rule> LifeCell<R> {
     /// Here `state` is the new state of the cell when `new` is true,
     /// the old state when `new` is false.
     pub(crate) fn update_desc(&self, state: Option<State>, new: bool) {
-        R::update_desc(&self, state, new);
+        R::update_desc(self, state, new);
     }
 }
 
@@ -169,7 +169,7 @@ pub struct CellRef<R: Rule> {
 impl<R: Rule> CellRef<R> {
     /// Creates a new [`CellRef`] from a mut pointer to a [`LifeCell`].
     pub(crate) unsafe fn new(ptr: *mut LifeCell<R>) -> Self {
-        CellRef {
+        Self {
             cell: NonNull::new_unchecked(ptr),
         }
     }

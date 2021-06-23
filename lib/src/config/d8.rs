@@ -618,19 +618,19 @@ mod tests {
 
     #[test]
     fn test_sym_tran_names() {
-        for &sym in &ALL_SYMMETRY {
+        for sym in ALL_SYMMETRY {
             assert!(Symmetry::from_str(&sym.to_string()) == Ok(sym))
         }
-        for &trans in &ALL_TRANSFORM {
+        for trans in ALL_TRANSFORM {
             assert!(Transform::from_str(&trans.to_string()) == Ok(trans))
         }
     }
 
     #[test]
     fn test_symmetry_group_member() {
-        for &sym in &ALL_SYMMETRY {
+        for sym in ALL_SYMMETRY {
             let members = sym.members();
-            for &tran in &ALL_TRANSFORM {
+            for tran in ALL_TRANSFORM {
                 assert_eq!(tran.is_in(sym), members.contains(&tran));
             }
         }
@@ -638,8 +638,8 @@ mod tests {
 
     #[test]
     fn test_symmetry_subgroup() {
-        for &sym in &ALL_SYMMETRY {
-            for &sub_sym in &ALL_SYMMETRY {
+        for sym in ALL_SYMMETRY {
+            for sub_sym in ALL_SYMMETRY {
                 let is_subgroup = sub_sym.members().into_iter().all(|tran| tran.is_in(sym));
                 assert_eq!(sub_sym <= sym, is_subgroup);
             }
@@ -649,7 +649,7 @@ mod tests {
     #[test]
     fn test_symmetry_coset() {
         let group = ALL_TRANSFORM.iter().copied().collect::<HashSet<_>>();
-        for &sym in &ALL_SYMMETRY {
+        for sym in ALL_SYMMETRY {
             let all_cosets = sym
                 .cosets()
                 .into_iter()
@@ -669,7 +669,7 @@ mod tests {
             let y = rng.gen_range(0..height);
             let coord = (x, y, 0);
 
-            for &tran in &ALL_TRANSFORM {
+            for tran in ALL_TRANSFORM {
                 assert_eq!(
                     coord,
                     tran.inverse()
@@ -692,8 +692,8 @@ mod tests {
             let y = rng.gen_range(0..height);
             let coord = (x, y, 0);
 
-            for &tran0 in &ALL_TRANSFORM {
-                for &tran1 in &ALL_TRANSFORM {
+            for tran0 in ALL_TRANSFORM {
+                for tran1 in ALL_TRANSFORM {
                     assert_eq!(
                         (tran0 * tran1).act_on(coord, width, height),
                         tran1.act_on(tran0.act_on(coord, width, height), width, height),
@@ -709,7 +709,7 @@ mod tests {
 
     #[test]
     fn test_world_condition() {
-        for &tran in &ALL_TRANSFORM {
+        for tran in ALL_TRANSFORM {
             assert_eq!(
                 tran.require_square_world(),
                 matches!(
@@ -731,7 +731,7 @@ mod tests {
                 )
             );
         }
-        for &sym in &ALL_SYMMETRY {
+        for sym in ALL_SYMMETRY {
             assert_eq!(
                 sym.require_square_world(),
                 matches!(
