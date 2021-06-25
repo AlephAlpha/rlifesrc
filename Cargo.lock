@@ -112,9 +112,9 @@ checksum = "cfa8873f51c92e232f9bac4065cddef41b714152812bfc5f7672ba16d6ef8cd9"
 
 [[package]]
 name = "build-time"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcb4019b12d57f546fdaaa612e0b2fe0b35cb3e416d6821532854ff787a3ff6a"
+checksum = "1903cc3455e5cc187bd0e2cacad7de3b3fd8352b71c538039c3813bc713b2a40"
 dependencies = [
  "chrono",
  "once_cell",
