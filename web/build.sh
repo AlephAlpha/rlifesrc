@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 export DEPLOY_PATH=./dist
 export TARGET_PATH=../target/wasm32-unknown-unknown/release
 export STATIC_PATH=./static

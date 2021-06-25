@@ -422,51 +422,58 @@ impl PartialOrd for Symmetry {
     /// For example, `Symmetry::C1` is smaller than all other symmetries.
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self == other {
-            return Some(Ordering::Equal);
-        }
-        match (self, other) {
-            (Self::C1, _)
-            | (_, Self::D8)
-            | (Self::C2, Self::C4)
-            | (Self::C2, Self::D4Ortho)
-            | (Self::C2, Self::D4Diag)
-            | (Self::D2Row, Self::D4Ortho)
-            | (Self::D2Col, Self::D4Ortho)
-            | (Self::D2Diag, Self::D4Diag)
-            | (Self::D2Antidiag, Self::D4Diag) => Some(Ordering::Less),
-            (Self::D8, _)
-            | (_, Self::C1)
-            | (Self::C4, Self::C2)
-            | (Self::D4Ortho, Self::C2)
-            | (Self::D4Diag, Self::C2)
-            | (Self::D4Ortho, Self::D2Row)
-            | (Self::D4Ortho, Self::D2Col)
-            | (Self::D4Diag, Self::D2Diag)
-            | (Self::D4Diag, Self::D2Antidiag) => Some(Ordering::Greater),
-            _ => None,
+            Some(Ordering::Equal)
+        } else if self.is_subgroup_of(*other) {
+            Some(Ordering::Less)
+        } else if other.is_subgroup_of(*self) {
+            Some(Ordering::Greater)
+        } else {
+            None
         }
     }
 }
 
 impl Symmetry {
+    /// Whether the symmetry group of `self` is a subgroup of that of `other`,
+    /// i.e., all patterns with symmetry `other` also have symmetry `self`.
+    ///
+    /// For example, the symmetry group of `Symmetry::C1` is a subgroup of
+    /// that of all other symmetries.
+    pub const fn is_subgroup_of(self, other: Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::C1, _)
+                | (_, Self::D8)
+                | (Self::C2, Self::C2)
+                | (Self::C2, Self::C4)
+                | (Self::C2, Self::D4Ortho)
+                | (Self::C2, Self::D4Diag)
+                | (Self::C4, Self::C4)
+                | (Self::D2Row, Self::D2Row)
+                | (Self::D2Row, Self::D4Ortho)
+                | (Self::D2Col, Self::D2Col)
+                | (Self::D2Col, Self::D4Ortho)
+                | (Self::D2Diag, Self::D2Diag)
+                | (Self::D2Diag, Self::D4Diag)
+                | (Self::D2Antidiag, Self::D2Antidiag)
+                | (Self::D2Antidiag, Self::D4Diag)
+                | (Self::D4Ortho, Self::D4Ortho)
+                | (Self::D4Diag, Self::D4Diag)
+        )
+    }
+
     /// Whether this symmetry requires the world to be square.
     ///
     /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
     pub fn require_square_world(self) -> bool {
-        matches!(
-            self.partial_cmp(&Self::D4Ortho),
-            Some(Ordering::Greater) | None
-        )
+        !self.is_subgroup_of(Self::D4Ortho)
     }
 
     /// Whether this transformation requires the world to have no diagonal width.
     ///
     /// Returns `true` for `C4`, `D2-`, `D2|`, `D4+` and `D8`.
     pub fn require_no_diagonal_width(self) -> bool {
-        matches!(
-            self.partial_cmp(&Self::D4Diag),
-            Some(Ordering::Greater) | None
-        )
+        !self.is_subgroup_of(Self::D4Diag)
     }
 
     /// Transformations contained in the symmetry group.
