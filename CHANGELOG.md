@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
+
+## 0.5.0 - 2021/07/03
+
 ### Lib
 
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
@@ -14,9 +18,11 @@ For the documentation of the unreleased lib, please visit https://alephalpha.git
 - Use an enum (`PolyWorld`) instead of a trait object (`Box<dyn Search>`), and remove the `Search` trait.
 - Remove the lifetime parameter for many types.
 
-### Web
+### TUI
 
-The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
+- Use `futures-executor` instead of `async-std`.
+
+### Web
 
 - Show timing.
 - Now you can find all results without pause.

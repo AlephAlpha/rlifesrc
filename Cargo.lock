@@ -85,9 +85,9 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "base64"
-version = "0.12.3"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
+checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bincode"
@@ -137,10 +137,11 @@ checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 
 [[package]]
 name = "ca-formats"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6453425f3b82842419e77173813887498d1d7d7f4b9b52494079e32f408fd8ba"
+checksum = "4cfb622414252042dd89a535f58433759f878565860114bd5ce53ee5d8bfee41"
 dependencies = [
+ "displaydoc",
  "lazy-regex",
  "regex",
  "thiserror",
@@ -148,11 +149,12 @@ dependencies = [
 
 [[package]]
 name = "ca-rules"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e46ec74ce9ad2c3bf495e5f7dc2383e5e6de38652cffb4031f567bea3903e8a"
+checksum = "2729f2a63e7b25304c481498a772d382d5989901c606203ad8d1dc05bb8682e9"
 dependencies = [
  "base64",
+ "displaydoc",
  "thiserror",
 ]
 
@@ -748,16 +750,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proxy-enum"
-version = "0.3.1"
-source = "git+https://github.com/AlephAlpha/proxy-enum.git#20e2995f3d281dc63b1faf0a94834daf074014be"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "pulldown-cmark"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -846,7 +838,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "rlifesrc"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "clap",
  "crossterm",
@@ -860,7 +852,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-lib"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "auto_enums",
  "bitflags",
@@ -870,7 +862,6 @@ dependencies = [
  "educe",
  "from_variants",
  "getrandom",
- "proxy-enum",
  "rand",
  "serde",
  "thiserror",
@@ -879,7 +870,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-web"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "build-time",
  "instant",
@@ -1026,18 +1017,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.25"
+version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa6f76457f59514c7eeb4e59d891395fab0b2fd1d40723ae737d64153392e9c6"
+checksum = "93119e4feac1cbe6c798c34d3a53ea0026b0b1de6a120deef895137c0529bfe2"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.25"
+version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a36768c0fbf1bb15eca10defa29526bda730a2376c2ab4393ccfa16fb1a318d"
+checksum = "060d69a0afe7796bf42e9e2ff91f5ee691fb15c53d38b4b62a9a53eb23164745"
 dependencies = [
  "proc-macro2",
  "quote",
