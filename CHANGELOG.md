@@ -14,7 +14,7 @@ For the documentation of the unreleased lib, please visit https://alephalpha.git
 - Remove `Status::Paused`. Now pausing is handled by `tui` and `web` instead of the `lib`.
 - Traits `Rule` and `Reason` are now [sealed](https://rust-lang.github.io/api-guidelines/future-proofing.html).
 - Add a `timing` field in the save file.
-- Add an `Algorithm` trait, but no new algorithm is added.
+- Add an `Algorithm` trait, but no new algorithm is added. `Reason` is no longer public.
 - Use an enum (`PolyWorld`) instead of a trait object (`Box<dyn Search>`), and remove the `Search` trait.
 - Remove the lifetime parameter for many types.
 
