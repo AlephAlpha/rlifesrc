@@ -149,7 +149,7 @@ impl Config {
     ///
     /// Return `None` when we should not force the front to be nonempty,
     /// or there isn't a well-defined 'front'.
-    pub(crate) fn is_front_fn(
+    pub(crate) fn fn_is_front(
         &self,
         rule_is_b0: bool,
         search_order: &SearchOrder,
@@ -158,6 +158,9 @@ impl Config {
         let dy = self.dy;
         let width = self.width;
         let height = self.height;
+        if !self.known_cells.is_empty() {
+            return None;
+        }
         match search_order {
             SearchOrder::RowFirst => {
                 if self.symmetry <= Symmetry::D2Col

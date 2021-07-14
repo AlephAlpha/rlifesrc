@@ -75,7 +75,7 @@ impl<R: Rule> World<R, LifeSrc> {
         let mut cells = Vec::with_capacity(size);
         let algo_data = A::new();
 
-        let is_front = config.is_front_fn(rule.has_b0(), &search_order);
+        let is_front = config.fn_is_front(rule.has_b0(), &search_order);
 
         // Fills the vector with dead cells,
         // and checks whether it is on the first row or column.
@@ -101,7 +101,7 @@ impl<R: Rule> World<R, LifeSrc> {
                     };
                     let mut cell = LifeCell::new((x, y, t), state, succ_state);
                     if let Some(is_front) = &is_front {
-                        if is_front((x, y, t)) {
+                        if is_front((x, y, t)) && config.contains((x, y, t), false, true) {
                             cell.is_front = true;
                         }
                     }
@@ -245,12 +245,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                         if pred.is_some() {
                             let cell_mut = self.find_cell_mut((x, y, t)).unwrap();
                             cell_mut.pred = pred;
-                        } else if 0 <= x
-                            && x < self.config.width
-                            && 0 <= y
-                            && y < self.config.height
-                            && (self.config.diagonal_width.is_none()
-                                || (x - y).abs() < self.config.diagonal_width.unwrap())
+                        } else if self.config.contains((x, y, t), false, true)
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
                             self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
@@ -289,20 +284,9 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                     for transform in self.config.symmetry.members() {
                         let coord =
                             transform.act_on((x, y, t), self.config.width, self.config.height);
-                        if 0 <= coord.0
-                            && coord.0 < self.config.width
-                            && 0 <= coord.1
-                            && coord.1 < self.config.height
-                            && (self.config.diagonal_width.is_none()
-                                || (coord.0 - coord.1).abs() < self.config.diagonal_width.unwrap())
-                        {
+                        if self.config.contains(coord, false, true) {
                             sym.push(self.find_cell(coord).unwrap());
-                        } else if 0 <= x
-                            && x < self.config.width
-                            && 0 <= y
-                            && y < self.config.height
-                            && (self.config.diagonal_width.is_none()
-                                || (x - y).abs() < self.config.diagonal_width.unwrap())
+                        } else if self.config.contains((x, y, t), false, true)
                             && !self.set_stack.iter().any(|s| s.cell == cell)
                         {
                             self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
@@ -319,7 +303,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
 
     /// Sets states for the cells.
     ///
-    /// All cells are set to unknown unless they are on the boundary,
+    /// All cells are set to unknown unless they are at the border,
     /// or are marked as known in [`init_pred_succ`](Self::init_pred_succ)
     /// or [`init_sym`](Self::init_sym).
     fn init_state(mut self) -> Self {
@@ -377,13 +361,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// Finds a cell by its coordinates. Returns a [`CellRef`].
     pub(crate) fn find_cell(&self, coord: Coord) -> Option<CellRef<R>> {
         let (x, y, t) = coord;
-        if x >= -1
-            && x <= self.config.width
-            && y >= -1
-            && y <= self.config.height
-            && t >= 0
-            && t < self.config.period
-        {
+        if self.config.contains((x, y, t), true, false) {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
             let cell = &self.cells[index as usize];
             let cell = unsafe { CellRef::new(cell.get()) };
@@ -399,15 +377,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// is out of the [`diagonal_width`](Config#structfield.diagonal_width).
     fn find_cell_mut(&mut self, coord: Coord) -> Option<&mut LifeCell<R>> {
         let (x, y, t) = coord;
-        if x >= -1
-            && x <= self.config.width
-            && y >= -1
-            && y <= self.config.height
-            && t >= 0
-            && t < self.config.period
-            && (self.config.diagonal_width.is_none()
-                || (x - y).abs() <= self.config.diagonal_width.unwrap() + 1)
-        {
+        if self.config.contains((x, y, t), true, true) {
             let index = ((x + 1) * (self.config.height + 2) + y + 1) * self.config.period + t;
             let cell = self.cells[index as usize].get_mut();
             Some(cell)

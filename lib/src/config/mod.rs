@@ -352,6 +352,40 @@ impl Config {
         self.symmetry.require_no_diagonal_width() || self.transform.require_no_diagonal_width()
     }
 
+    /// Whether the cell is contained in the world.
+    ///
+    /// If `including_border` is true, this includes the cells at the border.
+    ///
+    /// If `check_diagonal_width` is true, this excludes the cells outside of the diagonal_width.
+    pub(crate) fn contains(
+        &self,
+        (x, y, t): Coord,
+        including_border: bool,
+        check_diagonal_width: bool,
+    ) -> bool {
+        if including_border {
+            x >= -1
+                && x <= self.width
+                && y >= -1
+                && y <= self.height
+                && t >= 0
+                && t < self.period
+                && (!check_diagonal_width
+                    || (self.diagonal_width.is_none()
+                        || (x - y).abs() <= self.diagonal_width.unwrap() + 1))
+        } else {
+            x >= 0
+                && x < self.width
+                && y >= 0
+                && y < self.height
+                && t >= 0
+                && t < self.period
+                && (!check_diagonal_width
+                    || (self.diagonal_width.is_none()
+                        || (x - y).abs() < self.diagonal_width.unwrap()))
+        }
+    }
+
     /// Creates a new world from the configuration.
     /// Returns an error if the rule string is invalid.
     pub fn world(&self) -> Result<PolyWorld, Error> {
