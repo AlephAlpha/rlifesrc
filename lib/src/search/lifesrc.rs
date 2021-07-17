@@ -25,6 +25,7 @@ impl<R: Rule> Algorithm<R> for LifeSrc {
 
     type ConflReason = ();
 
+    #[inline]
     fn new() -> Self {
         Self
     }

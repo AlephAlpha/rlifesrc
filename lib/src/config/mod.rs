@@ -222,6 +222,7 @@ pub struct Config {
 impl Config {
     /// Sets up a new configuration with given size.
     #[must_use]
+    #[inline]
     pub fn new(width: i32, height: i32, period: i32) -> Self {
         Self {
             width,
@@ -233,6 +234,7 @@ impl Config {
 
     /// Sets the translations `(dx, dy)`.
     #[must_use]
+    #[inline]
     pub const fn set_translate(mut self, dx: i32, dy: i32) -> Self {
         self.dx = dx;
         self.dy = dy;
@@ -241,6 +243,7 @@ impl Config {
 
     /// Sets the transformation.
     #[must_use]
+    #[inline]
     pub const fn set_transform(mut self, transform: Transform) -> Self {
         self.transform = transform;
         self
@@ -248,6 +251,7 @@ impl Config {
 
     /// Sets the symmetry.
     #[must_use]
+    #[inline]
     pub const fn set_symmetry(mut self, symmetry: Symmetry) -> Self {
         self.symmetry = symmetry;
         self
@@ -255,6 +259,7 @@ impl Config {
 
     /// Sets the search order.
     #[must_use]
+    #[inline]
     pub fn set_search_order<T: Into<Option<SearchOrder>>>(mut self, search_order: T) -> Self {
         self.search_order = search_order.into();
         self
@@ -262,6 +267,7 @@ impl Config {
 
     /// Sets how to choose a state for an unknown cell.
     #[must_use]
+    #[inline]
     pub const fn set_new_state(mut self, new_state: NewState) -> Self {
         self.new_state = new_state;
         self
@@ -269,6 +275,7 @@ impl Config {
 
     /// Sets the maximal number of living cells.
     #[must_use]
+    #[inline]
     pub fn set_max_cell_count<T: Into<Option<u32>>>(mut self, max_cell_count: T) -> Self {
         self.max_cell_count = max_cell_count.into();
         self
@@ -277,6 +284,7 @@ impl Config {
     /// Sets whether to automatically reduce the `max_cell_count`
     /// when a result is found.
     #[must_use]
+    #[inline]
     pub const fn set_reduce_max(mut self, reduce_max: bool) -> Self {
         self.reduce_max = reduce_max;
         self
@@ -284,6 +292,7 @@ impl Config {
 
     /// Sets the rule string.
     #[must_use]
+    #[inline]
     pub fn set_rule_string<S: ToString>(mut self, rule_string: S) -> Self {
         self.rule_string = rule_string.to_string();
         self
@@ -291,6 +300,7 @@ impl Config {
 
     /// Sets the diagonal width.
     #[must_use]
+    #[inline]
     pub fn set_diagonal_width<T: Into<Option<i32>>>(mut self, diagonal_width: T) -> Self {
         self.diagonal_width = diagonal_width.into();
         self
@@ -299,6 +309,7 @@ impl Config {
     /// Sets whether to skip patterns whose fundamental period
     /// is smaller than the given period.
     #[must_use]
+    #[inline]
     pub const fn set_skip_subperiod(mut self, skip_subperiod: bool) -> Self {
         self.skip_subperiod = skip_subperiod;
         self
@@ -307,6 +318,7 @@ impl Config {
     /// Sets whether to skip patterns which are invariant under
     /// more transformations than required by the given symmetry.
     #[must_use]
+    #[inline]
     pub const fn set_skip_subsymmetry(mut self, skip_subsymmetry: bool) -> Self {
         self.skip_subsymmetry = skip_subsymmetry;
         self
@@ -314,6 +326,7 @@ impl Config {
 
     /// Sets cells whose states are known before the search.
     #[must_use]
+    #[inline]
     pub fn set_known_cells<T: Into<Vec<KnownCell>>>(mut self, known_cells: T) -> Self {
         self.known_cells = known_cells.into();
         self
@@ -324,6 +337,7 @@ impl Config {
     /// The cells are specified by a list of RLE strings.
     #[cfg(feature = "read-rle")]
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "read-rle")))]
+    #[inline]
     pub fn set_known_cells_from_rles<I, L>(mut self, input: I) -> Result<Self, RleError>
     where
         I: Input<Lines = L>,
@@ -335,12 +349,14 @@ impl Config {
 
     /// Sets whether to enable backjumping.
     #[must_use]
+    #[inline]
     pub const fn set_backjump(mut self, backjump: bool) -> Self {
         self.backjump = backjump;
         self
     }
 
     /// Whether the configuration requires the world to be square.
+    #[inline]
     pub fn require_square_world(&self) -> bool {
         self.symmetry.require_square_world()
             || self.transform.require_square_world()
@@ -348,6 +364,7 @@ impl Config {
     }
 
     /// Whether the configuration requires the world to have no diagonal width.
+    #[inline]
     pub fn require_no_diagonal_width(&self) -> bool {
         self.symmetry.require_no_diagonal_width() || self.transform.require_no_diagonal_width()
     }

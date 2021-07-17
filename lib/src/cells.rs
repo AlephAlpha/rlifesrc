@@ -31,6 +31,7 @@ pub const ALIVE: State = State(1);
 impl Not for State {
     type Output = Self;
 
+    #[inline]
     fn not(self) -> Self::Output {
         match self {
             ALIVE => DEAD,
@@ -111,6 +112,7 @@ impl<R: Rule> LifeCell<R> {
     /// descriptor says that all neighboring cells also have the same state.
     ///
     /// `is_front` are set to `false`.
+    #[inline]
     pub(crate) fn new(coord: Coord, background: State, succ_state: State) -> Self {
         Self {
             coord,
@@ -168,6 +170,7 @@ pub struct CellRef<R: Rule> {
 
 impl<R: Rule> CellRef<R> {
     /// Creates a new [`CellRef`] from a mut pointer to a [`LifeCell`].
+    #[inline]
     pub(crate) unsafe fn new(ptr: *mut LifeCell<R>) -> Self {
         Self {
             cell: NonNull::new_unchecked(ptr),
@@ -178,6 +181,7 @@ impl<R: Rule> CellRef<R> {
 impl<R: Rule> Deref for CellRef<R> {
     type Target = LifeCell<R>;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         unsafe { self.cell.as_ref() }
     }

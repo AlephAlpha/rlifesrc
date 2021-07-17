@@ -245,14 +245,17 @@ impl Rule for Life {
     type Desc = NbhdDesc;
     type IsGen = False;
 
+    #[inline]
     fn has_b0(&self) -> bool {
         self.b0
     }
 
+    #[inline]
     fn has_b0_s8(&self) -> bool {
         self.b0 && self.s8
     }
 
+    #[inline]
     fn gen(&self) -> usize {
         2
     }

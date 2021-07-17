@@ -134,6 +134,7 @@ pub struct SetCell<R: Rule, A: Algorithm<R>> {
 
 impl<R: Rule, A: Algorithm<R>> SetCell<R, A> {
     /// Get a reference to the set cell.
+    #[inline]
     pub(crate) fn new(cell: CellRef<R>, reason: A::Reason) -> Self {
         Self { cell, reason }
     }
@@ -141,6 +142,7 @@ impl<R: Rule, A: Algorithm<R>> SetCell<R, A> {
     #[cfg(feature = "serde")]
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
     /// Saves the [`SetCell`] as a [`SetCellSer`].
+    #[inline]
     pub(crate) fn ser(&self) -> SetCellSer {
         SetCellSer {
             coord: self.cell.coord,
@@ -159,6 +161,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// cells involved.
     ///
     /// If there is a conflict, returns its reason.
+    #[inline]
     fn consistify(&mut self, cell: CellRef<R>) -> Result<(), A::ConflReason> {
         Rule::consistify(self, cell)
     }
@@ -166,6 +169,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// Consistifies a cell, its neighbors, and its predecessor.
     ///
     /// If there is a conflict, returns its reason.
+    #[inline]
     fn consistify10(&mut self, cell: CellRef<R>) -> Result<(), A::ConflReason> {
         self.consistify(cell)?;
 
@@ -212,6 +216,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     ///
     /// Returns `true` if successes,
     /// `false` if it goes back to the time before the first cell is set.
+    #[inline]
     pub(crate) fn retreat(&mut self) -> bool {
         A::retreat(self)
     }
@@ -223,6 +228,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     ///
     /// Returns `None` is there is no unknown cell,
     /// `Some(false)` if the new state leads to an immediate conflict.
+    #[inline]
     fn decide(&mut self) -> Option<bool> {
         if let Some(cell) = self.get_unknown() {
             self.next_unknown = cell.next;
@@ -238,6 +244,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     }
 
     /// Deduces all cells that could be deduced before the first decision.
+    #[inline]
     pub(crate) fn presearch(mut self) -> Self {
         loop {
             if self.proceed().is_ok() {

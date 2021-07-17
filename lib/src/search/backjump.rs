@@ -37,6 +37,7 @@ pub struct Backjump<R: Rule> {
 impl<R: Rule> Sealed for Backjump<R> {}
 
 impl<R: Rule<IsGen = False>> Default for Backjump<R> {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
@@ -47,6 +48,7 @@ impl<R: Rule<IsGen = False>> Algorithm<R> for Backjump<R> {
 
     type ConflReason = ConflReason<R>;
 
+    #[inline]
     fn new() -> Self {
         Self {
             level: 0,
@@ -242,6 +244,7 @@ pub enum ConflReason<R: Rule> {
 
 impl<R: Rule> ConflReason<R> {
     /// Whether this reason should be analyzed before retreating.
+    #[inline]
     fn should_analyze(&self) -> bool {
         !matches!(self, Self::Deduce)
     }

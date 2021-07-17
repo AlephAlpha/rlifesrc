@@ -53,21 +53,25 @@ impl PolyWorld {
     /// [`Status::None`] if such pattern does not exist,
     /// [`Status::Searching`] if the number of steps exceeds `max_step`
     /// and no results are found.
+    #[inline]
     pub fn search(&mut self, max_step: Option<u64>) -> Status {
         dispatch!(self, world => world.search(max_step))
     }
 
     /// Gets the state of a cell. Returns `Err(())` if there is no such cell.
+    #[inline]
     pub fn get_cell_state(&self, coord: Coord) -> Option<State> {
         dispatch!(self, world => world.get_cell_state(coord))
     }
 
     /// World configuration.
+    #[inline]
     pub fn config(&self) -> &Config {
         dispatch!(self, world => world.config())
     }
 
     /// Whether the rule is a Generations rule.
+    #[inline]
     pub fn is_gen_rule(&self) -> bool {
         dispatch!(self, world => world.is_gen_rule())
     }
@@ -76,6 +80,7 @@ impl PolyWorld {
     ///
     /// In other words, whether a cell would become [`ALIVE`] in the next
     /// generation, if all its neighbors in this generation are dead.
+    #[inline]
     pub fn is_b0_rule(&self) -> bool {
         dispatch!(self, world => world.is_b0_rule())
     }
@@ -83,6 +88,7 @@ impl PolyWorld {
     /// Number of known living cells in some generation.
     ///
     /// For Generations rules, dying cells are not counted.
+    #[inline]
     pub fn cell_count_gen(&self, t: i32) -> u32 {
         dispatch!(self, world => world.cell_count_gen(t))
     }
@@ -90,11 +96,13 @@ impl PolyWorld {
     /// Minimum number of known living cells in all generation.
     ///
     /// For Generations rules, dying cells are not counted.
+    #[inline]
     pub fn cell_count(&self) -> u32 {
         dispatch!(self, world => world.cell_count())
     }
 
     /// Number of conflicts during the search.
+    #[inline]
     pub fn conflicts(&self) -> u64 {
         dispatch!(self, world => world.conflicts())
     }
@@ -103,6 +111,7 @@ impl PolyWorld {
     ///
     /// Currently this is the only parameter that you can change
     /// during the search.
+    #[inline]
     pub fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
         dispatch!(self, world => world.set_max_cell_count(max_cell_count))
     }
@@ -118,6 +127,7 @@ impl PolyWorld {
     /// * **Unknown** cells are represented by `?`;
     /// * Each line is ended with `$`;
     /// * The whole pattern is ended with `!`.
+    #[inline]
     pub fn rle_gen(&self, t: i32) -> String {
         dispatch!(self, world => world.rle_gen(t))
     }
@@ -130,6 +140,7 @@ impl PolyWorld {
     /// * **Dead** cells are represented by `.`;
     /// * **Living** and **Dying** cells are represented by `o`;
     /// * **Unknown** cells are represented by `?`.
+    #[inline]
     pub fn plaintext_gen(&self, t: i32) -> String {
         dispatch!(self, world => world.plaintext_gen(t))
     }
@@ -138,6 +149,7 @@ impl PolyWorld {
     /// which can be easily serialized.
     #[cfg(feature = "serde")]
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
+    #[inline]
     pub fn ser(&self) -> WorldSer {
         dispatch!(self, world => world.ser())
     }
@@ -145,6 +157,7 @@ impl PolyWorld {
     /// Restores the world from the [`WorldSer`].
     #[cfg(feature = "serde")]
     #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "serde")))]
+    #[inline]
     pub fn deser(&mut self, ser: &WorldSer) -> Result<(), Error> {
         dispatch!(self, world => world.deser(ser))
     }

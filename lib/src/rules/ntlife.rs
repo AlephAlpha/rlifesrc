@@ -436,18 +436,22 @@ impl Rule for NtLifeGen {
     type Desc = NbhdDescGen;
     type IsGen = True;
 
+    #[inline]
     fn has_b0(&self) -> bool {
         self.b0
     }
 
+    #[inline]
     fn has_b0_s8(&self) -> bool {
         self.b0 && self.s8
     }
 
+    #[inline]
     fn gen(&self) -> usize {
         self.gen
     }
 
+    #[inline]
     fn new_desc(state: State, succ_state: State) -> Self::Desc {
         let desc = NtLife::new_desc(state, succ_state);
         NbhdDescGen(desc.0, Some(succ_state))

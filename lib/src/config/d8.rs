@@ -465,14 +465,14 @@ impl Symmetry {
     /// Whether this symmetry requires the world to be square.
     ///
     /// Returns `true` for `C4`, `D2\`, `D2/`, `D4X` and `D8`.
-    pub fn require_square_world(self) -> bool {
+    pub const fn require_square_world(self) -> bool {
         !self.is_subgroup_of(Self::D4Ortho)
     }
 
     /// Whether this transformation requires the world to have no diagonal width.
     ///
     /// Returns `true` for `C4`, `D2-`, `D2|`, `D4+` and `D8`.
-    pub fn require_no_diagonal_width(self) -> bool {
+    pub const fn require_no_diagonal_width(self) -> bool {
         !self.is_subgroup_of(Self::D4Diag)
     }
 

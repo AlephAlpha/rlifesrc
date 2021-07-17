@@ -136,6 +136,7 @@ impl<R: Rule> World<R, LifeSrc> {
 
     /// Creates a new world from the configuration and the rule,
     /// using the [`LifeSrc`] algorithm.
+    #[inline]
     pub fn new_lifesrc(config: &Config, rule: R) -> Self {
         Self::new_with_rule(config, rule)
     }
@@ -144,6 +145,7 @@ impl<R: Rule> World<R, LifeSrc> {
 impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
     /// Creates a new world from the configuration and the rule,
     /// using the [`Backjump`] algorithm.
+    #[inline]
     pub fn new_backjump(config: &Config, rule: R) -> Self {
         World::new_with_rule(config, rule)
     }
@@ -151,6 +153,7 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
 
 impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// Initialize the list of cells in the front.
+    #[inline]
     fn init_front(self) -> Self {
         A::init_front(self)
     }
@@ -391,6 +394,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// and update the neighborhood descriptor of its neighbors.
     ///
     /// The original state of the cell must be unknown.
+    #[inline]
     pub(crate) fn set_cell(
         &mut self,
         cell: CellRef<R>,
@@ -417,6 +421,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     }
 
     /// Gets a references to the first unknown cell since [`next_unknown`](#structfield.next_unknown).
+    #[inline]
     pub(crate) fn get_unknown(&mut self) -> Option<CellRef<R>> {
         while let Some(cell) = self.next_unknown {
             if cell.state.get().is_none() {
@@ -437,11 +442,13 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     }
 
     /// Tests if the result is trivial.
+    #[inline]
     fn is_trivial(&self) -> bool {
         self.cell_count[0] == 0
     }
 
     /// Tests if the result is stable.
+    #[inline]
     fn is_stable(&self) -> bool {
         self.config.period > 1
             && self
