@@ -4,9 +4,11 @@
 
 The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
 
-### Lib
-
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
+
+## 0.5.1 - 2021/07/17
+
+### Lib
 
 - Disabled `non empty front` when there are known cells.
 
