@@ -172,8 +172,10 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
         if let Some(pred) = cell.pred {
             self.consistify(pred)?;
         }
-        for &neigh in cell.nbhd.iter().flatten() {
-            self.consistify(neigh)?;
+        for &neigh in cell.nbhd.iter() {
+            if let Some(neigh) = neigh {
+                self.consistify(neigh)?;
+            }
         }
         Ok(())
     }

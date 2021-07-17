@@ -279,7 +279,7 @@ impl Rule for Life {
             Some(_) => 0x10,
             None => 0,
         };
-        for neigh in cell.nbhd {
+        for &neigh in &cell.nbhd {
             let neigh = neigh.unwrap();
             let mut desc = neigh.desc.get();
             if new {
@@ -345,9 +345,11 @@ impl Rule for Life {
                 } else {
                     ALIVE
                 };
-                for &neigh in cell.nbhd.iter().flatten() {
-                    if neigh.state.get().is_none() {
-                        world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
+                for &neigh in &cell.nbhd {
+                    if let Some(neigh) = neigh {
+                        if neigh.state.get().is_none() {
+                            world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
+                        }
                     }
                 }
             }
@@ -454,7 +456,7 @@ impl Rule for LifeGen {
                 Some(_) => 0x10,
                 None => 0,
             };
-            for neigh in cell.nbhd {
+            for &neigh in &cell.nbhd {
                 let neigh = neigh.unwrap();
                 let mut desc = neigh.desc.get();
                 if new {
@@ -570,9 +572,11 @@ impl Rule for LifeGen {
         }
 
         if flags.intersects(ImplFlags::NBHD_ALIVE) {
-            for &neigh in cell.nbhd.iter().flatten() {
-                if neigh.state.get().is_none() {
-                    world.set_cell(neigh, ALIVE, A::Reason::from_cell(cell))?;
+            for &neigh in &cell.nbhd {
+                if let Some(neigh) = neigh {
+                    if neigh.state.get().is_none() {
+                        world.set_cell(neigh, ALIVE, A::Reason::from_cell(cell))?;
+                    }
                 }
             }
         }
