@@ -161,6 +161,12 @@ impl Config {
         if !self.known_cells.is_empty() {
             return None;
         }
+
+        // FIXME: We should actually finding out the symmetry instead of just looking at the rule string.
+        let rule_string = self.rule_string.to_uppercase();
+        let rule_is_map = rule_string.starts_with("MAP");
+        let rule_is_hex = rule_string.ends_with('H');
+
         match search_order {
             SearchOrder::RowFirst => {
                 if self.symmetry <= Symmetry::D2Col
@@ -168,9 +174,13 @@ impl Config {
                     && self.diagonal_width.is_none()
                 {
                     if !rule_is_b0 && dx == 0 && dy >= 0 {
-                        Some(Box::new(move |(x, y, t)| {
-                            y == (dy - 1).max(0) && t == 0 && x <= width / 2
-                        }))
+                        if !rule_is_map && !rule_is_hex {
+                            Some(Box::new(move |(x, y, t)| {
+                                y == (dy - 1).max(0) && t == 0 && x <= width / 2
+                            }))
+                        } else {
+                            Some(Box::new(move |(_, y, t)| y == (dy - 1).max(0) && t == 0))
+                        }
                     } else {
                         Some(Box::new(|(_, y, _)| y == 0))
                     }
@@ -184,9 +194,13 @@ impl Config {
                     && self.diagonal_width.is_none()
                 {
                     if !rule_is_b0 && dx >= 0 && dy == 0 {
-                        Some(Box::new(move |(x, y, t)| {
-                            x == (dx - 1).max(0) && t == 0 && y <= height / 2
-                        }))
+                        if !rule_is_map && !rule_is_hex {
+                            Some(Box::new(move |(x, y, t)| {
+                                x == (dx - 1).max(0) && t == 0 && y <= height / 2
+                            }))
+                        } else {
+                            Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t == 0))
+                        }
                     } else {
                         Some(Box::new(|(x, _, _)| x == 0))
                     }
@@ -196,8 +210,14 @@ impl Config {
             }
             SearchOrder::Diagonal => {
                 if self.symmetry <= Symmetry::D2Diag && self.transform.is_in(Symmetry::D2Diag) {
-                    if !rule_is_b0 && dx >= 0 && dx == dy {
-                        Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t == 0))
+                    if !rule_is_b0 && dx >= 0 && dx == dy && self.width == self.height {
+                        if !rule_is_map {
+                            Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t == 0))
+                        } else {
+                            Some(Box::new(move |(x, y, t)| {
+                                x == (dx - 1).max(0) && y == (dy - 1).max(0) && t == 0
+                            }))
+                        }
                     } else {
                         Some(Box::new(|(x, y, _)| x == 0 || y == 0))
                     }
