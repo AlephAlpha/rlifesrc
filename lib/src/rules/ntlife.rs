@@ -2,6 +2,7 @@
 
 use crate::{
     cells::{CellRef, LifeCell, State, ALIVE, DEAD},
+    config::{Symmetry, Transform},
     error::Error,
     rules::{private::Sealed, Rule},
     search::{Algorithm, Reason},
@@ -9,8 +10,37 @@ use crate::{
 };
 use bitflags::bitflags;
 use ca_rules::{ParseNtLife, ParseNtLifeGen};
-use std::str::FromStr;
+use std::{array::IntoIter, collections::HashSet, str::FromStr};
 use typebool::{False, True};
+
+/// Permutes the bits of an `u8`.
+fn permute_bits(n: u8, perm: [u32; 8]) -> u8 {
+    (0..8)
+        .map(|i| (n & (1 << i)).rotate_left(perm[i] + 8 - i as u32))
+        .fold(0, |x, y| x | y)
+}
+
+/// Transform the neighborhood of a cell.
+///
+/// The neighborhood is represented by a `u8`:
+///
+/// ```plaintext
+/// 7 6 5
+/// 4 x 3
+/// 2 1 0
+/// ```
+fn transform_neigh(data: u8, transform: Transform) -> u8 {
+    match transform {
+        Transform::Id => data,
+        Transform::Rotate90 => permute_bits(data, [5, 3, 0, 6, 1, 7, 4, 2]),
+        Transform::Rotate180 => permute_bits(data, [7, 6, 5, 4, 3, 2, 1, 0]),
+        Transform::Rotate270 => permute_bits(data, [2, 4, 7, 1, 6, 0, 3, 5]),
+        Transform::FlipRow => permute_bits(data, [5, 6, 7, 3, 4, 0, 1, 2]),
+        Transform::FlipCol => permute_bits(data, [2, 1, 0, 4, 3, 7, 6, 5]),
+        Transform::FlipDiag => permute_bits(data, [0, 3, 5, 1, 6, 2, 4, 7]),
+        Transform::FlipAntidiag => permute_bits(data, [7, 4, 2, 6, 1, 5, 3, 0]),
+    }
+}
 
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
@@ -67,6 +97,8 @@ pub struct NtLife {
     b0: bool,
     /// Whether the rule contains `S8`.
     s8: bool,
+    /// The symmetry of the rule.
+    symmetry: Symmetry,
     /// An array of actions for all neighborhood descriptors.
     impl_table: Vec<ImplFlags>,
 }
@@ -76,14 +108,44 @@ impl NtLife {
     pub fn new(b: &[u8], s: &[u8]) -> Self {
         let b0 = b.contains(&0x00);
         let s8 = s.contains(&0xff);
-
+        let symmetry = Symmetry::C1;
         let impl_table = vec![ImplFlags::empty(); 1 << 20];
 
-        Self { b0, s8, impl_table }
-            .init_trans(b, s)
-            .init_conflict()
-            .init_impl()
-            .init_impl_nbhd()
+        Self {
+            b0,
+            s8,
+            symmetry,
+            impl_table,
+        }
+        .init_symmetry(b, s)
+        .init_trans(b, s)
+        .init_conflict()
+        .init_impl()
+        .init_impl_nbhd()
+    }
+
+    /// Deduces the symmetry of the rule
+    fn init_symmetry(mut self, b: &[u8], s: &[u8]) -> Self {
+        let b_set: HashSet<_> = b.iter().cloned().collect();
+        let s_set: HashSet<_> = s.iter().cloned().collect();
+
+        self.symmetry = Symmetry::generated_by(
+            IntoIter::new(Transform::ALL)
+                .filter(|transform| {
+                    b.iter()
+                        .map(|data| transform_neigh(*data, *transform))
+                        .collect::<HashSet<_>>()
+                        == b_set
+                })
+                .filter(|transform| {
+                    s.iter()
+                        .map(|data| transform_neigh(*data, *transform))
+                        .collect::<HashSet<_>>()
+                        == s_set
+                }),
+        );
+
+        self
     }
 
     /// Deduces the implication for the successor.
@@ -382,6 +444,8 @@ pub struct NtLifeGen {
     s8: bool,
     /// Number of states.
     gen: usize,
+    /// The symmetry of the rule.
+    symmetry: Symmetry,
     /// An array of actions for all neighborhood descriptors.
     impl_table: Vec<ImplFlags>,
 }
@@ -396,6 +460,7 @@ impl NtLifeGen {
             b0: life.b0,
             s8: life.s8,
             gen,
+            symmetry: life.symmetry,
             impl_table,
         }
     }
@@ -405,6 +470,7 @@ impl NtLifeGen {
         NtLife {
             b0: self.b0,
             s8: self.s8,
+            symmetry: self.symmetry,
             impl_table: self.impl_table,
         }
     }
