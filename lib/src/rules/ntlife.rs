@@ -326,6 +326,11 @@ impl Rule for NtLife {
     }
 
     #[inline]
+    fn symmetry(&self) -> Symmetry {
+        self.symmetry
+    }
+
+    #[inline]
     fn new_desc(state: State, succ_state: State) -> Self::Desc {
         let nbhd_state = match state {
             ALIVE => 0x00ff,
@@ -518,6 +523,11 @@ impl Rule for NtLifeGen {
     }
 
     #[inline]
+    fn symmetry(&self) -> Symmetry {
+        self.symmetry
+    }
+
+    #[inline]
     fn new_desc(state: State, succ_state: State) -> Self::Desc {
         let desc = NtLife::new_desc(state, succ_state);
         NbhdDescGen(desc.0, Some(succ_state))
@@ -650,5 +660,22 @@ impl Rule for NtLifeGen {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rule_symmetry() {
+        let life: NtLife = "B3/S23".parse().unwrap();
+        assert_eq!(life.symmetry, Symmetry::D8);
+
+        let isotropic: NtLife = "B2ci3ai4c8/S02ae3eijkq4iz5ar6i7e".parse().unwrap();
+        assert_eq!(isotropic.symmetry, Symmetry::D8);
+
+        let hexagonal: NtLife = "B2/S34H".parse().unwrap();
+        assert_eq!(hexagonal.symmetry, Symmetry::D4Diag);
     }
 }

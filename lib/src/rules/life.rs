@@ -2,6 +2,7 @@
 
 use crate::{
     cells::{CellRef, LifeCell, State, ALIVE, DEAD},
+    config::Symmetry,
     error::Error,
     rules::{private::Sealed, Rule},
     search::{Algorithm, Reason},
@@ -260,6 +261,11 @@ impl Rule for Life {
         2
     }
 
+    #[inline]
+    fn symmetry(&self) -> Symmetry {
+        Symmetry::D8
+    }
+
     fn new_desc(state: State, succ_state: State) -> Self::Desc {
         let nbhd_state = match state {
             ALIVE => 0x08,
@@ -444,6 +450,11 @@ impl Rule for LifeGen {
     #[inline]
     fn gen(&self) -> usize {
         self.gen
+    }
+
+    #[inline]
+    fn symmetry(&self) -> Symmetry {
+        Symmetry::D8
     }
 
     #[inline]

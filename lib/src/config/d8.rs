@@ -709,6 +709,30 @@ mod tests {
     }
 
     #[test]
+    fn test_generating() {
+        for sym in Symmetry::ALL {
+            let members = sym.members();
+            assert_eq!(sym, Symmetry::generated_by(members));
+
+            let generated_with_cosets = sym
+                .cosets()
+                .iter()
+                .cloned()
+                .fold(sym, Symmetry::generated_with);
+            assert_eq!(generated_with_cosets, Symmetry::D8);
+
+            for transform in Transform::ALL {
+                let generated_with = sym.generated_with(transform);
+                if transform.is_in(sym) {
+                    assert_eq!(generated_with, sym);
+                } else {
+                    assert!(generated_with > sym);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn test_transform_inverse() {
         let width = 16;
         let height = 16;

@@ -8,6 +8,7 @@ mod ntlife;
 
 use crate::{
     cells::{CellRef, LifeCell, State},
+    config::Symmetry,
     search::Algorithm,
     world::World,
 };
@@ -56,6 +57,9 @@ pub trait Rule: private::Sealed {
 
     /// The number of states.
     fn gen(&self) -> usize;
+
+    /// The symmetry of the rule.
+    fn symmetry(&self) -> Symmetry;
 
     /// Generates a neighborhood descriptor which says that all neighboring
     /// cells have states `state`, and the successor has state `succ_state`.
