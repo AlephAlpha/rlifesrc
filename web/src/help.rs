@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use pulldown_cmark::{html::push_html, Parser};
 use std::include_str;
 use web_sys::Node;
@@ -6,13 +6,11 @@ use yew::{virtual_dom::VNode, Component, ComponentLink, Html, ShouldRender};
 
 const HELP_TEXT: &str = include_str!("help.md");
 
-lazy_static! {
-    static ref HELP_HTML: String = {
-        let mut html_output = String::new();
-        push_html(&mut html_output, Parser::new(HELP_TEXT));
-        html_output
-    };
-}
+static HELP_HTML: Lazy<String> = Lazy::new(|| {
+    let mut html_output = String::new();
+    push_html(&mut html_output, Parser::new(HELP_TEXT));
+    html_output
+});
 
 pub struct Help;
 
