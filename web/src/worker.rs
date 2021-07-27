@@ -220,6 +220,10 @@ impl Agent for Worker {
                 world_ser
                     .extra
                     .insert("max_partial".to_owned(), self.max_partial.clone());
+                world_ser.extra.insert(
+                    "max_partial_count".to_owned(),
+                    self.max_partial_count.to_string(),
+                );
                 self.link.respond(id, Response::Save(world_ser));
             }
             Request::Load(world_ser) => {
@@ -233,6 +237,23 @@ impl Agent for Worker {
                         }
                         if let Some(max_partial) = world_ser.extra.get("max_partial") {
                             self.max_partial = max_partial.clone();
+                        }
+                        if let Some(max_partial_count) = world_ser.extra.get("max_partial_count") {
+                            match max_partial_count.parse() {
+                                Ok(max_partial_count) => self.max_partial_count = max_partial_count,
+                                Err(error) => {
+                                    let message = error.to_string();
+                                    error!("Error loading save file: {}", message);
+                                    self.link.respond(
+                                        id,
+                                        Response::Error {
+                                            message,
+                                            goto_config: false,
+                                        },
+                                    );
+                                    return;
+                                }
+                            }
                         }
                         self.update_message().with_config().with_world(0).send(id);
                     }
