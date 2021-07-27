@@ -2,15 +2,28 @@
 
 ## Unreleased
 
-The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
+### Lib
 
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
+
+- Add an `extra` field in the save file for saving any extra information, e.g., maximal partial result.
+
+### Web
+
+The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
+
+- Save maximal partial result in the save file.
+
+### Others
+
+- Fix some bugs.
+- Update dependencies.
 
 ## 0.5.1 - 2021/07/17
 
 ### Lib
 
-- Disabled `non empty front` when there are known cells.
+- Disable `non empty front` when there are known cells.
 
 ### Others
 
@@ -21,7 +34,7 @@ For the documentation of the unreleased lib, please visit https://alephalpha.git
 
 ### Lib
 
-- Disabled backjumping when `max_cell_count` is specified.
+- Disable backjumping when `max_cell_count` is specified.
 - Remove `Status::Paused`. Now pausing is handled by `tui` and `web` instead of the `lib`.
 - The `Rule` trait is now [sealed](https://rust-lang.github.io/api-guidelines/future-proofing.html).
 - Add a `timing` field in the save file.

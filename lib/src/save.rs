@@ -12,9 +12,12 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+#[cfg(feature = "save-extra")]
+#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "save-extra")))]
+use std::collections::BTreeMap;
+
 /// A representation of reasons for setting a cell which can be easily serialized.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ReasonSer {
     /// Known before the search starts,
     Known,
@@ -81,6 +84,12 @@ pub struct WorldSer {
     /// Time used in searching. This field is handled by the frontend.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timing: Option<Duration>,
+
+    /// A field for saving extra information.
+    #[cfg(feature = "save-extra")]
+    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "save-extra")))]
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, String>,
 }
 
 impl WorldSer {
@@ -130,6 +139,8 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
             set_stack: self.set_stack.iter().map(SetCell::ser).collect(),
             check_index: self.check_index,
             timing: None,
+            #[cfg(feature = "save-extra")]
+            extra: BTreeMap::new(),
         }
     }
 

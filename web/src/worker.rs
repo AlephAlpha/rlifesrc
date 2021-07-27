@@ -217,6 +217,9 @@ impl Agent for Worker {
             Request::Save => {
                 let mut world_ser = self.world.ser();
                 world_ser.timing = Some(self.timing);
+                world_ser
+                    .extra
+                    .insert("max_partial".to_owned(), self.max_partial.clone());
                 self.link.respond(id, Response::Save(world_ser));
             }
             Request::Load(world_ser) => {
@@ -227,6 +230,9 @@ impl Agent for Worker {
                         self.reset_world(world);
                         if let Some(timing) = world_ser.timing {
                             self.timing = timing;
+                        }
+                        if let Some(max_partial) = world_ser.extra.get("max_partial") {
+                            self.max_partial = max_partial.clone();
                         }
                         self.update_message().with_config().with_world(0).send(id);
                     }

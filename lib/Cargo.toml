@@ -26,8 +26,16 @@ typebool = "0.1.0"
 
 [features]
 default = ["serde"]
+
+# Supports chosing random state for wasm32-unknown-unknown target.
+# See https://docs.rs/getrandom/*/getrandom/index.html#webassembly-support
 js = ["serde", "getrandom/js"]
+
+# Supports reading RLE as known cells.
 read-rle = ["serde", "ca-formats"]
+
+# Supports saving extra information.
+save-extra = ["serde"]
 
 [package.metadata.docs.rs]
 all-features = true
