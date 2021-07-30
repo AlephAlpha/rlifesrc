@@ -126,8 +126,8 @@ impl NtLife {
 
     /// Deduces the symmetry of the rule
     fn init_symmetry(mut self, b: &[u8], s: &[u8]) -> Self {
-        let b_set: HashSet<_> = b.iter().cloned().collect();
-        let s_set: HashSet<_> = s.iter().cloned().collect();
+        let b_set: HashSet<_> = b.iter().copied().collect();
+        let s_set: HashSet<_> = s.iter().copied().collect();
 
         self.symmetry = Symmetry::generated_by(
             IntoIter::new(Transform::ALL)

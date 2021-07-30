@@ -357,15 +357,15 @@ impl Config {
 
     /// Whether the configuration requires the world to be square.
     #[inline]
-    pub fn require_square_world(&self) -> bool {
+    pub const fn require_square_world(&self) -> bool {
         self.symmetry.require_square_world()
             || self.transform.require_square_world()
-            || self.search_order == Some(SearchOrder::Diagonal)
+            || matches!(self.search_order, Some(SearchOrder::Diagonal))
     }
 
     /// Whether the configuration requires the world to have no diagonal width.
     #[inline]
-    pub fn require_no_diagonal_width(&self) -> bool {
+    pub const fn require_no_diagonal_width(&self) -> bool {
         self.symmetry.require_no_diagonal_width() || self.transform.require_no_diagonal_width()
     }
 

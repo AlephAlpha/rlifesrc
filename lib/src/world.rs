@@ -591,9 +591,9 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                     Some(DEAD) => str.push('.'),
                     Some(ALIVE) => {
                         if self.is_gen_rule() {
-                            str.push('A')
+                            str.push('A');
                         } else {
-                            str.push('o')
+                            str.push('o');
                         }
                     }
                     Some(State(i)) => str.push((b'A' + i as u8 - 1) as char),
@@ -601,9 +601,9 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                 };
             }
             if y == self.config().height - 1 {
-                str.push('!')
+                str.push('!');
             } else {
-                str.push('$')
+                str.push('$');
             };
             str.push('\n');
         }

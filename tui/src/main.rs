@@ -18,7 +18,7 @@ fn run_search(world: &mut PolyWorld, all: bool) {
             match world.search(None) {
                 Status::Found => {
                     found = true;
-                    println!("{}", world.rle_gen(0))
+                    println!("{}", world.rle_gen(0));
                 }
                 Status::None => break,
                 _ => (),

@@ -113,7 +113,7 @@ impl PolyWorld {
     /// during the search.
     #[inline]
     pub fn set_max_cell_count(&mut self, max_cell_count: Option<u32>) {
-        dispatch!(self, world => world.set_max_cell_count(max_cell_count))
+        dispatch!(self, world => world.set_max_cell_count(max_cell_count));
     }
 
     /// Displays the whole world in some generation,

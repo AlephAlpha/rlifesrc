@@ -132,9 +132,9 @@ impl<'a, W: Write> App<'a, W> {
                     Some(DEAD) => line.push('.'),
                     Some(ALIVE) => {
                         if self.world.is_gen_rule() {
-                            line.push('A')
+                            line.push('A');
                         } else {
-                            line.push('o')
+                            line.push('o');
                         }
                     }
                     Some(State(i)) => line.push((b'A' + i as u8 - 1) as char),
@@ -142,9 +142,9 @@ impl<'a, W: Write> App<'a, W> {
                 };
             }
             if y == self.world.config().height - 1 {
-                line.push('!')
+                line.push('!');
             } else {
-                line.push('$')
+                line.push('$');
             };
             self.output.queue(Print(line))?.queue(MoveToNextLine(1))?;
         }
@@ -239,18 +239,12 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Handles a key event. Returns `true` to quit the program.
     fn handle(&mut self, event: Option<Event>) -> CrosstermResult<bool> {
-        /// A macro to generate key event patterns.
-        macro_rules! key_event {
-            ($( $code:pat )|+) => {
-                $(
-                    Some(Event::Key(KeyEvent { code: $code , .. }))
-                )|+
-            };
-        }
-
         match self.mode {
             Mode::Main => match event {
-                key_event!(KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc) => {
+                Some(Event::Key(KeyEvent {
+                    code: KeyCode::Char('q' | 'Q') | KeyCode::Esc,
+                    ..
+                })) => {
                     if !self.paused {
                         self.pause();
                     }
@@ -261,15 +255,24 @@ impl<'a, W: Write> App<'a, W> {
                         return Ok(true);
                     }
                 }
-                key_event!(KeyCode::PageDown) => {
+                Some(Event::Key(KeyEvent {
+                    code: KeyCode::PageDown,
+                    ..
+                })) => {
                     self.gen = (self.gen + 1) % self.period;
                     self.update()?;
                 }
-                key_event!(KeyCode::PageUp) => {
+                Some(Event::Key(KeyEvent {
+                    code: KeyCode::PageUp,
+                    ..
+                })) => {
                     self.gen = (self.gen + self.period - 1) % self.period;
                     self.update()?;
                 }
-                key_event!(KeyCode::Char(' ') | KeyCode::Enter) => {
+                Some(Event::Key(KeyEvent {
+                    code: KeyCode::Char(' ') | KeyCode::Enter,
+                    ..
+                })) => {
                     if !self.paused {
                         self.pause();
                     } else {
@@ -295,9 +298,10 @@ impl<'a, W: Write> App<'a, W> {
                 }
             },
             Mode::AskingQuit => match event {
-                key_event!(KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter) => {
-                    return Ok(true)
-                }
+                Some(Event::Key(KeyEvent {
+                    code: KeyCode::Char('y' | 'Y') | KeyCode::Enter,
+                    ..
+                })) => return Ok(true),
                 Some(Event::Resize(width, height)) => {
                     self.term_size = (width, height);
                     self.world_size.0 = self.world_size.0.min(self.term_size.0 as i32 - 1);
@@ -345,7 +349,7 @@ impl<'a, W: Write> App<'a, W> {
 
 impl<'a, W: Write> Drop for App<'a, W> {
     fn drop(&mut self) {
-        self.quit().unwrap()
+        self.quit().ok();
     }
 }
 

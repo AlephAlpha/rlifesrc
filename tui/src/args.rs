@@ -334,7 +334,7 @@ impl Args {
                         )
                     })?;
                 }
-                Some("yaml") | Some("yml") => {
+                Some("yaml" | "yml") => {
                     config = serde_yaml::from_reader(reader).map_err(|e| {
                         Error::with_description(
                             &format! {"Invalid config file: {}",e},
