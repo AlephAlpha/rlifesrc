@@ -177,6 +177,8 @@ impl Config {
                         } else {
                             Some(Box::new(move |(_, y, t)| y == (dy - 1).max(0) && t == 0))
                         }
+                    } else if rule_symmetry >= Symmetry::D2Col && dx == 0 {
+                        Some(Box::new(move |(x, y, _)| y == 0 && x <= width / 2))
                     } else {
                         Some(Box::new(|(_, y, _)| y == 0))
                     }
@@ -197,6 +199,8 @@ impl Config {
                         } else {
                             Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t == 0))
                         }
+                    } else if rule_symmetry >= Symmetry::D2Row && dy == 0 {
+                        Some(Box::new(move |(x, y, _)| x == 0 && y <= height / 2))
                     } else {
                         Some(Box::new(|(x, _, _)| x == 0))
                     }
@@ -206,14 +210,19 @@ impl Config {
             }
             SearchOrder::Diagonal => {
                 if self.symmetry <= Symmetry::D2Diag && self.transform.is_in(Symmetry::D2Diag) {
-                    if !rule_is_b0 && dx >= 0 && dx == dy && self.width == self.height {
-                        if rule_symmetry >= Symmetry::D2Diag {
+                    if !rule_is_b0 && dx >= 0 && dx == dy {
+                        if rule_symmetry >= Symmetry::D2Diag && self.width == self.height {
                             Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t == 0))
                         } else {
                             Some(Box::new(move |(x, y, t)| {
                                 x == (dx - 1).max(0) && y == (dy - 1).max(0) && t == 0
                             }))
                         }
+                    } else if rule_symmetry >= Symmetry::D2Diag
+                        && dx == dy
+                        && self.width == self.height
+                    {
+                        Some(Box::new(|(x, _, _)| x == 0))
                     } else {
                         Some(Box::new(|(x, y, _)| x == 0 || y == 0))
                     }
