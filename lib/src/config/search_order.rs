@@ -152,6 +152,7 @@ impl Config {
     pub(crate) fn fn_is_front(
         &self,
         rule_is_b0: bool,
+        rule_gen: usize,
         rule_symmetry: Symmetry,
         search_order: &SearchOrder,
     ) -> Option<Box<dyn Fn(Coord) -> bool>> {
@@ -159,6 +160,7 @@ impl Config {
         let dy = self.dy;
         let width = self.width;
         let height = self.height;
+        let max_t = if rule_is_b0 { rule_gen as i32 } else { 1 };
         if !self.known_cells.is_empty() {
             return None;
         }
@@ -169,13 +171,13 @@ impl Config {
                     && self.transform.is_in(Symmetry::D2Col)
                     && self.diagonal_width.is_none()
                 {
-                    if !rule_is_b0 && dx == 0 && dy >= 0 {
+                    if dx == 0 && dy >= 0 {
                         if rule_symmetry >= Symmetry::D2Col {
                             Some(Box::new(move |(x, y, t)| {
-                                y == (dy - 1).max(0) && t == 0 && x <= width / 2
+                                y == (dy - 1).max(0) && t < max_t && x <= width / 2
                             }))
                         } else {
-                            Some(Box::new(move |(_, y, t)| y == (dy - 1).max(0) && t == 0))
+                            Some(Box::new(move |(_, y, t)| y == (dy - 1).max(0) && t < max_t))
                         }
                     } else if rule_symmetry >= Symmetry::D2Col && dx == 0 {
                         Some(Box::new(move |(x, y, _)| y == 0 && x <= width / 2))
@@ -191,13 +193,13 @@ impl Config {
                     && self.transform.is_in(Symmetry::D2Row)
                     && self.diagonal_width.is_none()
                 {
-                    if !rule_is_b0 && dx >= 0 && dy == 0 {
+                    if dx >= 0 && dy == 0 {
                         if rule_symmetry >= Symmetry::D2Row {
                             Some(Box::new(move |(x, y, t)| {
-                                x == (dx - 1).max(0) && t == 0 && y <= height / 2
+                                x == (dx - 1).max(0) && t < max_t && y <= height / 2
                             }))
                         } else {
-                            Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t == 0))
+                            Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t < max_t))
                         }
                     } else if rule_symmetry >= Symmetry::D2Row && dy == 0 {
                         Some(Box::new(move |(x, y, _)| x == 0 && y <= height / 2))
@@ -210,12 +212,12 @@ impl Config {
             }
             SearchOrder::Diagonal => {
                 if self.symmetry <= Symmetry::D2Diag && self.transform.is_in(Symmetry::D2Diag) {
-                    if !rule_is_b0 && dx >= 0 && dx == dy {
+                    if dx >= 0 && dx == dy {
                         if rule_symmetry >= Symmetry::D2Diag && self.width == self.height {
-                            Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t == 0))
+                            Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t < max_t))
                         } else {
                             Some(Box::new(move |(x, y, t)| {
-                                x == (dx - 1).max(0) && y == (dy - 1).max(0) && t == 0
+                                x == (dx - 1).max(0) && y == (dy - 1).max(0) && t < max_t
                             }))
                         }
                     } else if rule_symmetry >= Symmetry::D2Diag
