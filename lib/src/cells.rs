@@ -135,7 +135,8 @@ impl<R: Rule> LifeCell<R> {
     ///
     /// Here `state` is the new state of the cell when `new` is true,
     /// the old state when `new` is false.
-    pub(crate) fn update_desc(&self, state: Option<State>, new: bool) {
+    #[inline]
+    pub(crate) fn update_desc(&self, state: State, new: bool) {
         R::update_desc(self, state, new);
     }
 }

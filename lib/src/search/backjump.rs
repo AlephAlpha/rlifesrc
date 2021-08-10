@@ -1,12 +1,11 @@
 //! The search process, with backjumping.
 use crate::{
     cells::{CellRef, State},
-    rules::Rule,
+    rules::{typebool::False, Rule},
     search::{private::Sealed, Algorithm, Reason as TraitReason, SetCell},
     world::World,
 };
 use educe::Educe;
-use typebool::False;
 
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
@@ -25,13 +24,13 @@ use crate::cells::LifeCell;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Backjump<R: Rule> {
     /// The global decision level for assigning the cell state.
-    pub(crate) level: u32,
+    level: u32,
 
     /// All cells in the front.
-    pub(crate) front: Vec<CellRef<R>>,
+    front: Vec<CellRef<R>>,
 
     /// A learnt clause.
-    pub(crate) learnt: Vec<CellRef<R>>,
+    learnt: Vec<CellRef<R>>,
 }
 
 impl<R: Rule> Sealed for Backjump<R> {}
@@ -294,7 +293,7 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
     ) -> Result<(), ConflReason<R>> {
         cell.state.set(Some(state));
         let mut result = Ok(());
-        cell.update_desc(Some(state), true);
+        cell.update_desc(state, true);
         if state == !cell.background {
             self.cell_count[cell.coord.2 as usize] += 1;
             if let Some(max) = self.config.max_cell_count {
@@ -306,7 +305,11 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
         if cell.is_front && state == cell.background {
             self.front_cell_count -= 1;
             if self.non_empty_front && self.front_cell_count == 0 {
-                result = Err(ConflReason::Front);
+                result = if matches!(reason, Reason::Deduce) {
+                    Err(ConflReason::Deduce)
+                } else {
+                    Err(ConflReason::Front)
+                };
             }
         }
         if reason.is_decided() {
@@ -365,7 +368,7 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
             return self.retreat_impl();
         }
         let mut max_level = 0;
-        let mut counter = 0;
+        let mut seen_count = 0;
         let mut i = 0;
         while i < self.algo_data.learnt.len() {
             let reason_cell = self.algo_data.learnt[i];
@@ -373,7 +376,7 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
                 let level = reason_cell.level.get();
                 if level == self.algo_data.level {
                     if !reason_cell.seen.get() {
-                        counter += 1;
+                        seen_count += 1;
                         reason_cell.seen.set(true);
                     }
                 } else if level > 0 {
@@ -396,7 +399,14 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
                     self.next_unknown = cell.next;
                     self.algo_data.level -= 1;
                     self.clear_cell(cell);
-                    return self.set_cell_impl(cell, state, reason).is_ok() || self.retreat_impl();
+                    match self.set_cell_impl(cell, state, reason) {
+                        Ok(()) => return true,
+                        Err(ConflReason::Deduce) => return self.retreat_impl(),
+                        Err(reason) => {
+                            self.learn_from_confl(reason);
+                            return self.analyze();
+                        }
+                    }
                 }
                 Reason::Deduce => {
                     self.clear_cell(cell);
@@ -409,13 +419,13 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
                     let seen = cell.seen.get();
                     self.clear_cell(cell);
                     if seen {
-                        counter -= 1;
+                        seen_count -= 1;
                         for reason_cell in reason.cells() {
                             if reason_cell.state.get().is_some() {
                                 let level = reason_cell.level.get();
                                 if level == self.algo_data.level {
                                     if !reason_cell.seen.get() {
-                                        counter += 1;
+                                        seen_count += 1;
                                         reason_cell.seen.set(true);
                                     }
                                 } else if level > 0 {
@@ -425,7 +435,7 @@ impl<R: Rule<IsGen = False>> World<R, Backjump<R>> {
                             }
                         }
 
-                        if counter == 0 {
+                        if seen_count == 0 {
                             if max_level == 0 {
                                 break;
                             }

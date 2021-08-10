@@ -53,7 +53,7 @@ pub enum SearchOrder {
 
 impl Config {
     /// Automatically determines the search order if `search_order` is `None`.
-    pub(crate) fn auto_search_order(&self) -> Cow<SearchOrder> {
+    pub(crate) fn auto_search_order(&self) -> Cow<'_, SearchOrder> {
         if let Some(search_order) = &self.search_order {
             Cow::Borrowed(search_order)
         } else {

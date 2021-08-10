@@ -347,7 +347,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 }
 
-impl<'a, W: Write> Drop for App<'a, W> {
+impl<W: Write> Drop for App<'_, W> {
     fn drop(&mut self) {
         self.quit().ok();
     }

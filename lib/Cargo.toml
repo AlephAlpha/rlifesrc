@@ -22,7 +22,6 @@ getrandom = "0.2.3"
 rand = "0.8.4"
 serde = { version = "1.0.127", features = ["derive"], optional = true }
 thiserror = "1.0.26"
-typebool = "0.1.0"
 
 [features]
 default = ["serde"]

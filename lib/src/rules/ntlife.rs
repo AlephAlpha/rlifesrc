@@ -4,14 +4,17 @@ use crate::{
     cells::{CellRef, LifeCell, State, ALIVE, DEAD},
     config::{Symmetry, Transform},
     error::Error,
-    rules::{private::Sealed, Rule},
+    rules::{
+        private::Sealed,
+        typebool::{False, True},
+        Rule,
+    },
     search::{Algorithm, Reason},
     world::World,
 };
 use bitflags::bitflags;
 use ca_rules::{ParseNtLife, ParseNtLifeGen};
 use std::{array::IntoIter, collections::HashSet, str::FromStr};
-use typebool::{False, True};
 
 /// Permutes the bits of an `u8`.
 fn permute_bits(n: u8, perm: [u32; 8]) -> u8 {
@@ -347,11 +350,10 @@ impl Rule for NtLife {
         NbhdDesc(nbhd_state << 4 | succ_state << 2 | state)
     }
 
-    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, _new: bool) {
+    fn update_desc(cell: &LifeCell<Self>, state: State, _new: bool) {
         let nbhd_change_num = match state {
-            Some(ALIVE) => 0x0001,
-            Some(_) => 0x0100,
-            None => 0x0000,
+            ALIVE => 0x0001,
+            _ => 0x0100,
         };
         for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
             let neigh = neigh.unwrap();
@@ -361,9 +363,8 @@ impl Rule for NtLife {
         }
 
         let change_num = match state {
-            Some(ALIVE) => 0b01,
-            Some(_) => 0b10,
-            None => 0,
+            ALIVE => 0b01,
+            _ => 0b10,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
@@ -409,19 +410,16 @@ impl Rule for NtLife {
         }
 
         if flags.intersects(ImplFlags::NBHD) {
-            {
-                for (i, &neigh) in cell.nbhd.iter().enumerate() {
-                    if flags.intersects(ImplFlags::from_bits(3 << (2 * i + 6)).unwrap()) {
-                        if let Some(neigh) = neigh {
-                            let state = if flags
-                                .contains(ImplFlags::from_bits(1 << (2 * i + 7)).unwrap())
-                            {
+            for (i, &neigh) in cell.nbhd.iter().enumerate() {
+                if flags.intersects(ImplFlags::from_bits(3 << (2 * i + 6)).unwrap()) {
+                    if let Some(neigh) = neigh {
+                        let state =
+                            if flags.contains(ImplFlags::from_bits(1 << (2 * i + 7)).unwrap()) {
                                 DEAD
                             } else {
                                 ALIVE
                             };
-                            world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
-                        }
+                        world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
                     }
                 }
             }
@@ -533,11 +531,10 @@ impl Rule for NtLifeGen {
         NbhdDescGen(desc.0, Some(succ_state))
     }
 
-    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, new: bool) {
+    fn update_desc(cell: &LifeCell<Self>, state: State, new: bool) {
         let nbhd_change_num = match state {
-            Some(ALIVE) => 0x0001,
-            Some(_) => 0x0100,
-            None => 0x0000,
+            ALIVE => 0x0001,
+            _ => 0x0100,
         };
         for (i, &neigh) in cell.nbhd.iter().rev().enumerate() {
             let neigh = neigh.unwrap();
@@ -547,14 +544,13 @@ impl Rule for NtLifeGen {
         }
 
         let change_num = match state {
-            Some(ALIVE) => 0b01,
-            Some(_) => 0b10,
-            None => 0,
+            ALIVE => 0b01,
+            _ => 0b10,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
             desc.0 ^= change_num << 2;
-            desc.1 = if new { state } else { None };
+            desc.1 = if new { Some(state) } else { None };
             pred.desc.set(desc);
         }
         let mut desc = cell.desc.get();

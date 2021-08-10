@@ -123,7 +123,7 @@ impl FromStr for Transform {
 }
 
 impl Display for Transform {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         let s = match self {
             Self::Id => "Id",
             Self::Rotate90 => "R90",
@@ -402,7 +402,7 @@ impl FromStr for Symmetry {
 }
 
 impl Display for Symmetry {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         let s = match self {
             Self::C1 => "C1",
             Self::C2 => "C2",

@@ -4,14 +4,17 @@ use crate::{
     cells::{CellRef, LifeCell, State, ALIVE, DEAD},
     config::Symmetry,
     error::Error,
-    rules::{private::Sealed, Rule},
+    rules::{
+        private::Sealed,
+        typebool::{False, True},
+        Rule,
+    },
     search::{Algorithm, Reason},
     world::World,
 };
 use bitflags::bitflags;
 use ca_rules::{ParseLife, ParseLifeGen};
 use std::str::FromStr;
-use typebool::{False, True};
 
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
@@ -282,11 +285,10 @@ impl Rule for Life {
         NbhdDesc(nbhd_state << 4 | succ_state << 2 | state)
     }
 
-    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, new: bool) {
+    fn update_desc(cell: &LifeCell<Self>, state: State, new: bool) {
         let state_num = match state {
-            Some(ALIVE) => 0x01,
-            Some(_) => 0x10,
-            None => 0,
+            ALIVE => 0x01,
+            _ => 0x10,
         };
         for &neigh in &cell.nbhd {
             let neigh = neigh.unwrap();
@@ -300,9 +302,8 @@ impl Rule for Life {
         }
 
         let change_num = match state {
-            Some(ALIVE) => 0b01,
-            Some(_) => 0b10,
-            None => 0,
+            ALIVE => 0b01,
+            _ => 0b10,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
@@ -348,17 +349,15 @@ impl Rule for Life {
         }
 
         if flags.intersects(ImplFlags::NBHD) {
-            {
-                let state = if flags.contains(ImplFlags::NBHD_DEAD) {
-                    DEAD
-                } else {
-                    ALIVE
-                };
-                for &neigh in &cell.nbhd {
-                    if let Some(neigh) = neigh {
-                        if neigh.state.get().is_none() {
-                            world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
-                        }
+            let state = if flags.contains(ImplFlags::NBHD_DEAD) {
+                DEAD
+            } else {
+                ALIVE
+            };
+            for &neigh in &cell.nbhd {
+                if let Some(neigh) = neigh {
+                    if neigh.state.get().is_none() {
+                        world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
                     }
                 }
             }
@@ -463,12 +462,11 @@ impl Rule for LifeGen {
         NbhdDescGen(desc.0, Some(succ_state))
     }
 
-    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, new: bool) {
+    fn update_desc(cell: &LifeCell<Self>, state: State, new: bool) {
         {
             let state_num = match state {
-                Some(ALIVE) => 0x01,
-                Some(_) => 0x10,
-                None => 0,
+                ALIVE => 0x01,
+                _ => 0x10,
             };
             for &neigh in &cell.nbhd {
                 let neigh = neigh.unwrap();
@@ -482,14 +480,13 @@ impl Rule for LifeGen {
             }
         }
         let change_num = match state {
-            Some(ALIVE) => 0b01,
-            Some(_) => 0b10,
-            None => 0,
+            ALIVE => 0b01,
+            _ => 0b10,
         };
         if let Some(pred) = cell.pred {
             let mut desc = pred.desc.get();
             desc.0 ^= change_num << 2;
-            desc.1 = if new { state } else { None };
+            desc.1 = if new { Some(state) } else { None };
             pred.desc.set(desc);
         }
         let mut desc = cell.desc.get();

@@ -1,11 +1,10 @@
 //! The search process, without backjumping.
 use crate::{
     cells::{CellRef, State},
-    rules::Rule,
+    rules::{typebool::Bool, Rule},
     search::{private::Sealed, Algorithm, Reason as TraitReason, SetCell},
     world::World,
 };
-use typebool::Bool;
 
 #[cfg(feature = "serde")]
 use crate::{error::Error, save::ReasonSer};
@@ -144,7 +143,7 @@ impl<R: Rule> World<R, LifeSrc> {
     ) -> Result<(), ()> {
         cell.state.set(Some(state));
         let mut result = Ok(());
-        cell.update_desc(Some(state), true);
+        cell.update_desc(state, true);
         if state == !cell.background {
             self.cell_count[cell.coord.2 as usize] += 1;
             if let Some(max) = self.config.max_cell_count {

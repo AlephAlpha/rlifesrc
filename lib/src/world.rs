@@ -3,11 +3,13 @@
 use crate::{
     cells::{CellRef, Coord, LifeCell, State, ALIVE, DEAD},
     config::{Config, KnownCell, SearchOrder},
-    rules::Rule,
+    rules::{
+        typebool::{Bool, False},
+        Rule,
+    },
     search::{Algorithm, Backjump, LifeSrc, Reason, SetCell},
 };
 use std::{cell::UnsafeCell, convert::TryInto, fmt::Write, mem};
-use typebool::{Bool, False};
 
 /// The world.
 pub struct World<R: Rule, A: Algorithm<R>> {
@@ -41,7 +43,7 @@ pub struct World<R: Rule, A: Algorithm<R>> {
     ///
     /// The cells in this stack always have known states.
     ///
-    /// It is used in the backtracking.
+    /// It is used in backtracking.
     pub(crate) set_stack: Vec<SetCell<R, A>>,
 
     /// The position of the next cell to be examined in the [`set_stack`](#structfield.set_stack).
@@ -409,13 +411,12 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
     /// and update the neighborhood descriptor of its neighbors.
     pub(crate) fn clear_cell(&mut self, cell: CellRef<R>) {
         cell.seen.set(false);
-        let old_state = cell.state.take();
-        if old_state != None {
+        if let Some(old_state) = cell.state.take() {
             cell.update_desc(old_state, false);
-            if old_state == Some(!cell.background) {
+            if old_state == !cell.background {
                 self.cell_count[cell.coord.2 as usize] -= 1;
             }
-            if cell.is_front && old_state == Some(cell.background) {
+            if cell.is_front && old_state == cell.background {
                 self.front_cell_count += 1;
             }
         }

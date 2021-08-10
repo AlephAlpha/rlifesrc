@@ -14,10 +14,36 @@ use crate::{
 };
 pub use life::{Life, LifeGen};
 pub use ntlife::{NtLife, NtLifeGen};
-use typebool::Bool;
 
 #[cfg(doc)]
 use crate::cells::ALIVE;
+
+use typebool::Bool;
+
+/// Type level boolean values.
+pub(crate) mod typebool {
+    /// A type level boolean value.
+    pub trait Bool {
+        /// The runtime boolean value.
+        const VALUE: bool;
+    }
+
+    /// Type level `true`.
+    #[derive(Debug, Clone, Copy)]
+    pub struct True;
+
+    impl Bool for True {
+        const VALUE: bool = true;
+    }
+
+    /// Type level `false`.
+    #[derive(Debug, Clone, Copy)]
+    pub struct False;
+
+    impl Bool for False {
+        const VALUE: bool = false;
+    }
+}
 
 /// A cellular automaton rule.
 ///
@@ -72,7 +98,7 @@ pub trait Rule: private::Sealed {
     /// The `state` is the new state of the cell when `new` is true,
     /// the old state when `new` is false.
     #[cfg_attr(not(github_io), doc(hidden))]
-    fn update_desc(cell: &LifeCell<Self>, state: Option<State>, new: bool);
+    fn update_desc(cell: &LifeCell<Self>, state: State, new: bool);
 
     /// Consistifies a cell.
     ///
