@@ -106,7 +106,7 @@ OPTIONS:
             Symmetry of the pattern
             You may need to add quotation marks for some of the symmetries.
             The usages of these symmetries are the same as Oscar Cunningham's Logic Life Search.
-            See [https://conwaylife.com/wiki/Symmetry] 
+            See [https://conwaylife.com/wiki/Symmetry]
              [default: C1]  [possible values: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
     -t, --transform <TRANSFORM>
@@ -235,15 +235,20 @@ When you enter the TUI, it looks like this (taking `rlifesrc 20 16 7 3 0 -r '345
 
 The output format during the search is the same as that of the CLI, except that `?` means unknown cells.
 
-`Cells` means the number of known living cells in the current generation. For Generations rules, dying cells are not counted. `Confl` means the number of conflicts during the search, which can be understood of the number of steps.
+`Cells` means the number of known living cells in the current generation. For Generations rules, dying cells are not counted. `Confl` means the number of conflicts during the search.
 
-Press the space bar or `Enter` to start or pause the search, `q` to quit, Page up (Page down) to show the last (the next) generation. Note that the usage of the keys is different from the original lifesrc.
+Then you can control the search with the keyboard:
+
+- <kbd>space</kbd> / <kbd>enter</kbd>: start or pause the search
+- <kbd>q</kbd>: quit
+- <kbd>page up</kbd>: show the last generation
+- <kbd>page down</kbd>: show the next generation
 
 The search result looks like this:
 
 ![](screenshots/Screenshot_1.png)
 
-If you press the space bar or `Enter` again, it will start to search the next result.
+If you press <kbd>space</kbd> or <kbd>enter</kbd> again, it will start to search the next result.
 
 The time is only shown when the search is paused. It will not be reset when starting a new search, unless the command line flag `--reset-time` is added.
 
