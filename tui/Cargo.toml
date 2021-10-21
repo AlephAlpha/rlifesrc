@@ -2,7 +2,7 @@
 name = "rlifesrc"
 version = "0.5.1"
 authors = ["AlephAlpha <alephalpha911@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "A Game of Life pattern searcher."
 homepage = "https://github.com/AlephAlpha/rlifesrc/tree/master/tui"
 repository = "https://github.com/AlephAlpha/rlifesrc"
@@ -12,7 +12,7 @@ keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
 clap = "2.33.3"
-crossterm = { version = "0.21.0", features = ["event-stream"], optional = true }
+crossterm = { version = "0.22.1", features = ["event-stream"], optional = true }
 futures-executor = { version = "0.3.17", optional = true }
 futures-util = { version = "0.3.17", optional = true }
 rlifesrc-lib = { path = "../lib/", version = "0.5.1" }

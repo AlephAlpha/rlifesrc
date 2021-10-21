@@ -329,7 +329,7 @@ impl Args {
                 Some("json") => {
                     config = serde_json::from_reader(reader).map_err(|e| {
                         Error::with_description(
-                            &format! {"Invalid config file: {}",e},
+                            &format!("Invalid config file: {}", e),
                             ErrorKind::Io,
                         )
                     })?;
@@ -337,7 +337,7 @@ impl Args {
                 Some("yaml" | "yml") => {
                     config = serde_yaml::from_reader(reader).map_err(|e| {
                         Error::with_description(
-                            &format! {"Invalid config file: {}",e},
+                            &format!("Invalid config file: {}", e),
                             ErrorKind::Io,
                         )
                     })?;
@@ -349,7 +349,7 @@ impl Args {
                         .map_err(|e| Error::with_description(&e.to_string(), ErrorKind::Io))?;
                     config = toml::from_slice(&buf).map_err(|e| {
                         Error::with_description(
-                            &format! {"Invalid config file: {}",e},
+                            &format!("Invalid config file: {}", e),
                             ErrorKind::Io,
                         )
                     })?;
@@ -423,7 +423,7 @@ impl Args {
         let no_tui = matches.is_present("NOTUI");
 
         let world = config.world().map_err(|e| {
-            Error::with_description(&format! {"Invalid config: {}",e}, ErrorKind::InvalidValue)
+            Error::with_description(&format!("Invalid config: {}", e), ErrorKind::InvalidValue)
         })?;
 
         if world.is_gen_rule() && config.backjump {
