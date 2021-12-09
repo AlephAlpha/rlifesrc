@@ -22,7 +22,7 @@ rlifesrc-lib = { path = "../lib/", version = "0.5.1", features = [
   "read-rle",
   "save-extra",
 ] }
-serde = { version = "1.0.130", features = ["derive"] }
+serde = { version = "1.0.131", features = ["derive"] }
 wasm-bindgen = "0.2.78"
 wasm-logger = "0.2.0"
 web-sys = { version = "0.3.55", features = [

@@ -20,7 +20,7 @@ educe = "0.4.18"
 from_variants = "0.6.0"
 getrandom = "0.2.3"
 rand = "0.8.4"
-serde = { version = "1.0.130", features = ["derive"], optional = true }
+serde = { version = "1.0.131", features = ["derive"], optional = true }
 thiserror = "1.0.29"
 
 [features]
