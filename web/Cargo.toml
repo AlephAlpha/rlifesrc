@@ -32,4 +32,4 @@ web-sys = { version = "0.3.55", features = [
   "Url",
   "Window",
 ] }
-yew = "0.18.0"
+yew = "0.19.3"
