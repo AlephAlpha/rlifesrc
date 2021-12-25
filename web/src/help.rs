@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use pulldown_cmark::{html::push_html, Parser};
 use std::include_str;
 use web_sys::Node;
-use yew::{virtual_dom::VNode, Component, ComponentLink, Html, ShouldRender};
+use yew::{virtual_dom::VNode, Component, Context, Html};
 
 const HELP_TEXT: &str = include_str!("help.md");
 
@@ -18,19 +18,11 @@ impl Component for Help {
     type Message = ();
     type Properties = ();
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Help
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self
     }
 
-    fn update(&mut self, _: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         let html = web_sys::window()
             .unwrap()
             .document()

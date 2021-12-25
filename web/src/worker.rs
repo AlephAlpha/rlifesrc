@@ -1,12 +1,10 @@
+use gloo::timers::callback::Timeout;
 use instant::Instant;
 use log::{debug, error};
 use rlifesrc_lib::{save::WorldSer, Config, PolyWorld, Status};
 use serde::{Deserialize, Serialize};
 use std::{option_env, time::Duration};
-use yew::{
-    agent::{Agent, AgentLink, HandlerId, Public},
-    services::timeout::{TimeoutService, TimeoutTask},
-};
+use yew_agent::{Agent, AgentLink, HandlerId, Public};
 
 const VIEW_FREQ: u64 = 100000;
 
@@ -57,24 +55,22 @@ pub struct Worker {
     start_time: Option<Instant>,
     timing: Duration,
     link: AgentLink<Worker>,
-    timeout_task: Option<TimeoutTask>,
+    timeout: Option<Timeout>,
 }
 
 impl Worker {
     fn start_job(&mut self) {
         self.paused = false;
-        let handle = TimeoutService::spawn(
-            Duration::from_millis(0),
-            self.link.callback(|_| WorkerMsg::Step),
-        );
-        self.timeout_task = Some(handle);
+        let link = self.link.clone();
+        let handle = Timeout::new(0, move || link.send_message(WorkerMsg::Step));
+        self.timeout = Some(handle);
         if self.start_time.is_none() {
             self.start_time = Some(Instant::now());
         }
     }
 
     fn stop_job(&mut self) {
-        self.timeout_task.take();
+        self.timeout.take();
         if let Some(instant) = self.start_time.take() {
             self.timing += instant.elapsed();
         }
@@ -135,7 +131,7 @@ impl Agent for Worker {
         let world = config.world().unwrap();
         let all_found = vec![String::new(); config.period as usize];
 
-        let mut worker = Worker {
+        let mut worker = Self {
             status: Status::Initial,
             paused: true,
             world,
@@ -147,7 +143,7 @@ impl Agent for Worker {
             start_time: None,
             timing: Duration::default(),
             link,
-            timeout_task: None,
+            timeout: None,
         };
         worker.update_max_martial(false);
         worker

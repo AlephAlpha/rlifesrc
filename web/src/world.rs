@@ -1,14 +1,10 @@
-use yew::{
-    events::MouseEvent, html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender,
-};
+use yew::{events::MouseEvent, html, Component, Context, Html, NodeRef, Properties};
 
 pub struct World {
-    link: ComponentLink<Self>,
-    world: String,
     node_ref: NodeRef,
 }
 
-#[derive(Clone, Properties)]
+#[derive(Clone, PartialEq, Properties)]
 pub struct Props {
     pub world: String,
 }
@@ -21,15 +17,13 @@ impl Component for World {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        World {
-            link,
-            world: props.world,
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self {
             node_ref: NodeRef::default(),
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Select => {
                 if let Some(node) = self.node_ref.get() {
@@ -42,23 +36,16 @@ impl Component for World {
         }
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.world != props.world && {
-            self.world = props.world;
-            true
-        }
-    }
-
-    fn view(&self) -> Html {
-        let ondblclick = self.link.callback(|e: MouseEvent| {
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let ondblclick = ctx.link().callback(|e: MouseEvent| {
             e.prevent_default();
             Msg::Select
         });
         html! {
             <pre id="world"
-                ref=self.node_ref.clone()
-                ondblclick=ondblclick>
-                { &self.world }
+                ref={self.node_ref.clone()}
+                ondblclick={ondblclick}>
+                { &ctx.props().world }
             </pre>
         }
     }

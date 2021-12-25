@@ -78,11 +78,11 @@ pub struct KnownCell {
 #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "read-rle")))]
 impl KnownCell {
     /// Convert a [`CellData`] to a [`KnownCell`].
-    pub fn from_cell_data(data: CellData, gen: i32) -> Self {
+    pub const fn from_cell_data(data: CellData, gen: i32) -> Self {
         let (x, y) = data.position;
         let coord = (x as i32, y as i32, gen);
         let state = State(data.state as usize);
-        KnownCell { coord, state }
+        Self { coord, state }
     }
 
     /// Get a list [`KnownCell`] from multiple RLE's in one string.
@@ -111,7 +111,7 @@ impl KnownCell {
         let mut rle = rle.with_unknown();
 
         for data in &mut rle {
-            known_cells.push(KnownCell::from_cell_data(data?, gen));
+            known_cells.push(Self::from_cell_data(data?, gen));
         }
 
         if let Some(rle) = rle.try_remains()? {

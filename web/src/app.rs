@@ -5,24 +5,24 @@ use crate::{
     world::World,
 };
 use build_time::build_time_utc;
+use gloo::{
+    dialogs,
+    file::{
+        callbacks::{read_as_text, FileReader},
+        FileList as GlooFileList,
+    },
+    timers::callback::Interval,
+};
 use js_sys::Array;
 use log::{debug, error};
 use rlifesrc_lib::{Config, Status};
 use std::time::Duration;
-use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
-use web_sys::{Blob, BlobPropertyBag, FileList, HtmlAnchorElement, HtmlElement, Url};
-use yew::{
-    events::WheelEvent,
-    format::{Json, Text},
-    html,
-    html::ChangeData,
-    services::{
-        interval::{IntervalService, IntervalTask},
-        reader::{FileData, ReaderService, ReaderTask},
-        DialogService,
-    },
-    Bridge, Bridged, Component, ComponentLink, Html, ShouldRender,
+use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
+use web_sys::{
+    Blob, BlobPropertyBag, Event, FileList, HtmlAnchorElement, HtmlElement, HtmlInputElement, Url,
 };
+use yew::{events::WheelEvent, html, Component, Context, Html};
+use yew_agent::{Bridge, Bridged};
 
 #[wasm_bindgen]
 extern "C" {
@@ -31,7 +31,6 @@ extern "C" {
 }
 
 pub struct App {
-    link: ComponentLink<Self>,
     config: Config,
     status: Status,
     paused: bool,
@@ -43,8 +42,8 @@ pub struct App {
     found_count: u32,
     timing: Duration,
     worker: Box<dyn Bridge<Worker>>,
-    interval_task: Option<IntervalTask>,
-    reader_task: Option<ReaderTask>,
+    interval: Option<Interval>,
+    reader: Option<FileReader>,
 }
 
 #[derive(Debug)]
@@ -57,25 +56,22 @@ pub enum Msg {
     Reset,
     Save,
     Load(FileList),
-    SendFile(FileData),
+    SendFile(String),
     SetMaxPartial,
     SetFindAll,
     Apply(Config),
     DataReceived(Response),
-    None,
 }
 
 impl App {
-    fn start_job(&mut self) {
-        let handle = IntervalService::spawn(
-            Duration::from_millis(1000 / 60),
-            self.link.callback(|_| Msg::Tick),
-        );
-        self.interval_task = Some(handle);
+    fn start_job(&mut self, ctx: &Context<Self>) {
+        let link = ctx.link().clone();
+        let handle = Interval::new(1000 / 60, move || link.send_message(Msg::Tick));
+        self.interval = Some(handle);
     }
 
     fn stop_job(&mut self) {
-        self.interval_task.take();
+        self.interval.take();
     }
 }
 
@@ -83,15 +79,14 @@ impl Component for App {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         let config: Config = Config::default();
         let status = Status::Initial;
         let world = "Loading...".to_owned();
-        let callback = link.callback(Msg::DataReceived);
+        let callback = ctx.link().callback(Msg::DataReceived);
         let worker = Worker::bridge(callback);
 
-        App {
-            link,
+        Self {
             config,
             status,
             paused: true,
@@ -103,12 +98,12 @@ impl Component for App {
             found_count: 0,
             timing: Duration::default(),
             worker,
-            interval_task: None,
-            reader_task: None,
+            interval: None,
+            reader: None,
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Tick => {
                 if self.max_partial {
@@ -133,26 +128,27 @@ impl Component for App {
             }
             Msg::Start => {
                 self.worker.send(Request::Start);
-                self.start_job();
+                self.start_job(ctx);
             }
             Msg::Pause => self.worker.send(Request::Pause),
             Msg::Reset => self.worker.send(Request::SetWorld(self.config.clone())),
             Msg::Save => self.worker.send(Request::Save),
             Msg::Load(files) => {
-                let file = files.get(0).unwrap();
-                let task = ReaderService::read_file(file, self.link.callback(Msg::SendFile));
-                match task {
-                    Ok(task) => self.reader_task = Some(task),
+                let file = &GlooFileList::from(files)[0];
+                let link = ctx.link().clone();
+                let task = read_as_text(file, move |content| match content {
+                    Ok(content) => link.send_message(Msg::SendFile(content)),
                     Err(e) => error!("Error opening file reader: {}", e),
-                }
+                });
+                self.reader = Some(task)
             }
             Msg::SendFile(data) => {
-                let Json(world_ser) = Ok(data.content).into();
+                let world_ser = serde_json::from_str(&data);
                 match world_ser {
                     Ok(world_ser) => self.worker.send(Request::Load(world_ser)),
                     Err(e) => {
                         error!("Error parsing save file: {}", e);
-                        DialogService::alert("Broken saved file.");
+                        dialogs::alert("Broken saved file.");
                     }
                 }
             }
@@ -216,38 +212,30 @@ impl Component for App {
                         message,
                         goto_config,
                     } => {
-                        DialogService::alert(&message);
+                        dialogs::alert(&message);
                         if goto_config {
                             activate("pane-settings");
                         }
                     }
-                    Response::Save(world_ser) => {
-                        let text: Text = Json(&world_ser).into();
-                        match text {
-                            Ok(text) => {
-                                debug!("Generated save file: {:?}", text);
-                                download(&text, "save.json", "application/json").unwrap()
-                            }
-                            Err(e) => error!("Error generating save file: {}", e),
+                    Response::Save(world_ser) => match serde_json::to_string(&world_ser) {
+                        Ok(text) => {
+                            debug!("Generated save file: {:?}", text);
+                            download(&text, "save.json", "application/json").unwrap()
                         }
-                    }
+                        Err(e) => error!("Error generating save file: {}", e),
+                    },
                 };
                 return true;
             }
-            Msg::None => (),
         }
         false
     }
 
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         html! {
             <div id="rlifesrc">
                 { self.header() }
-                { self.main() }
+                { self.main(ctx) }
                 { self.footer() }
             </div>
         }
@@ -302,7 +290,7 @@ impl App {
         }
     }
 
-    fn main(&self) -> Html {
+    fn main(&self, ctx: &Context<Self>) -> Html {
         html! {
             <main class="mui-container-fluid">
                 <div class="mui-row">
@@ -329,13 +317,13 @@ impl App {
                                 </li>
                             </ul>
                             <div class="mui-tabs__pane mui--is-active" id="pane-world">
-                                { self.data() }
+                                { self.data(ctx) }
                                 <div class="mui-checkbox">
                                     <label>
                                         <input id="max-partial"
                                             type="checkbox"
-                                            checked=self.max_partial
-                                            onclick=self.link.callback(|_| Msg::SetMaxPartial)/>
+                                            checked={self.max_partial}
+                                            onclick={ctx.link().callback(|_| Msg::SetMaxPartial)}/>
                                         <abbr title="Show maximal partial result.">
                                             { "Show max partial." }
                                         </abbr>
@@ -345,20 +333,20 @@ impl App {
                                     <label>
                                         <input id="find-all"
                                             type="checkbox"
-                                            checked=self.find_all
-                                            onclick=self.link.callback(|_| Msg::SetFindAll)/>
+                                            checked={self.find_all}
+                                            onclick={ctx.link().callback(|_| Msg::SetFindAll)}/>
                                         <abbr title="Find all results. Will not stop until all results \
                                                      are found.">
                                             { "Find all results. Won't stop when found one." }
                                         </abbr>
                                     </label>
                                 </div>
-                                <World world=self.world.clone()/>
-                                { self.buttons() }
+                                <World world={self.world.clone()}/>
+                                { self.buttons(ctx) }
                             </div>
                             <div class="mui-tabs__pane" id="pane-settings">
-                                <Settings config=self.config.clone()
-                                    callback=self.link.callback(Msg::Apply)/>
+                                <Settings config={self.config.clone()}
+                                    callback={ctx.link().callback(Msg::Apply)}/>
                             </div>
                             <div class="mui-tabs__pane" id="pane-help">
                                 <Help/>
@@ -370,8 +358,8 @@ impl App {
         }
     }
 
-    fn data(&self) -> Html {
-        let onwheel = self.link.callback(|e: WheelEvent| {
+    fn data(&self, ctx: &Context<Self>) -> Html {
+        let onwheel = ctx.link().callback(|e: WheelEvent| {
             e.prevent_default();
             if e.delta_y() < 0.0 {
                 Msg::IncGen
@@ -381,21 +369,21 @@ impl App {
         });
         html! {
             <ul id="data" class="mui-list--inline mui--text-body2">
-                <li onwheel=onwheel
-                    class=if self.max_partial { "mui--hide" } else { "" }>
+                <li onwheel={onwheel}
+                    class={if self.max_partial { "mui--hide" } else { "" }}>
                     <abbr title="The displayed generation.">
                         { "Generation" }
                     </abbr>
                     { ": " }
                     { self.gen }
                     <button class="mui-btn mui-btn--small btn-tiny"
-                        disabled=self.gen == 0
-                        onclick=self.link.callback(|_| Msg::DecGen)>
+                        disabled={self.gen == 0}
+                        onclick={ctx.link().callback(|_| Msg::DecGen)}>
                         <i class="fas fa-minus"></i>
                     </button>
                     <button class="mui-btn mui-btn--small btn-tiny"
-                        disabled=self.gen == self.config.period - 1
-                        onclick=self.link.callback(|_| Msg::IncGen)>
+                        disabled={self.gen == self.config.period - 1}
+                        onclick={ctx.link().callback(|_| Msg::IncGen)}>
                         <i class="fas fa-plus"></i>
                     </button>
                 </li>
@@ -407,14 +395,14 @@ impl App {
                     { ": " }
                     { self.cells }
                 </li>
-                <li class=if self.find_all { "" } else { "mui--hide" }>
+                <li class={if self.find_all { "" } else { "mui--hide" }}>
                     <abbr title="Number of found results.">
                         { "Found" }
                     </abbr>
                     { ": " }
                     { self.found_count }
                 </li>
-                <li class=if self.paused { "" } else { "mui--hide" }>
+                <li class={if self.paused { "" } else { "mui--hide" }}>
                     <abbr title="Time taken by the search.">
                         { "Time" }
                     </abbr>
@@ -439,28 +427,28 @@ impl App {
         }
     }
 
-    fn buttons(&self) -> Html {
+    fn buttons(&self, ctx: &Context<Self>) -> Html {
         html! {
             <div class="buttons">
                 <button class="mui-btn mui-btn--raised"
-                    disabled=!self.paused
-                    onclick=self.link.callback(|_| Msg::Start)>
+                    disabled={!self.paused}
+                    onclick={ctx.link().callback(|_| Msg::Start)}>
                     <i class="fas fa-play"></i>
                     <span class="mui--hidden-xs">
                         { "Start" }
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    disabled=self.paused
-                    onclick=self.link.callback(|_| Msg::Pause)>
+                    disabled={self.paused}
+                    onclick={ctx.link().callback(|_| Msg::Pause)}>
                     <i class="fas fa-pause"></i>
                     <span class="mui--hidden-xs">
                         { "Pause" }
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    disabled=!self.paused
-                    onclick=self.link.callback(|_| Msg::Reset)>
+                    disabled={!self.paused}
+                    onclick={ctx.link().callback(|_| Msg::Reset)}>
                     <i class="fas fa-redo"></i>
                     <span class="mui--hidden-xs">
                         <abbr title="Reset the world.">
@@ -470,8 +458,8 @@ impl App {
                 </button>
                 <div class="mui--visible-xs-block"></div>
                 <button class="mui-btn mui-btn--raised"
-                    disabled=!self.paused
-                    onclick=self.link.callback(|_| Msg::Save)>
+                    disabled={!self.paused}
+                    onclick={ctx.link().callback(|_| Msg::Save)}>
                     <i class="fas fa-save"></i>
                     <span class="mui--hidden-xs">
                         <abbr title="Save the search status in a json file.">
@@ -480,10 +468,10 @@ impl App {
                     </span>
                 </button>
                 <button class="mui-btn mui-btn--raised"
-                    onclick=self.link.callback(|_| {
+                    onclick={ctx.link().batch_callback(|_| {
                         click_button("load").unwrap();
-                        Msg::None
-                    })>
+                        None
+                    })}>
                     <i class="fas fa-file-import"></i>
                     <span class="mui--hidden-xs">
                         <abbr title="Load the search status from a json file.">
@@ -494,10 +482,10 @@ impl App {
                 <input id="load"
                     type="file"
                     hidden=true
-                    onchange=self.link.callback(|e| match e {
-                        ChangeData::Files(files) => Msg::Load(files),
-                        _ => Msg::None,
-                    })/>
+                    onchange={ctx.link().batch_callback(|e: Event| {
+                        let input =  e.target()?.dyn_into::<HtmlInputElement>().ok()?;
+                        input.files().map(Msg::Load)
+                    })}/>
             </div>
         }
     }
