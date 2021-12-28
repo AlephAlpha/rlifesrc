@@ -206,18 +206,16 @@ impl<'a, W: Write> App<'a, W> {
 
     /// Searches for one step.
     fn step(&mut self) {
-        match self.world.search(Some(VIEW_FREQ)) {
-            Status::Searching => (),
-            s => {
-                self.status = s;
-                self.paused = true;
-                if let Some(instant) = self.start_time.take() {
-                    self.timing += instant.elapsed();
-                }
-                if self.reset {
-                    self.start_time = None;
-                    self.timing = Duration::default();
-                }
+        let s = self.world.search(Some(VIEW_FREQ));
+        self.status = s;
+        if s != Status::Searching {
+            self.paused = true;
+            if let Some(instant) = self.start_time.take() {
+                self.timing += instant.elapsed();
+            }
+            if self.reset {
+                self.start_time = None;
+                self.timing = Duration::default();
             }
         }
     }
