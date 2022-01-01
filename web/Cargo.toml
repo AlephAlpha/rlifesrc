@@ -1,6 +1,6 @@
 [package]
 name = "rlifesrc-web"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["AlephAlpha <alephalpha911@gmail.com>"]
 edition = "2021"
 description = "A Game of Life pattern searcher."
@@ -18,7 +18,7 @@ js-sys = "0.3.55"
 log = "0.4.14"
 once_cell = "1.9.0"
 pulldown-cmark = "0.9.0"
-rlifesrc-lib = { path = "../lib/", version = "0.5.1", features = [
+rlifesrc-lib = { path = "../lib/", version = "0.5.2", features = [
   "js",
   "read-rle",
   "save-extra",

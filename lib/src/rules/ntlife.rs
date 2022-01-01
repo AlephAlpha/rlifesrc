@@ -14,7 +14,7 @@ use crate::{
 };
 use bitflags::bitflags;
 use ca_rules::{ParseNtLife, ParseNtLifeGen};
-use std::{array::IntoIter, collections::HashSet, str::FromStr};
+use std::{collections::HashSet, str::FromStr};
 
 /// Permutes the bits of an `u8`.
 fn permute_bits(n: u8, perm: [u32; 8]) -> u8 {
@@ -133,7 +133,8 @@ impl NtLife {
         let s_set: HashSet<_> = s.iter().copied().collect();
 
         self.symmetry = Symmetry::generated_by(
-            IntoIter::new(Transform::ALL)
+            Transform::ALL
+                .into_iter()
                 .filter(|transform| {
                     b.iter()
                         .map(|data| transform_neigh(*data, *transform))
