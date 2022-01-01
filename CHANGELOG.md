@@ -6,13 +6,24 @@
 
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
 
-- Add an `extra` field in the save file for saving any extra information, e.g., maximal partial result.
-
 ### Web
 
 The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
 
+## 0.5.2 - 2022/01/01
+
+### Lib
+
+- Add an `extra` field in the save file for saving any extra information, e.g., maximal partial result.
+
+### TUI
+
+- Update Clap to 3.0.0.
+
+### Web
+
 - Save maximal partial result in the save file.
+- Update Yew to 0.19.3 and introduce some new dependencies.
 
 ### Others
 
