@@ -415,9 +415,9 @@ dependencies = [
 
 [[package]]
 name = "gloo"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4b30b0425ea2dcc1a0d2cbb9512ee1c4d9a911509cb1f8cb17b612e71411c07"
+checksum = "d21d2b3c97d07d967ff927dda82528d3c1c6cbc3c189ebf2f450222dbcd77a55"
 dependencies = [
  "gloo-console",
  "gloo-dialogs",
@@ -428,6 +428,7 @@ dependencies = [
  "gloo-storage",
  "gloo-timers",
  "gloo-utils",
+ "gloo-worker",
 ]
 
 [[package]]
@@ -533,6 +534,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d77d28d9a6f7c384d9e40293fa11f05558bf928a993208e12528ee6633cb415"
 dependencies = [
  "js-sys",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "gloo-worker"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c843b9a46d07485026f030be7bd008580a12a2920fea837745a440a3b0c97cb"
+dependencies = [
+ "anymap2",
+ "bincode",
+ "gloo-console",
+ "gloo-utils",
+ "js-sys",
+ "serde",
+ "slab",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -953,7 +971,7 @@ name = "rlifesrc-web"
 version = "0.5.2"
 dependencies = [
  "build-time",
- "gloo 0.5.0",
+ "gloo 0.6.0",
  "instant",
  "js-sys",
  "log",
