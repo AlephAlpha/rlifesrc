@@ -11,7 +11,7 @@ readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
-clap = { version = "3.0.4", features = ["cargo"] }
+clap = { version = "3.0.6", features = ["cargo"] }
 crossterm = { version = "0.22.1", features = ["event-stream"], optional = true }
 futures-executor = { version = "0.3.19", optional = true }
 futures-util = { version = "0.3.19", optional = true }
