@@ -18,7 +18,7 @@ ca-rules = "0.3.3"
 displaydoc = "0.2.3"
 educe = "0.4.18"
 from_variants = "0.6.0"
-getrandom = "0.2.3"
+getrandom = "0.2.4"
 rand = "0.8.4"
 serde = { version = "1.0.133", features = ["derive"], optional = true }
 thiserror = "1.0.30"
