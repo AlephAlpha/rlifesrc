@@ -1,3 +1,5 @@
+#![allow(clippy::unused_unit)]
+
 use crate::{
     help::Help,
     settings::Settings,
