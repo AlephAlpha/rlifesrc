@@ -5,7 +5,7 @@ use rlifesrc_lib::{
 };
 use std::matches;
 use wasm_bindgen::JsCast;
-use web_sys::{Event, HtmlInputElement, HtmlSelectElement};
+use web_sys::{Event, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement};
 use yew::{html, Callback, Component, Context, Html, Properties};
 
 pub struct Settings {
@@ -595,7 +595,7 @@ impl Settings {
             serde_json::to_string(&self.config.known_cells).unwrap()
         };
         let onchange = ctx.link().batch_callback(|e: Event| {
-            let input = e.target()?.dyn_into::<HtmlInputElement>().ok()?;
+            let input = e.target()?.dyn_into::<HtmlTextAreaElement>().ok()?;
             Some(Msg::SetKnown(input.value()))
         });
         html! {
