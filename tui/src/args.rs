@@ -1,6 +1,6 @@
 //! Parsing command-line arguments.
 
-use clap::{app_from_crate, AppSettings, Arg, ErrorKind, Result};
+use clap::{command, Arg, ErrorKind, Result};
 use rlifesrc_lib::{
     rules::NtLifeGen, Config, NewState, PolyWorld, SearchOrder, Symmetry, Transform,
 };
@@ -27,7 +27,7 @@ pub struct Args {
 impl Args {
     /// Parses the command-line arguments.
     pub(crate) fn parse() -> Result<Self> {
-        let mut app = app_from_crate!()
+        let mut app = command!()
             .long_about(
                 "Searching for patterns in Conway's Game of Life\n\
                  \n\
@@ -38,7 +38,7 @@ impl Args {
                  https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README.md (In Chinese)\n\
                  https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README_en.md (In English)\n",
             )
-            .global_setting(AppSettings::AllowNegativeNumbers)
+            .allow_negative_numbers(true)
             .arg(
                 Arg::new("CONFIG")
                     .help("Read config from a file")
