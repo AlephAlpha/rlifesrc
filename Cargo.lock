@@ -158,9 +158,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.1.5"
+version = "3.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ced1892c55c910c1219e98d6fc8d71f6bddba7905866ce740066d8bfea859312"
+checksum = "d8c93436c21e4698bacadf42917db28b23017027a4deccb35dbe47a7e7840123"
 dependencies = [
  "atty",
  "bitflags",
@@ -279,14 +279,15 @@ dependencies = [
 
 [[package]]
 name = "enum-ordinalize"
-version = "3.1.10"
+version = "3.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b166c9e378360dd5a6666a9604bb4f54ae0cac39023ffbac425e917a2a04fef"
+checksum = "2170fc0efee383079a8bdd05d6ea2a184d2a0f07a1c1dcabdb2fd5e9f24bc36c"
 dependencies = [
  "num-bigint",
  "num-traits",
  "proc-macro2",
  "quote",
+ "rustc_version",
  "syn",
 ]
 
@@ -328,6 +329,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures-channel"
+version = "0.3.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3083ce4b914124575708913bca19bfe887522d6e2e6d0952943f5eac4a74010"
+dependencies = [
+ "futures-core",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -354,6 +364,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "futures-sink"
+version = "0.3.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21163e139fa306126e6eedaf49ecdb4588f939600f0b1e770f4205ee4b7fa868"
 
 [[package]]
 name = "futures-task"
@@ -415,15 +431,16 @@ dependencies = [
 
 [[package]]
 name = "gloo"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d21d2b3c97d07d967ff927dda82528d3c1c6cbc3c189ebf2f450222dbcd77a55"
+checksum = "f96605dc96adaffef27d911a805f0269d83ab89c1076e9c75ebac64a1a27215d"
 dependencies = [
  "gloo-console",
  "gloo-dialogs",
  "gloo-events",
  "gloo-file",
  "gloo-history",
+ "gloo-net",
  "gloo-render",
  "gloo-storage",
  "gloo-timers",
@@ -488,6 +505,26 @@ dependencies = [
  "serde_urlencoded",
  "thiserror",
  "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "gloo-net"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2899cb1a13be9020b010967adc6b2a8a343b6f1428b90238c9d53ca24decc6db"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "futures-sink",
+ "gloo-utils",
+ "js-sys",
+ "pin-project",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
@@ -789,6 +826,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
+name = "pin-project"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58ad3879ad3baf4e44784bc6a718a8698867bb991f8ce24d1bcbe2cfb4c3a75e"
+dependencies = [
+ "pin-project-internal",
+]
+
+[[package]]
+name = "pin-project-internal"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "744b6f092ba29c3650faf274db506afd39944f48420f6c86b17cfe0ee1cb36bb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -901,9 +958,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.5.4"
+version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d07a8629359eb56f1e2fb1652bb04212c072a87ba68546a04065d525673ac461"
+checksum = "1a11647b6b25ff05a515cb92c365cec08801e83423a235b51e231e1808747286"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -952,7 +1009,7 @@ name = "rlifesrc-web"
 version = "0.5.2"
 dependencies = [
  "build-time",
- "gloo 0.6.0",
+ "gloo 0.6.1",
  "instant",
  "js-sys",
  "log",
@@ -966,6 +1023,15 @@ dependencies = [
  "web-sys",
  "yew",
  "yew-agent",
+]
+
+[[package]]
+name = "rustc_version"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
+dependencies = [
+ "semver",
 ]
 
 [[package]]
@@ -985,6 +1051,12 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "semver"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4a3381e03edd24287172047536f20cabde766e2cd3e65e6b00fb3af51c4f38d"
 
 [[package]]
 name = "serde"
