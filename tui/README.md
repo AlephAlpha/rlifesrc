@@ -168,7 +168,7 @@ rlifesrc -C config.json
 
 配置文件只是 [`rlifesrc-lib`](../lib/) 中的 `Config` 结构体序列化的结果。当前，`Config` 的 `known_cells` 字段和 `SearchOrder` 的 `FromVec` 成员只能通过配置文件来设置。详见 [`Config`](https://docs.rs/rlifesrc-lib/*/rlifesrc_lib/struct.Config.html) 的文档。
 
-10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)，详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
+10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)，详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Static_symmetry#Reflectional)。
 
 8 种不同的变换，对应二面体群 _D_<sub>8</sub> 的 8 个元素。
 
