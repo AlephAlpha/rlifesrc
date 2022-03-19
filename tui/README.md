@@ -113,7 +113,7 @@ OPTIONS:
             图样的对称性
             其中一些对称性可能需要加上引号。
             这些对称性的用法和 Oscar Cunningham 的 Logic Life Search 一样。
-            详见 https://conwaylife.com/wiki/Symmetry
+            详见 https://conwaylife.com/wiki/Static_symmetry#Reflectional
              [默认: C1]  [可能的值: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
     -t, --transform <TRANSFORM>

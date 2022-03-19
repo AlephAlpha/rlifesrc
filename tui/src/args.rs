@@ -147,7 +147,7 @@ impl Args {
                          You may need to add quotation marks for some of the symmetries.\n\
                          The usages of these symmetries are the same as Oscar Cunningham's \
                          Logic Life Search.\n\
-                         See [https://conwaylife.com/wiki/Symmetry] \n",
+                         See [https://conwaylife.com/wiki/Static_symmetry#Reflectional] \n",
                     )
                     .short('s')
                     .long("symmetry")

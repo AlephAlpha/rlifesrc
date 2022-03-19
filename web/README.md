@@ -149,7 +149,7 @@ python3 -m http.server
   <dd>
   图样的对称性。
 
-  10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。这些对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)。详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Symmetry)。
+  10 种不同的对称性，对应二面体群 _D_<sub>8</sub> 的 10 个子群。这些对称性的写法来自 Oscar Cunningham 的 [Logic Life Search](https://github.com/OscarCunningham/logic-life-search)。详见 [Life Wiki 上的相应说明](https://conwaylife.com/wiki/Static_symmetry#Reflectional)。
 
   注意有些对称性要求世界是正方形，有些则要求没有对角宽度。
   </dd>

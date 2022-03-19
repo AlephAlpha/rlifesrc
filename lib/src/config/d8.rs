@@ -300,7 +300,7 @@ impl Transform {
 ///
 /// The notations are stolen from Oscar Cunningham's
 /// [Logic Life Search](https://github.com/OscarCunningham/logic-life-search).
-/// Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
+/// Please see the [Life Wiki](https://conwaylife.com/wiki/Static_symmetry#Reflectional) for details.
 ///
 /// Some of the symmetries are only valid when the world is square,
 /// and some are only valid when the world has no diagonal width.

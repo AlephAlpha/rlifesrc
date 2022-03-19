@@ -10,6 +10,11 @@ For the documentation of the unreleased lib, please visit https://alephalpha.git
 
 The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
 
+### Others
+
+- Fix some bugs.
+- Update dependencies.
+
 ## 0.5.2 - 2022/01/01
 
 ### Lib

@@ -106,7 +106,7 @@ OPTIONS:
             Symmetry of the pattern
             You may need to add quotation marks for some of the symmetries.
             The usages of these symmetries are the same as Oscar Cunningham's Logic Life Search.
-            See [https://conwaylife.com/wiki/Symmetry]
+            See [https://conwaylife.com/wiki/Static_symmetry#Reflectional]
              [default: C1]  [possible values: C1, C2, C4, D2|, D2-, D2\, D2/, D4+, D4X, D8]
 
     -t, --transform <TRANSFORM>
@@ -161,7 +161,7 @@ Where the content of `config.json` is:
 
 The config file is just a serialization of the `Config` struct of [`rlifesrc-lib`](../lib/). Currently, the `known_cells` field, and the `FromVec` variant of `SearchOrder`, can only be specified through the config file. Please see the documentation for [`Config`](https://docs.rs/rlifesrc-lib/*/rlifesrc_lib/struct.Config.html) for details.
 
-10 different symmetries correspond to the 10 subgroups of the dihedral group _D_<sub>8</sub>. The notations are stolen from Oscar Cunningham's [Logic Life Search](https://github.com/OscarCunningham/logic-life-search). Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
+10 different symmetries correspond to the 10 subgroups of the dihedral group _D_<sub>8</sub>. The notations are stolen from Oscar Cunningham's [Logic Life Search](https://github.com/OscarCunningham/logic-life-search). Please see the [Life Wiki](https://conwaylife.com/wiki/Static_symmetry#Reflectional) for details.
 
 8 different transformations correspond to the 10 elements of the dihedral group _D_<sub>8</sub>. Here:
 

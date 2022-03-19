@@ -88,7 +88,7 @@ Some transformations require that the world is square. Some are only valid when 
 
 Symmetry of the pattern.
 
-10 different symmetries correspond to the 10 subgroups of the dihedral group _D_<sub>8</sub>. The notations are stolen from Oscar Cunningham's [Logic Life Search](https://github.com/OscarCunningham/logic-life-search). Please see the [Life Wiki](https://conwaylife.com/wiki/Symmetry) for details.
+10 different symmetries correspond to the 10 subgroups of the dihedral group _D_<sub>8</sub>. The notations are stolen from Oscar Cunningham's [Logic Life Search](https://github.com/OscarCunningham/logic-life-search). Please see the [Life Wiki](https://conwaylife.com/wiki/Static_symmetry#Reflectional) for details.
 
 Some symmetries require that the world is square. Some are only valid when the world have no diagonal width.
 
