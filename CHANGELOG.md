@@ -6,12 +6,15 @@
 
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
 
+- Fix the orientation of MAP rules.
+
 ### Web
 
 The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
 
 ### Others
 
+- Fix links in docs.
 - Fix some bugs.
 - Update dependencies.
 

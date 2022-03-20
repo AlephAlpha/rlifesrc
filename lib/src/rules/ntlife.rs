@@ -292,6 +292,16 @@ impl NtLife {
 /// A parser for the rule.
 impl ParseNtLife for NtLife {
     fn from_bs(b: Vec<u8>, s: Vec<u8>) -> Self {
+        // A temporary fix of the orientation of MAP rules.
+        // A better fix should be done in the ca-rules crate.
+        let b = b
+            .into_iter()
+            .map(|b| transform_neigh(b, Transform::FlipAntidiag))
+            .collect::<Vec<_>>();
+        let s = s
+            .into_iter()
+            .map(|s| transform_neigh(s, Transform::FlipAntidiag))
+            .collect::<Vec<_>>();
         Self::new(&b, &s)
     }
 }
@@ -483,6 +493,16 @@ impl NtLifeGen {
 /// A parser for the rule.
 impl ParseNtLifeGen for NtLifeGen {
     fn from_bsg(b: Vec<u8>, s: Vec<u8>, gen: usize) -> Self {
+        // A temporary fix of the orientation of MAP rules.
+        // A better fix should be done in the ca-rules crate.
+        let b = b
+            .into_iter()
+            .map(|b| transform_neigh(b, Transform::FlipAntidiag))
+            .collect::<Vec<_>>();
+        let s = s
+            .into_iter()
+            .map(|s| transform_neigh(s, Transform::FlipAntidiag))
+            .collect::<Vec<_>>();
         Self::new(&b, &s, gen)
     }
 }

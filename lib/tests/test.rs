@@ -160,6 +160,18 @@ fn snowflakes() -> Result<(), Error> {
 }
 
 #[test]
+fn map_rules() -> Result<(), Error> {
+    let config = Config::new(4, 6, 2).set_rule_string(
+        "MAPERYXfhZofugWaH7oaIDogBZofuhogOiAaIDogIAAgAAWaH7oaIDogGiA6ICAAIAAaIDogIAAgACAAIAAAAAAAA",
+    );
+    let mut search = config.world()?;
+    assert_eq!(search.search(None), Status::Found);
+    assert_eq!(search.search(None), Status::Found);
+    assert_eq!(search.search(None), Status::Found);
+    Ok(())
+}
+
+#[test]
 fn transform_subperiod() -> Result<(), Error> {
     let config = Config::new(13, 13, 6)
         .set_translate(0, 6)
