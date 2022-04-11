@@ -7,6 +7,7 @@
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
 
 - Fix the orientation of MAP rules.
+- Remove the `save-extra` feature. The `extra` field in the save file is now always enabled.
 
 ### Web
 
@@ -22,7 +23,7 @@ The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always
 
 ### Lib
 
-- Add an `extra` field in the save file for saving any extra information, e.g., maximal partial result.
+- Add an `extra` field in the save file for saving any extra information, e.g., maximal partial result. This can be enabled by the `save-extra` feature.
 
 ### TUI
 

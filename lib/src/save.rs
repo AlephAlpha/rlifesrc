@@ -12,8 +12,6 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[cfg(feature = "save-extra")]
-#[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "save-extra")))]
 use std::collections::BTreeMap;
 
 /// A representation of reasons for setting a cell which can be easily serialized.
@@ -86,8 +84,6 @@ pub struct WorldSer {
     pub timing: Option<Duration>,
 
     /// A field for saving extra information.
-    #[cfg(feature = "save-extra")]
-    #[cfg_attr(any(docs_rs, github_io), doc(cfg(feature = "save-extra")))]
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub extra: BTreeMap<String, String>,
 }
@@ -139,7 +135,6 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
             set_stack: self.set_stack.iter().map(SetCell::ser).collect(),
             check_index: self.check_index,
             timing: None,
-            #[cfg(feature = "save-extra")]
             extra: BTreeMap::new(),
         }
     }

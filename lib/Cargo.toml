@@ -18,7 +18,7 @@ ca-rules = "0.3.3"
 displaydoc = "0.2.3"
 educe = "0.4.19"
 from_variants = "1.0.0"
-getrandom = "0.2.5"
+getrandom = "0.2.6"
 rand = "0.8.5"
 serde = { version = "1.0.136", features = ["derive"], optional = true }
 thiserror = "1.0.30"
@@ -26,15 +26,12 @@ thiserror = "1.0.30"
 [features]
 default = ["serde"]
 
-# Supports chosing random state for wasm32-unknown-unknown target.
+# Supports choosing random state for wasm32-unknown-unknown target.
 # See https://docs.rs/getrandom/*/getrandom/index.html#webassembly-support
-js = ["serde", "getrandom/js"]
+js = ["getrandom/js"]
 
 # Supports reading RLE as known cells.
 read-rle = ["serde", "ca-formats"]
-
-# Supports saving extra information.
-save-extra = ["serde"]
 
 [package.metadata.docs.rs]
 all-features = true
