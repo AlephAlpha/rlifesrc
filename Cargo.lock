@@ -431,9 +431,9 @@ dependencies = [
 
 [[package]]
 name = "gloo"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f96605dc96adaffef27d911a805f0269d83ab89c1076e9c75ebac64a1a27215d"
+checksum = "03e691526c3972d1fda35453f6df29925edea014dc75a2dede7661527e9439f0"
 dependencies = [
  "gloo-console",
  "gloo-dialogs",
@@ -510,9 +510,9 @@ dependencies = [
 
 [[package]]
 name = "gloo-net"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2899cb1a13be9020b010967adc6b2a8a343b6f1428b90238c9d53ca24decc6db"
+checksum = "f6d37f728c2b2b8c568bd2efb34ce9087e347c182db68f101a969b4fe23054d5"
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -1011,7 +1011,7 @@ name = "rlifesrc-web"
 version = "0.5.2"
 dependencies = [
  "build-time",
- "gloo 0.6.1",
+ "gloo 0.7.0",
  "instant",
  "js-sys",
  "log",
