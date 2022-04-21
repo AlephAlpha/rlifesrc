@@ -407,8 +407,11 @@ impl Rule for NtLife {
             } else {
                 ALIVE
             };
-            let succ = cell.succ.unwrap();
-            return world.set_cell(succ, state, A::Reason::from_cell(cell));
+            if let Some(succ) = cell.succ {
+                return world.set_cell(succ, state, A::Reason::from_cell(cell));
+            } else {
+                return Ok(());
+            }
         }
 
         if flags.intersects(ImplFlags::SELF) {
@@ -601,8 +604,11 @@ impl Rule for NtLifeGen {
                     } else {
                         ALIVE
                     };
-                    let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, state, A::Reason::from_cell(cell));
+                    if let Some(succ) = cell.succ {
+                        return world.set_cell(succ, state, A::Reason::from_cell(cell));
+                    } else {
+                        return Ok(());
+                    }
                 }
             }
             Some(ALIVE) => {
@@ -617,8 +623,11 @@ impl Rule for NtLifeGen {
                     } else {
                         ALIVE
                     };
-                    let succ = cell.succ.unwrap();
-                    return world.set_cell(succ, state, A::Reason::from_cell(cell));
+                    if let Some(succ) = cell.succ {
+                        return world.set_cell(succ, state, A::Reason::from_cell(cell));
+                    } else {
+                        return Ok(());
+                    }
                 }
             }
             Some(State(i)) => {
@@ -628,9 +637,10 @@ impl Rule for NtLifeGen {
                     } else {
                         return Err(A::confl_from_cell(cell));
                     }
-                } else {
-                    let succ = cell.succ.unwrap();
+                } else if let Some(succ) = cell.succ {
                     return world.set_cell(succ, State((i + 1) % gen), A::Reason::from_cell(cell));
+                } else {
+                    return Ok(());
                 }
             }
             None => match desc.1 {

@@ -168,7 +168,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                 if let Some(d) = self.config.diagonal_width {
                     let abs = (x - y).abs();
                     if abs >= d {
-                        if abs == d || abs == d + 1 {
+                        if abs <= d + 1 {
                             for t in 0..self.config.period {
                                 let cell = self.find_cell((x, y, t)).unwrap();
                                 self.set_stack.push(SetCell::new(cell, A::Reason::KNOWN));
@@ -247,8 +247,9 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
                         let cell_mut = self.find_cell_mut((x, y, t)).unwrap();
                         cell_mut.pred = pred;
                     } else {
-                        let pred = self.find_cell(self.config.translate((x, y, t - 1)));
-                        if pred.is_some() {
+                        let coord = self.config.translate((x, y, t - 1));
+                        let pred = self.find_cell(self.config.translate(coord));
+                        if self.config.contains(coord, true, true) && pred.is_some() {
                             let cell_mut = self.find_cell_mut((x, y, t)).unwrap();
                             cell_mut.pred = pred;
                         } else if self.config.contains((x, y, t), false, true)
