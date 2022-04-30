@@ -217,7 +217,7 @@ impl Config {
                             Some(Box::new(move |(x, _, t)| x == (dx - 1).max(0) && t < max_t))
                         } else {
                             Some(Box::new(move |(x, y, t)| {
-                                x == (dx - 1).max(0) && y == (dy - 1).max(0) && t < max_t
+                                (x == (dx - 1).max(0) || y == (dy - 1).max(0)) && t < max_t
                             }))
                         }
                     } else if rule_symmetry >= Symmetry::D2Diag
