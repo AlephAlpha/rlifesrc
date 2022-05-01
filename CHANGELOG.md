@@ -17,6 +17,7 @@ The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always
 
 - Fix links in docs.
 - Fix some bugs.
+- Update to Rust 2021.
 - Update dependencies.
 
 ## 0.5.2 - 2022/01/01
