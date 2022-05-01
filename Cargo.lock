@@ -983,7 +983,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "rlifesrc"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "clap",
  "crossterm",
@@ -997,7 +997,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-lib"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "auto_enums",
  "bitflags",
@@ -1014,7 +1014,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-web"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "build-time",
  "gloo 0.7.0",

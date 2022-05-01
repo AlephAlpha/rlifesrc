@@ -6,12 +6,18 @@
 
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
 
-- Fix the orientation of MAP rules.
-- Remove the `save-extra` feature. The `extra` field in the save file is now always enabled.
-
 ### Web
 
 The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
+
+### Others
+
+## 0.6.0 - 2022/05/01
+
+### Lib
+
+- Fix the orientation of MAP rules.
+- Remove the `save-extra` feature. The `extra` field in the save file is now always enabled.
 
 ### Others
 
