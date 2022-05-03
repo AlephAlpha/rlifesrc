@@ -18,11 +18,11 @@
 
 ## 编译
 
-网页版的部署用 Github Actions 自动完成，参见[`build-web.yml`](./../.github/workflows/build-web.yml)。
+网页版的编译和部署用 Github Actions 自动完成，参见[`build-web.yml`](./../.github/workflows/build-web.yml)。
 
 如果要手动编译的话：
 
-1. 编译前要安装**最新版**的 [`trunk`](https://github.com/thedodd/trunk)：
+1. 编译前要安装 [`trunk`](https://github.com/thedodd/trunk)，需要 0.15.0 以上的版本：
 
     ```bash
     cargo install --locked trunk
@@ -46,10 +46,11 @@
 
 ```bash
 git clone --single-branch --branch=gh-pages --depth 1 https://github.com/AlephAlpha/rlifesrc.git
+cd rlifesrc
 python3 -m http.server
 ```
 
-然后在浏览器打开 `http://0.0.0.0:8000/rlifesrc/` 即可。由于前面第3步说的问题，不要先 `cd` 到 `rlifesrc` 再运行服务器。
+然后在浏览器打开 `http://0.0.0.0:8000/` 即可。
 
 注意由于浏览器同源策略的问题， `git clone` 下来后无法直接在浏览器中打开运行。
 
