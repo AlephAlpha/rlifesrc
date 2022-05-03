@@ -3,7 +3,7 @@ use instant::Instant;
 use log::{debug, error};
 use rlifesrc_lib::{save::WorldSer, Config, PolyWorld, Status};
 use serde::{Deserialize, Serialize};
-use std::{option_env, time::Duration};
+use std::time::Duration;
 use yew_agent::{Agent, AgentLink, HandlerId, Public};
 
 const VIEW_FREQ: u64 = 100000;
@@ -274,7 +274,11 @@ impl Agent for Worker {
     }
 
     fn name_of_resource() -> &'static str {
-        option_env!("RLIFESRC_PATH").unwrap_or("rlifesrc/worker.js")
+        "worker.js"
+    }
+
+    fn resource_path_is_relative() -> bool {
+        true
     }
 }
 

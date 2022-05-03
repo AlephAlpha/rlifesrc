@@ -18,15 +18,15 @@
 
 ## 编译
 
-编译过程比较复杂，我用 Github Actions 自动完成，参见[`build-web.yml`](./../.github/workflows/build-web.yml)。如果要手动编译的话：
+网页版的部署用 Github Actions 自动完成，参见[`build-web.yml`](./../.github/workflows/build-web.yml)。
 
-1. 编译前要安装**最新版**的 [`wasm-bindgen`](https://github.com/rustwasm/wasm-bindgen)：
+如果要手动编译的话：
+
+1. 编译前要安装**最新版**的 [`trunk`](https://github.com/thedodd/trunk)：
 
     ```bash
-    cargo install -f wasm-bindgen-cli
+    cargo install --locked trunk
     ```
-
-    `wasm-bindgen` 版本不对的话会无法编译。如果升级到最新版还是不对，可以试试先删掉 `Cargo.lock` 再重新编译。
 
 2. 由于是编译成 WebAssembly，还要给 Rust 添加相应的 target：
 
@@ -34,20 +34,13 @@
     rustup target add wasm32-unknown-unknown
     ```
 
-3. 现在 [`yew`](https://github.com/yewstack/yew) 是从**绝对路径**读取 worker 所在的文件。由于我是部署到 `https://alephalpha.github.io/rlifesrc/`，所以把这个路径默认设为 `rlifesrc/worker.js`；如果部署到的地址不同，可以在**编译时**通过环境变量 `RLIFESRC_PATH` 修改此路径。比如说要改成 `worker.js` 的话：
+3. 然后 `cd` 到 `web` 目录，并运行：
 
     ```bash
-    export RLIFESRC_PATH=worker.js
+    trunk build --release
     ```
 
-4. 完成以上准备工作之后，可以编译了。假设要把编译的结果输出到 `target/deploy` 目录：
-
-    ```bash
-    cargo build --release --target wasm32-unknown-unknown --manifest-path web/Cargo.toml
-    wasm-bindgen --target web --no-typescript --out-dir target/deploy target/wasm32-unknown-unknown/release/main.wasm
-    wasm-bindgen --target no-modules --no-typescript --out-dir target/deploy target/wasm32-unknown-unknown/release/worker.wasm
-    cp -r web/static/* target/deploy
-    ```
+4. 编译输出的文件在 `web/dist` 目录。
 
 如果只是想在本地使用网页版，完全可以不用编译，只需要把编译好的版本 `git clone` 下来，用 Python 自带的服务器功能：
 
