@@ -8,7 +8,7 @@
 
 支持 [Life-like](https://conwaylife.com/wiki/Totalistic_Life-like_cellular_automaton) 和 [non-totalistic](https://conwaylife.com/wiki/Non-isotropic_Life-like_cellular_automaton) 的规则，但后者比前者要略慢一些。也支持[六边形](https://conwaylife.com/wiki/Hexagonal_neighbourhood)以及[von Neumann 邻域](https://conwaylife.com/wiki/Von_Neumann_neighbourhood)的规则，但目前是通过转化成 non-totalistic 规则来实现的，速度较慢。还支持 [Generations](https://conwaylife.com/wiki/Generations) 规则。
 
-[点此试用。](https://alephalpha.github.io/rlifesrc/)（[国内镜像](https://alephalpha.gitee.io/rlifesrc/)）
+[点此试用。](https://alephalpha.github.io/rlifesrc/)
 
 这里是 rlifesrc 的网页版。文本界面的说明见[`tui/`](../tui/README.md) 目录中的 `README.md`。
 

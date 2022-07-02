@@ -10,4 +10,4 @@
 
 提供一个文本界面的命令行工具，和一个基于 WebAssembly 的网页版，请分别见 [`tui/`](tui/) 和  [`web/`](web/) 两个目录。
 
-[点此试用网页版。](https://alephalpha.github.io/rlifesrc/) （[国内镜像](https://alephalpha.gitee.io/rlifesrc/)）
+[点此试用网页版。](https://alephalpha.github.io/rlifesrc/)
