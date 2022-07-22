@@ -165,7 +165,7 @@ pub struct SetCell<R: Rule, A: Algorithm<R>> {
 impl<R: Rule, A: Algorithm<R>> SetCell<R, A> {
     /// Get a reference to the set cell.
     #[inline]
-    pub(crate) fn new(cell: CellRef<R>, reason: A::Reason) -> Self {
+    pub(crate) const fn new(cell: CellRef<R>, reason: A::Reason) -> Self {
         Self { cell, reason }
     }
 

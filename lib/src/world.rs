@@ -509,13 +509,13 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
 
     /// World configuration.
     #[inline]
-    pub fn config(&self) -> &Config {
+    pub const fn config(&self) -> &Config {
         &self.config
     }
 
     /// Whether the rule is a Generations rule.
     #[inline]
-    pub fn is_gen_rule(&self) -> bool {
+    pub const fn is_gen_rule(&self) -> bool {
         R::IsGen::VALUE
     }
 
@@ -546,7 +546,7 @@ impl<R: Rule, A: Algorithm<R>> World<R, A> {
 
     /// Number of conflicts during the search.
     #[inline]
-    pub fn conflicts(&self) -> u64 {
+    pub const fn conflicts(&self) -> u64 {
         self.conflicts
     }
 

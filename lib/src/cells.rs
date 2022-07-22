@@ -172,7 +172,7 @@ pub struct CellRef<R: Rule> {
 impl<R: Rule> CellRef<R> {
     /// Creates a new [`CellRef`] from a mut pointer to a [`LifeCell`].
     #[inline]
-    pub(crate) unsafe fn new(ptr: *mut LifeCell<R>) -> Self {
+    pub(crate) const unsafe fn new(ptr: *mut LifeCell<R>) -> Self {
         Self {
             cell: NonNull::new_unchecked(ptr),
         }

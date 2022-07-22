@@ -28,7 +28,7 @@ fn run_search(world: &mut PolyWorld, all: bool) {
             eprintln!("Not found.");
             exit(1);
         }
-    } else if let Status::Found = world.search(None) {
+    } else if world.search(None) == Status::Found {
         println!("{}", world.rle_gen(0));
     } else {
         eprintln!("Not found.");

@@ -244,7 +244,7 @@ pub enum ConflReason<R: Rule> {
 impl<R: Rule> ConflReason<R> {
     /// Whether this reason should be analyzed before retreating.
     #[inline]
-    fn should_analyze(&self) -> bool {
+    const fn should_analyze(&self) -> bool {
         !matches!(self, Self::Deduce)
     }
 }
