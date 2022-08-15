@@ -4,7 +4,7 @@ pub struct World {
     node_ref: NodeRef,
 }
 
-#[derive(Clone, PartialEq, Properties)]
+#[derive(Clone, PartialEq, Eq, Properties)]
 pub struct Props {
     pub world: String,
 }
