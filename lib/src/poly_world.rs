@@ -66,13 +66,13 @@ impl PolyWorld {
 
     /// World configuration.
     #[inline]
-    pub fn config(&self) -> &Config {
+    pub const fn config(&self) -> &Config {
         dispatch!(self, world => world.config())
     }
 
     /// Whether the rule is a Generations rule.
     #[inline]
-    pub fn is_gen_rule(&self) -> bool {
+    pub const fn is_gen_rule(&self) -> bool {
         dispatch!(self, world => world.is_gen_rule())
     }
 
@@ -103,7 +103,7 @@ impl PolyWorld {
 
     /// Number of conflicts during the search.
     #[inline]
-    pub fn conflicts(&self) -> u64 {
+    pub const fn conflicts(&self) -> u64 {
         dispatch!(self, world => world.conflicts())
     }
 

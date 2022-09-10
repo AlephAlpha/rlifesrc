@@ -28,8 +28,7 @@ use crate::cells::{ALIVE, DEAD};
 use serde::{Deserialize, Serialize};
 
 /// How to choose a state for an unknown cell.
-#[derive(Clone, Copy, Debug, Educe, PartialEq, Eq, Hash)]
-#[educe(Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum NewState {
     /// Chooses the background state.
@@ -50,7 +49,7 @@ pub enum NewState {
     /// For example, for non-Generations rules,
     /// it chooses [`ALIVE`] on even generations,
     /// [`DEAD`] on odd generations.
-    #[educe(Default)]
+    #[default]
     ChooseAlive,
 
     /// Random.

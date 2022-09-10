@@ -168,7 +168,7 @@ impl<R: Rule> Reason<R> {
     /// Cells involved in the reason.
     fn cells(self) -> Vec<CellRef<R>> {
         match self {
-            Reason::Rule(cell) => {
+            Self::Rule(cell) => {
                 let mut cells = Vec::with_capacity(10);
                 cells.push(cell);
                 if let Some(succ) = cell.succ {
@@ -181,8 +181,8 @@ impl<R: Rule> Reason<R> {
                 }
                 cells
             }
-            Reason::Sym(cell) => vec![cell],
-            Reason::Clause(clause) => clause,
+            Self::Sym(cell) => vec![cell],
+            Self::Clause(clause) => clause,
             _ => unreachable!(),
         }
     }

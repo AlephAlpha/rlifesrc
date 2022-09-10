@@ -6,7 +6,6 @@
 //! 10 different symmetries correspond to 10 subgroups of _D_<sub>8</sub>.
 
 use super::{Config, Coord};
-use educe::Educe;
 use std::{
     cmp::Ordering,
     fmt::{self, Display, Formatter},
@@ -39,14 +38,13 @@ use serde::{Deserialize, Serialize};
 ///
 /// Some of the transformations are only valid when the world is square.
 /// and some are only valid when the world has no diagonal width.
-#[derive(Clone, Copy, Debug, Educe, PartialEq, Eq, Hash)]
-#[educe(Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Transform {
     /// `Id`.
     ///
     /// Identity transformation.
-    #[educe(Default)]
+    #[default]
     Id,
     /// `R90`.
     ///
@@ -304,14 +302,13 @@ impl Transform {
 ///
 /// Some of the symmetries are only valid when the world is square,
 /// and some are only valid when the world has no diagonal width.
-#[derive(Clone, Copy, Debug, Educe, PartialEq, Eq, Hash)]
-#[educe(Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Symmetry {
     /// `C1`.
     ///
     /// No symmetry at all.
-    #[educe(Default)]
+    #[default]
     C1,
     /// `C2`.
     ///
