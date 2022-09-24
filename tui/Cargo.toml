@@ -11,13 +11,13 @@ readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
-clap = { version = "3.2.20", features = ["cargo"] }
+clap = { version = "3.2.22", features = ["cargo"] }
 crossterm = { version = "0.25.0", features = ["event-stream"], optional = true }
 futures-executor = { version = "0.3.24", optional = true }
 futures-util = { version = "0.3.24", optional = true }
 rlifesrc-lib = { path = "../lib/", version = "0.6.0" }
 serde_json = "1.0.85"
-serde_yaml = "0.9.11"
+serde_yaml = "0.9.13"
 toml = "0.5.9"
 
 [features]
