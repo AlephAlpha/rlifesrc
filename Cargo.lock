@@ -125,9 +125,9 @@ checksum = "c1ad822118d20d2c234f427000d5acc36eabe1e29a348c89b63dd60b13f28e5d"
 
 [[package]]
 name = "ca-formats"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cfb622414252042dd89a535f58433759f878565860114bd5ce53ee5d8bfee41"
+checksum = "43f8ba74df0dc11ed007d30c94b3c423958568e5a1f90c1d7a3d716b9ee97065"
 dependencies = [
  "displaydoc",
  "lazy-regex",
