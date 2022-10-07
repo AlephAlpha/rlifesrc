@@ -70,6 +70,7 @@ bitflags! {
 pub struct NbhdDesc(u16);
 
 /// Totalistic Life-like rules.
+#[derive(Clone)]
 pub struct Life {
     /// Whether the rule contains `B0`.
     b0: bool,
@@ -378,6 +379,7 @@ impl Rule for Life {
 pub struct NbhdDescGen(u16, Option<State>);
 
 /// Totalistic Life-like Generations rules.
+#[derive(Clone)]
 pub struct LifeGen {
     /// Whether the rule contains `B0`.
     b0: bool,

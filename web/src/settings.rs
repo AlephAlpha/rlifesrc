@@ -200,7 +200,7 @@ impl Settings {
                 </label>
                 <input id="set_rule"
                     type="text"
-                    class={(!self.rule_is_valid).then(|| "mui--is-invalid")}
+                    class={(!self.rule_is_valid).then_some("mui--is-invalid")}
                     value={self.config.rule_string.clone()}
                     onchange={onchange}/>
             </div>
@@ -608,7 +608,7 @@ impl Settings {
                     { ":" }
                 </label>
                 <textarea id="set_known"
-                    class={self.known_cells_string.is_some().then(|| "mui--is-invalid")}
+                    class={self.known_cells_string.is_some().then_some("mui--is-invalid")}
                     placeholder="Input in JSON, e.g. [{\"coord\":[0,0,0],\"state\":0},{\"coord\":[1,1,0],\"state\":1}]\n\
                                  Or in RLE, e.g. ?o$2bo$2?o!"
                     value={value}

@@ -1,18 +1,18 @@
 //! Parsing command-line arguments.
 
-use clap::{command, Arg, ErrorKind, Result};
+use clap::{
+    command,
+    error::{ErrorKind, Result},
+    value_parser, Arg, ArgAction,
+};
 use rlifesrc_lib::{
     rules::NtLifeGen, Config, NewState, PolyWorld, SearchOrder, Symmetry, Transform,
 };
 use std::{
     fs::File,
     io::{BufReader, Read},
-    path::Path,
+    path::PathBuf,
 };
-
-fn is_positive(s: &str) -> bool {
-    s.chars().all(|c| c.is_ascii_digit()) && s != "0" && !s.starts_with('-')
-}
 
 /// A struct to store the parse results.
 pub struct Args {
@@ -36,9 +36,8 @@ impl Args {
                  \n\
                  For a detailed help, please visit:\n\
                  https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README.md (In Chinese)\n\
-                 https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README_en.md (In English)\n",
+                 https://github.com/AlephAlpha/rlifesrc/blob/master/tui/README_en.md (In English)",
             )
-            .allow_negative_numbers(true)
             .arg(
                 Arg::new("CONFIG")
                     .help("Read config from a file")
@@ -46,58 +45,43 @@ impl Args {
                         "Read config from a file\n\
                          Supported formats: JSON, YAML, TOML.\n\
                          When a config file is provided, all the other flags and options, \
-                         except --all (-a), --reset-time, --no-tui (-n), are ignored.\n",
+                         except --all (-a), --reset-time, --no-tui (-n), are ignored.",
                     )
                     .short('C')
                     .long("config")
-                    .takes_value(true),
+                    .value_parser(value_parser!(PathBuf)),
             )
             .arg(
                 Arg::new("X")
                     .help("Width of the pattern")
                     .required_unless_present("CONFIG")
-                    .index(1)
-                    .validator(|x| {
-                        is_positive(x)
-                            .then(|| ())
-                            .ok_or_else(|| String::from("width must be a positive integer"))
-                    }),
+                    .value_parser(value_parser!(i32).range(1..)),
             )
             .arg(
                 Arg::new("Y")
                     .help("Height of the pattern")
                     .required_unless_present("CONFIG")
-                    .index(2)
-                    .validator(|y| {
-                        is_positive(y)
-                            .then(|| ())
-                            .ok_or_else(|| String::from("height must be a positive integer"))
-                    }),
+                    .value_parser(value_parser!(i32).range(1..)),
             )
             .arg(
                 Arg::new("P")
                     .help("Period of the pattern")
                     .default_value("1")
-                    .index(3)
-                    .validator(|p| {
-                        is_positive(p)
-                            .then(|| ())
-                            .ok_or_else(|| String::from("period must be a positive integer"))
-                    }),
+                    .value_parser(value_parser!(i32).range(1..)),
             )
             .arg(
                 Arg::new("DX")
                     .help("Horizontal translation")
                     .default_value("0")
-                    .index(4)
-                    .validator(|d| d.parse::<i32>().map(|_| ()).map_err(|e| e.to_string())),
+                    .allow_negative_numbers(true)
+                    .value_parser(value_parser!(i32)),
             )
             .arg(
                 Arg::new("DY")
                     .help("Vertical translation")
                     .default_value("0")
-                    .index(5)
-                    .validator(|d| d.parse::<i32>().map(|_| ()).map_err(|e| e.to_string())),
+                    .allow_negative_numbers(true)
+                    .value_parser(value_parser!(i32)),
             )
             .arg(
                 Arg::new("DIAG")
@@ -106,19 +90,12 @@ impl Args {
                         "Diagonal width\n\
                          If the diagonal width is n > 0, the cells at position (x, y) \
                          where abs(x - y) >= n are assumed to be dead.\n\
-                         If this value is set to 0, it would be ignored.\n",
+                         If this value is set to 0, it would be ignored.",
                     )
                     .short('d')
                     .long("diag")
-                    .takes_value(true)
                     .default_value("0")
-                    .validator(|d| {
-                        if is_positive(d) || d == "0" {
-                            Ok(())
-                        } else {
-                            Err(String::from("diagonal width must be a positive integer"))
-                        }
-                    }),
+                    .value_parser(value_parser!(i32).range(0..)),
             )
             .arg(
                 Arg::new("TRANSFORM")
@@ -129,14 +106,14 @@ impl Args {
                          the first generation, applying this transformation first, \
                          and then the translation defined by DX and DY.\n\
                          You may need to add quotation marks for some of the transformations.\n\
-                         \"Id\" is the identical transformation.\n\
-                         \"R\" means counterclockwise rotation.\n\
-                         \"F\" means flipping (reflection) across an axis.\n",
+                         Supported values are Id, R90, R180, R270, F|, F-, F\\, F/.\n\
+                         Id is the identical transformation.\n\
+                         R means counterclockwise rotation.\n\
+                         F means flipping (reflection) across an axis.",
                     )
                     .short('t')
                     .long("transform")
-                    .takes_value(true)
-                    .possible_values(&["Id", "R90", "R180", "R270", "F|", "F-", "F\\", "F/"])
+                    .value_parser(value_parser!(Transform))
                     .default_value("Id"),
             )
             .arg(
@@ -147,14 +124,12 @@ impl Args {
                          You may need to add quotation marks for some of the symmetries.\n\
                          The usages of these symmetries are the same as Oscar Cunningham's \
                          Logic Life Search.\n\
-                         See [https://conwaylife.com/wiki/Static_symmetry#Reflectional] \n",
+                         Supported values are C1, C2, C4, D2|, D2-, D2\\, D2/, D4+, D4X, D8.\n\
+                         See [https://conwaylife.com/wiki/Static_symmetry#Reflectional] ",
                     )
                     .short('s')
                     .long("symmetry")
-                    .takes_value(true)
-                    .possible_values(&[
-                        "C1", "C2", "C4", "D2|", "D2-", "D2\\", "D2/", "D4+", "D4X", "D8",
-                    ])
+                    .value_parser(value_parser!(Symmetry))
                     .default_value("C1"),
             )
             .arg(
@@ -163,29 +138,23 @@ impl Args {
                     .long_help(
                         "Rule of the cellular automaton\n\
                          Supports Life-like, isotropic non-totalistic, hexagonal, MAP rules, \
-                         and their corresponding Generations rules.\n",
+                         and their corresponding Generations rules.",
                     )
                     .short('r')
                     .long("rule")
-                    .takes_value(true)
                     .default_value("B3/S23")
-                    .validator(|d| {
-                        d.parse::<NtLifeGen>()
-                            .map(|_| ())
-                            .map_err(|e| e.to_string())
-                    }),
+                    .value_parser(|d: &str| d.parse::<NtLifeGen>().map(|_| d.to_string())),
             )
             .arg(
                 Arg::new("ORDER")
                     .help("Search order")
                     .long_help(
                         "Search order\n\
-                         Row first or column first.\n",
+                         Row first or column first.",
                     )
                     .short('o')
                     .long("order")
-                    .takes_value(true)
-                    .possible_values(&[
+                    .value_parser([
                         "row",
                         "column",
                         "automatic",
@@ -199,11 +168,10 @@ impl Args {
             )
             .arg(
                 Arg::new("CHOOSE")
-                    .help("How to choose a state for unknown cells\n")
+                    .help("How to choose a state for unknown cells")
                     .short('c')
                     .long("choose")
-                    .takes_value(true)
-                    .possible_values(&["dead", "alive", "random", "d", "a", "r"])
+                    .value_parser(["dead", "alive", "random", "d", "a", "r"])
                     .default_value("alive"),
             )
             .arg(
@@ -211,13 +179,12 @@ impl Args {
                     .help("Upper bound of numbers of minimum living cells in all generations")
                     .long_help(
                         "Upper bound of numbers of minimum living cells in all generations\n\
-                         If this value is set to 0, it means there is no limitation.\n",
+                         If this value is set to 0, it means there is no limitation.",
                     )
                     .short('m')
                     .long("max")
-                    .takes_value(true)
                     .default_value("0")
-                    .validator(|d| d.parse::<u32>().map(|_| ()).map_err(|e| e.to_string())),
+                    .value_parser(value_parser!(u32)),
             )
             .arg(
                 Arg::new("REDUCE")
@@ -225,11 +192,11 @@ impl Args {
                     .long_help(
                         "Reduce the max cell count when a result is found\n\
                          The new max cell count will be set to the cell count of \
-                         the current result minus one.\n",
+                         the current result minus one.",
                     )
                     .short('R')
                     .long("reduce")
-                    .takes_value(false),
+                    .action(ArgAction::SetTrue),
             )
             .arg(
                 Arg::new("SUBPERIOD")
@@ -237,7 +204,7 @@ impl Args {
                     .long_help("Allow patterns whose fundamental period are smaller than the given period")
                     .short('p')
                     .long("subperiod")
-                    .takes_value(false),
+                    .action(ArgAction::SetTrue),
             )
             .arg(
                 Arg::new("SKIPSUBSYM")
@@ -246,11 +213,11 @@ impl Args {
                         "Skip patterns which are invariant under more transformations than \
                          required by the given symmetry.\n\
                          In another word, skip patterns whose symmetry group properly contains \
-                         the given symmetry group.\n",
+                         the given symmetry group.",
                     )
                     .short('S')
                     .long("skip-subsym")
-                    .takes_value(false),
+                    .action(ArgAction::SetTrue),
             )
             .arg(
                 Arg::new("BACKJUMP")
@@ -261,7 +228,7 @@ impl Args {
                         useful for large (e.g., 64x64) still lifes.",
                     )
                     .long("backjump")
-                    .takes_value(false),
+                    .action(ArgAction::SetTrue),
             );
 
         #[cfg(feature = "tui")]
@@ -272,23 +239,26 @@ impl Args {
                         .help("Prints all possible results instead of only the first one")
                         .long_help(
                             "Prints all possible results instead of only the first one\n\
-                             Only useful when --no-tui is set.\n",
+                             Only useful when --no-tui is set.",
                         )
                         .short('a')
                         .long("all")
-                        .requires("NOTUI"),
+                        .requires("NOTUI")
+                        .action(ArgAction::SetTrue),
                 )
                 .arg(
                     Arg::new("RESET")
                         .help("Resets the time when starting a new search")
                         .long("reset-time")
-                        .conflicts_with("NOTUI"),
+                        .conflicts_with("NOTUI")
+                        .action(ArgAction::SetTrue),
                 )
                 .arg(
                     Arg::new("NOTUI")
                         .help("Starts searching immediately, without entering the TUI")
                         .short('n')
-                        .long("no-tui"),
+                        .long("no-tui")
+                        .action(ArgAction::SetTrue),
                 );
         }
 
@@ -299,7 +269,8 @@ impl Args {
                     .help("Searches for all possible pattern")
                     .long_help("Searches for all possible pattern")
                     .short('a')
-                    .long("all"),
+                    .long("all")
+                    .action(ArgAction::SetTrue),
             );
         }
 
@@ -307,8 +278,7 @@ impl Args {
 
         let config;
 
-        if let Some(config_file) = matches.value_of("CONFIG") {
-            let path = Path::new(config_file);
+        if let Some(path) = matches.get_one::<PathBuf>("CONFIG") {
             let file = File::open(path).map_err(|e| app.error(ErrorKind::Io, e))?;
             let mut reader = BufReader::new(file);
             match path.extension().and_then(|s| s.to_str()) {
@@ -334,44 +304,44 @@ impl Args {
                 _ => return Err(app.error(ErrorKind::Io, "Unsupported config file format")),
             }
         } else {
-            let width = matches.value_of("X").unwrap().parse().unwrap();
-            let height = matches.value_of("Y").unwrap().parse().unwrap();
-            let period = matches.value_of("P").unwrap().parse().unwrap();
+            let width = *matches.get_one("X").unwrap();
+            let height = *matches.get_one("Y").unwrap();
+            let period = *matches.get_one("P").unwrap();
 
-            let dx = matches.value_of("DX").unwrap().parse().unwrap();
-            let dy = matches.value_of("DY").unwrap().parse().unwrap();
+            let dx = *matches.get_one("DX").unwrap();
+            let dy = *matches.get_one("DY").unwrap();
 
-            let transform: Transform = matches.value_of("TRANSFORM").unwrap().parse().unwrap();
-            let symmetry: Symmetry = matches.value_of("SYMMETRY").unwrap().parse().unwrap();
+            let transform = *matches.get_one("TRANSFORM").unwrap();
+            let symmetry = *matches.get_one("SYMMETRY").unwrap();
 
-            let search_order = match matches.value_of("ORDER").unwrap() {
+            let search_order = match matches.get_one::<String>("ORDER").unwrap().as_str() {
                 "row" | "r" => Some(SearchOrder::RowFirst),
                 "column" | "c" => Some(SearchOrder::ColumnFirst),
                 "diagonal" | "d" => Some(SearchOrder::Diagonal),
                 _ => None,
             };
-            let new_state = match matches.value_of("CHOOSE").unwrap() {
+            let new_state = match matches.get_one::<String>("CHOOSE").unwrap().as_str() {
                 "dead" | "d" => NewState::ChooseDead,
                 "alive" | "a" => NewState::ChooseAlive,
                 "random" | "r" => NewState::Random,
                 _ => NewState::ChooseAlive,
             };
-            let max_cell_count = matches.value_of("MAX").unwrap().parse().unwrap();
+            let max_cell_count = *matches.get_one("MAX").unwrap();
             let max_cell_count = match max_cell_count {
                 0 => None,
                 i => Some(i),
             };
-            let diagonal_width = matches.value_of("DIAG").unwrap().parse().unwrap();
+            let diagonal_width = *matches.get_one("DIAG").unwrap();
             let diagonal_width = match diagonal_width {
                 0 => None,
                 i => Some(i),
             };
-            let reduce_max = matches.is_present("REDUCE");
-            let skip_subperiod = !matches.is_present("SUBPERIOD");
-            let skip_subsymmetry = matches.is_present("SKIPSUBSYM");
-            let backjump = matches.is_present("BACKJUMP");
+            let reduce_max = matches.get_flag("REDUCE");
+            let skip_subperiod = !matches.get_flag("SUBPERIOD");
+            let skip_subsymmetry = matches.get_flag("SKIPSUBSYM");
+            let backjump = matches.get_flag("BACKJUMP");
 
-            let rule_string = matches.value_of("RULE").unwrap().to_string();
+            let rule_string = matches.get_one::<String>("RULE").unwrap().to_string();
 
             config = Config::new(width, height, period)
                 .set_translate(dx, dy)
@@ -388,11 +358,11 @@ impl Args {
                 .set_backjump(backjump);
         }
 
-        let all = matches.is_present("ALL");
+        let all = matches.get_flag("ALL");
         #[cfg(feature = "tui")]
-        let reset = matches.is_present("RESET");
+        let reset = matches.get_flag("RESET");
         #[cfg(feature = "tui")]
-        let no_tui = matches.is_present("NOTUI");
+        let no_tui = matches.get_flag("NOTUI");
 
         let world = config
             .world()

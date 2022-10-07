@@ -95,6 +95,7 @@ pub struct NbhdDesc(u32);
 /// Life-like rule: isotropic non-totalistic rules,
 /// non-isotropic rules, hexagonal rules, rules with von Neumann
 /// neighborhoods, etc.
+#[derive(Clone)]
 pub struct NtLife {
     /// Whether the rule contains `B0`.
     b0: bool,
@@ -454,6 +455,7 @@ pub struct NbhdDescGen(u32, Option<State>);
 ///
 /// This includes any rule that can be converted to a non-totalistic
 /// Life-like Generations rule.
+#[derive(Clone)]
 pub struct NtLifeGen {
     /// Whether the rule contains `B0`.
     b0: bool,

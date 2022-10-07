@@ -103,7 +103,7 @@ impl Worker {
         let paused = self.paused;
         let config = (status == Status::Found && self.world.config().reduce_max)
             .then(|| self.world.config().clone());
-        let timing = self.paused.then(|| self.timing);
+        let timing = self.paused.then_some(self.timing);
         let found_count = self.found_count;
 
         let msg = UpdateMessage {

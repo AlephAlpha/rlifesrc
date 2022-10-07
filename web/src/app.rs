@@ -292,6 +292,7 @@ impl App {
         }
     }
 
+    #[allow(clippy::let_unit_value)]
     fn main(&self, ctx: &Context<Self>) -> Html {
         html! {
             <main class="mui-container-fluid">
