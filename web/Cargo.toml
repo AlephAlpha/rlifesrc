@@ -39,4 +39,4 @@ web-sys = { version = "0.3.60", features = [
   "Window",
 ] }
 yew = "0.19.3"
-yew-agent = "0.1.0"
+yew-agent = "0.2.0"
