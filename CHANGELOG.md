@@ -6,14 +6,19 @@
 
 For the documentation of the unreleased lib, please visit https://alephalpha.github.io/rlifesrc-doc/rlifesrc_lib/.
 
-### TUI
-
-- Update Clap to 4.0.0.
-
 ### Web
 
 The [web version on GitHub.io](https://alephalpha.github.io/rlifesrc/) is always the newest unreleased version on the master branch.
 
+## 0.6.1 - 2023/03/18
+
+### TUI
+
+- Update Clap to 4.1.10.
+
+### Web
+
+- Update Yew to 0.20.0.
 - Build with [Trunk](https://github.com/thedodd/trunk).
 
 ### Others

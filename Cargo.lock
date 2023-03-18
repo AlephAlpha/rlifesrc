@@ -1181,7 +1181,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-lib"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "auto_enums",
  "bitflags 2.0.1",
@@ -1198,7 +1198,7 @@ dependencies = [
 
 [[package]]
 name = "rlifesrc-web"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "build-time",
  "gloo",
