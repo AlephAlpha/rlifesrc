@@ -18,7 +18,7 @@ use gloo::{
 use js_sys::Array;
 use log::{debug, error};
 use rlifesrc_lib::{Config, Status};
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use web_sys::{
     Blob, BlobPropertyBag, Event, FileList, HtmlAnchorElement, HtmlElement, HtmlInputElement, Url,
@@ -85,8 +85,11 @@ impl Component for App {
         let config: Config = Config::default();
         let status = Status::Initial;
         let world = "Loading...".to_owned();
-        let callback = ctx.link().callback(Msg::DataReceived);
-        let worker = Worker::bridge(callback);
+        let callback = {
+            let link = ctx.link().clone();
+            move |e| link.send_message(Msg::DataReceived(e))
+        };
+        let worker = Worker::bridge(Rc::new(callback));
 
         Self {
             config,

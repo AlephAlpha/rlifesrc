@@ -47,7 +47,7 @@ fn transform_neigh(data: u8, transform: Transform) -> u8 {
 
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
-    #[derive(Default)]
+    #[derive(Clone, Copy, Debug, Default ,PartialEq, Eq, Hash)]
     struct ImplFlags: u32 {
         /// A conflict is detected.
         const CONFLICT = 0b_0000_0001;
@@ -59,7 +59,7 @@ bitflags! {
         const SUCC_DEAD = 0b_0000_1000;
 
         /// The state of the successor is implied.
-        const SUCC = Self::SUCC_ALIVE.bits | Self::SUCC_DEAD.bits;
+        const SUCC = Self::SUCC_ALIVE.bits() | Self::SUCC_DEAD.bits();
 
         /// The cell itself must be alive.
         const SELF_ALIVE = 0b_0001_0000;
@@ -68,7 +68,7 @@ bitflags! {
         const SELF_DEAD = 0b_0010_0000;
 
         /// The state of the cell itself is implied.
-        const SELF = Self::SELF_ALIVE.bits | Self::SELF_DEAD.bits;
+        const SELF = Self::SELF_ALIVE.bits() | Self::SELF_DEAD.bits();
 
         /// The state of at least one unknown neighbor is implied.
         const NBHD = 0xffff << 6;
@@ -273,10 +273,10 @@ impl NtLife {
 
                             if possibly_dead && !possibly_alive {
                                 self.impl_table[index | state] |=
-                                    ImplFlags::from_bits((n.pow(2) << 7) as u32).unwrap();
+                                    ImplFlags::from_bits_retain((n.pow(2) << 7) as u32);
                             } else if !possibly_dead && possibly_alive {
                                 self.impl_table[index | state] |=
-                                    ImplFlags::from_bits((n.pow(2) << 6) as u32).unwrap();
+                                    ImplFlags::from_bits_retain((n.pow(2) << 6) as u32);
                             } else if !possibly_dead && !possibly_alive {
                                 self.impl_table[index | state] = ImplFlags::CONFLICT;
                             }
@@ -426,14 +426,14 @@ impl Rule for NtLife {
 
         if flags.intersects(ImplFlags::NBHD) {
             for (i, &neigh) in cell.nbhd.iter().enumerate() {
-                if flags.intersects(ImplFlags::from_bits(3 << (2 * i + 6)).unwrap()) {
+                if flags.intersects(ImplFlags::from_bits_retain(3 << (2 * i + 6))) {
                     if let Some(neigh) = neigh {
-                        let state =
-                            if flags.contains(ImplFlags::from_bits(1 << (2 * i + 7)).unwrap()) {
-                                DEAD
-                            } else {
-                                ALIVE
-                            };
+                        let state = if flags.contains(ImplFlags::from_bits_retain(1 << (2 * i + 7)))
+                        {
+                            DEAD
+                        } else {
+                            ALIVE
+                        };
                         world.set_cell(neigh, state, A::Reason::from_cell(cell))?;
                     }
                 }
@@ -680,7 +680,7 @@ impl Rule for NtLifeGen {
 
         if flags.intersects(ImplFlags::NBHD) {
             for (i, &neigh) in cell.nbhd.iter().enumerate() {
-                if flags.intersects(ImplFlags::from_bits(1 << (2 * i + 6)).unwrap()) {
+                if flags.intersects(ImplFlags::from_bits_retain(1 << (2 * i + 6))) {
                     if let Some(neigh) = neigh {
                         world.set_cell(neigh, ALIVE, A::Reason::from_cell(cell))?;
                     }

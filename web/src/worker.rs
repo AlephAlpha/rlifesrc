@@ -4,7 +4,7 @@ use log::{debug, error};
 use rlifesrc_lib::{save::WorldSer, Config, PolyWorld, Status};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use yew_agent::{Agent, AgentLink, HandlerId, Public};
+use yew_agent::{HandlerId, Public, Worker as YewWorker, WorkerLink};
 
 const VIEW_FREQ: u64 = 100000;
 
@@ -54,7 +54,7 @@ pub struct Worker {
     all_found: Vec<String>,
     start_time: Option<Instant>,
     timing: Duration,
-    link: AgentLink<Worker>,
+    link: WorkerLink<Worker>,
     timeout: Option<Timeout>,
 }
 
@@ -119,13 +119,13 @@ impl Worker {
     }
 }
 
-impl Agent for Worker {
+impl YewWorker for Worker {
     type Reach = Public<Self>;
     type Message = WorkerMsg;
     type Input = Request;
     type Output = Response;
 
-    fn create(link: AgentLink<Self>) -> Self {
+    fn create(link: WorkerLink<Self>) -> Self {
         debug!("Worker path: {}", Self::name_of_resource());
         let config: Config = Config::default();
         let world = config.world().unwrap();

@@ -293,11 +293,11 @@ impl Args {
                     })?;
                 }
                 Some("toml") => {
-                    let mut buf = Vec::new();
-                    reader
-                        .read_to_end(&mut buf)
-                        .map_err(|e| app.error(ErrorKind::Io, e))?;
-                    config = toml::from_slice(&buf).map_err(|e| {
+                    let mut buf = String::new();
+                    reader.read_to_string(&mut buf).map_err(|e| {
+                        app.error(ErrorKind::Io, format!("Invalid config file: {}", e))
+                    })?;
+                    config = toml::from_str(&buf).map_err(|e| {
                         app.error(ErrorKind::Io, format!("Invalid config file: {}", e))
                     })?;
                 }

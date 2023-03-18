@@ -132,7 +132,7 @@ impl Display for Transform {
             Self::FlipDiag => "F\\",
             Self::FlipAntidiag => "F/",
         };
-        write!(f, "{}", s)?;
+        write!(f, "{s}")?;
         Ok(())
     }
 }
@@ -412,7 +412,7 @@ impl Display for Symmetry {
             Self::D4Diag => "D4X",
             Self::D8 => "D8",
         };
-        write!(f, "{}", s)?;
+        write!(f, "{s}")?;
         Ok(())
     }
 }

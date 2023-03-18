@@ -18,7 +18,7 @@ use std::str::FromStr;
 
 bitflags! {
     /// Flags to imply the state of a cell and its neighbors.
-    #[derive(Default)]
+    #[derive(Clone, Copy, Debug, Default ,PartialEq, Eq, Hash)]
     struct ImplFlags: u8 {
         /// A conflict is detected.
         const CONFLICT = 0b_0000_0001;
@@ -30,7 +30,7 @@ bitflags! {
         const SUCC_DEAD = 0b_0000_1000;
 
         /// The state of the successor is implied.
-        const SUCC = Self::SUCC_ALIVE.bits | Self::SUCC_DEAD.bits;
+        const SUCC = Self::SUCC_ALIVE.bits() | Self::SUCC_DEAD.bits();
 
         /// The cell itself must be alive.
         const SELF_ALIVE = 0b_0001_0000;
@@ -39,7 +39,7 @@ bitflags! {
         const SELF_DEAD = 0b_0010_0000;
 
         /// The state of the cell itself is implied.
-        const SELF = Self::SELF_ALIVE.bits | Self::SELF_DEAD.bits;
+        const SELF = Self::SELF_ALIVE.bits() | Self::SELF_DEAD.bits();
 
         /// All unknown neighbors must be alive.
         const NBHD_ALIVE = 0b_0100_0000;
@@ -48,7 +48,7 @@ bitflags! {
         const NBHD_DEAD = 0b_1000_0000;
 
         /// The states of all unknown neighbors are implied.
-        const NBHD = Self::NBHD_ALIVE.bits | Self::NBHD_DEAD.bits;
+        const NBHD = Self::NBHD_ALIVE.bits() | Self::NBHD_DEAD.bits();
     }
 }
 

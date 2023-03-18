@@ -122,9 +122,9 @@ impl Component for Settings {
         true
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        self.config != ctx.props().config && {
-            self.config = ctx.props().config.clone();
+    fn changed(&mut self, _ctx: &Context<Self>, prop: &Props) -> bool {
+        self.config != prop.config && {
+            self.config = prop.config.clone();
             self.rule_is_valid = self.config.rule_string.parse::<NtLifeGen>().is_ok();
             self.known_cells_string = None;
             true
