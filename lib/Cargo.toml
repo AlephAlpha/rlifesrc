@@ -12,7 +12,7 @@ keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
 auto_enums = "0.8.0"
-bitflags = "2.0.1"
+bitflags = "2.0.2"
 ca-formats = { version = "0.3.5", features = ["unknown"], optional = true }
 ca-rules = "0.3.5"
 displaydoc = "0.2.3"
