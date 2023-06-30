@@ -11,7 +11,7 @@ readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
-auto_enums = "0.8.0"
+auto_enums = "0.8.1"
 bitflags = "2.3.3"
 ca-formats = { version = "0.3.5", features = ["unknown"], optional = true }
 ca-rules = "0.3.5"
