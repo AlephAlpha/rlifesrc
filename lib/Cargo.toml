@@ -11,8 +11,8 @@ readme = "README_en.md"
 keywords = ["game-of-life", "cellular-automata"]
 
 [dependencies]
-auto_enums = "0.8.1"
-bitflags = "2.3.3"
+auto_enums = "0.8.2"
+bitflags = "2.4.0"
 ca-formats = { version = "0.3.5", features = ["unknown"], optional = true }
 ca-rules = "0.3.5"
 displaydoc = "0.2.4"
@@ -20,7 +20,7 @@ educe = "0.4.22"
 from_variants = "1.0.2"
 getrandom = "0.2.10"
 rand = "0.8.5"
-serde = { version = "1.0.174", features = ["derive"], optional = true }
+serde = { version = "1.0.183", features = ["derive"], optional = true }
 thiserror = "1.0.47"
 
 [features]

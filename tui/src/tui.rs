@@ -3,12 +3,12 @@ use crossterm::{
     event::{Event, EventStream, KeyCode, KeyEvent},
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
-    ExecutableCommand, QueueableCommand, Result as CrosstermResult,
+    ExecutableCommand, QueueableCommand,
 };
 use futures_util::{future, select_biased, FutureExt, TryStreamExt};
 use rlifesrc_lib::{PolyWorld, State, Status, ALIVE, DEAD};
 use std::{
-    io::{stdout, Write},
+    io::{stdout, Result, Write},
     time::{Duration, Instant},
 };
 
@@ -42,7 +42,7 @@ struct App<'a, W: Write> {
 }
 
 impl<'a, W: Write> App<'a, W> {
-    fn new(world: PolyWorld, reset: bool, output: &'a mut W) -> CrosstermResult<Self> {
+    fn new(world: PolyWorld, reset: bool, output: &'a mut W) -> Result<Self> {
         let period = world.config().period;
         let mut app = App {
             gen: 0,
@@ -63,7 +63,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Initializes the screen.
-    fn init(&mut self) -> CrosstermResult<()> {
+    fn init(&mut self) -> Result<()> {
         self.output
             .execute(EnterAlternateScreen)?
             .execute(Hide)?
@@ -76,7 +76,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Quits the program.
-    fn quit(&mut self) -> CrosstermResult<()> {
+    fn quit(&mut self) -> Result<()> {
         terminal::disable_raw_mode()?;
         self.output
             .execute(Show)?
@@ -86,7 +86,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Updates the header.
-    fn update_header(&mut self) -> CrosstermResult<()> {
+    fn update_header(&mut self) -> Result<()> {
         self.output
             .queue(MoveTo(0, 0))?
             .queue(SetBackgroundColor(Color::White))?
@@ -113,7 +113,7 @@ impl<'a, W: Write> App<'a, W> {
     /// Prints the pattern in a mix of
     /// [Plaintext](https://conwaylife.com/wiki/Plaintext) and
     /// [RLE](https://conwaylife.com/wiki/Rle) format.
-    fn update_main(&mut self) -> CrosstermResult<()> {
+    fn update_main(&mut self) -> Result<()> {
         self.output
             .queue(MoveTo(0, 1))?
             .queue(ResetColor)?
@@ -152,7 +152,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Updates the footer.
-    fn update_footer(&mut self) -> CrosstermResult<()> {
+    fn update_footer(&mut self) -> Result<()> {
         const INITIAL: &str = "Press [space] to start.";
         const FOUND: &str = "Found a result. Press [q] to quit or [space] to search for the next.";
         const NONE: &str = "No more result. Press [q] to quit.";
@@ -182,7 +182,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Updates the screen.
-    fn update(&mut self) -> CrosstermResult<()> {
+    fn update(&mut self) -> Result<()> {
         self.update_header()?;
         self.update_main()?;
         self.update_footer()?;
@@ -221,7 +221,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Asks whether to quit.
-    fn ask_quit(&mut self) -> CrosstermResult<()> {
+    fn ask_quit(&mut self) -> Result<()> {
         const ASK_QUIT: &str = "Are you sure to quit? [Y/n]";
 
         self.output
@@ -236,7 +236,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// Handles a key event. Returns `true` to quit the program.
-    fn handle(&mut self, event: Option<Event>) -> CrosstermResult<bool> {
+    fn handle(&mut self, event: Option<Event>) -> Result<bool> {
         match self.mode {
             Mode::Main => match event {
                 Some(Event::Key(KeyEvent {
@@ -324,7 +324,7 @@ impl<'a, W: Write> App<'a, W> {
     }
 
     /// The main loop.
-    async fn main_loop(&mut self, reader: &mut EventStream) -> CrosstermResult<()> {
+    async fn main_loop(&mut self, reader: &mut EventStream) -> Result<()> {
         loop {
             if !self.paused {
                 select_biased! {
@@ -354,7 +354,7 @@ impl<W: Write> Drop for App<'_, W> {
 /// Runs the search with a TUI.
 ///
 /// If `reset` is true, the time will be reset when starting a new search.
-pub fn tui(world: PolyWorld, reset: bool) -> CrosstermResult<()> {
+pub fn tui(world: PolyWorld, reset: bool) -> Result<()> {
     let mut stdout = stdout();
     let mut reader = EventStream::new();
     let result;
