@@ -224,7 +224,7 @@ impl<R: Rule> TraitReason<R> for Reason<R> {
 
 /// Reasons for a conflict.
 #[derive(Educe)]
-#[educe(Clone, Copy, Debug, PartialEq, Eq)]
+#[educe(Debug, PartialEq, Eq)]
 pub enum ConflReason<R: Rule> {
     /// Conflict from the rule when constitifying another cell.
     Rule(CellRef<R>),
@@ -240,6 +240,14 @@ pub enum ConflReason<R: Rule> {
     /// A general reason used as a fallback.
     Deduce,
 }
+
+impl<R: Rule> Clone for ConflReason<R> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<R: Rule> Copy for ConflReason<R> {}
 
 impl<R: Rule> ConflReason<R> {
     /// Whether this reason should be analyzed before retreating.

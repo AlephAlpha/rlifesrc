@@ -163,11 +163,19 @@ impl<R: Rule<Desc = D>, D: Copy + Debug> Debug for LifeCell<R> {
 /// used in any function or method involving another world.
 #[repr(transparent)]
 #[derive(Educe)]
-#[educe(Clone, Copy, PartialEq, Eq, Hash)]
+#[educe(PartialEq, Eq, Hash)]
 pub struct CellRef<R: Rule> {
     /// The [`LifeCell`] it refers to.
     cell: NonNull<LifeCell<R>>,
 }
+
+impl<R: Rule> Clone for CellRef<R> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<R: Rule> Copy for CellRef<R> {}
 
 impl<R: Rule> CellRef<R> {
     /// Creates a new [`CellRef`] from a mut pointer to a [`LifeCell`].
