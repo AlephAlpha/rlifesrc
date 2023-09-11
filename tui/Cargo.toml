@@ -18,7 +18,7 @@ futures-util = { version = "0.3.28", optional = true }
 rlifesrc-lib = { path = "../lib/", version = "0.6.1" }
 serde_json = "1.0.105"
 serde_yaml = "0.9.25"
-toml = "0.7.6"
+toml = "0.7.8"
 
 [features]
 default = ["tui"]
