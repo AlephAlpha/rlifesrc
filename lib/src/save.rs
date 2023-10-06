@@ -106,7 +106,6 @@ impl WorldSer {
                 return Err(Error::InvalidState(coord, state));
             } else {
                 let reason = A::deser_reason(world, reason)?;
-                let cell = cell;
                 world.set_cell(cell, state, reason).ok();
             }
         }
