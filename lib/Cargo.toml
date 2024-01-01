@@ -21,7 +21,7 @@ from_variants = "1.0.2"
 getrandom = "0.2.10"
 rand = "0.8.5"
 serde = { version = "1.0.188", features = ["derive"], optional = true }
-thiserror = "1.0.49"
+thiserror = "1.0.53"
 
 [features]
 default = ["serde"]
