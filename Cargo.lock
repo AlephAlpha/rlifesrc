@@ -97,9 +97,9 @@ checksum = "d301b3b94cb4b2f23d7917810addbbaff90738e0ca2be692bd027e70d7e0330c"
 
 [[package]]
 name = "auto_enums"
-version = "0.8.2"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd4ba50b181a898ce52142184e3a46641002b3b190bf5ef827eb3c578fad4b70"
+checksum = "f1c074a5fdb14f54a9cc22ad68979588325bc6986eed6b859e03de43e4880214"
 dependencies = [
  "derive_utils",
  "proc-macro2",
