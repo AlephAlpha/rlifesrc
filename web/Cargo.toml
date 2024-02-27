@@ -38,5 +38,5 @@ web-sys = { version = "0.3.64", features = [
   "Url",
   "Window",
 ] }
-yew = { version = "0.20.0", features = ["csr"] }
+yew = { version = "0.21.0", features = ["csr"] }
 yew-agent = "0.2.0"
