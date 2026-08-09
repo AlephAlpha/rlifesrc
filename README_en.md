@@ -2,6 +2,8 @@
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/AlephAlpha/rlifesrc/test.yml?branch=master)](https://github.com/AlephAlpha/rlifesrc/actions) [![Crates.io](https://img.shields.io/crates/v/rlifesrc)](https://crates.io/crates/rlifesrc) [![Docs.rs](https://docs.rs/rlifesrc-lib/badge.svg)](https://docs.rs/rlifesrc-lib/) [![中文](https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87-brightgreen)](README.md)
 
+> Notice: I do not currently plan to continue maintaining rlifesrc. The related project [factoriosrc](https://github.com/AlephAlpha/factoriosrc) already implements most of rlifesrc's functionality and supports more rules, including Higher-range outer-totalistic rules. Its web version is available at <https://alephalpha.github.io/factoriosrc/>.
+
 __Rust Life Search__, or __rlifesrc__, is a Game of Life pattern searcher written in Rust.
 
 The program is based on David Bell's [lifesrc](https://github.com/DavidKinder/Xlife/tree/master/Xlife35/source/lifesearch) and Jason Summers's [WinLifeSearch](https://github.com/jsummers/winlifesearch/), using [an algorithm invented by Dean Hickerson](https://github.com/DavidKinder/Xlife/blob/master/Xlife35/source/lifesearch/ORIGIN).
